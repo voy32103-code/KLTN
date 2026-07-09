@@ -538,6 +538,51 @@ function formatNullablePercent(value?: number | null) {
 function renderEvaluation(evaluation: EvaluationResult) {
   const feedback = evaluation.feedback
   const total = evaluation.matchedCount + evaluation.partialCount + evaluation.missedCount
+  const design = feedback?.designSuggestions
+  
+  const designTabHtml = design ? `
+    <div class="design-suggestions-card" style="display: flex; flex-direction: column; gap: 16px; margin-top: 8px;">
+      <div class="subsection-heading">
+        <h3>Gợi ý Mô hình thiết kế sơ bộ (AI Suggestion)</h3>
+        <span style="font-size: 11px; opacity: 0.7;">Được sinh tự động dựa trên các yêu cầu thu thập được</span>
+      </div>
+      
+      <div class="design-meta-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 8px;">
+        <div class="meta-section" style="background: rgba(255, 255, 255, 0.01); border: 1px solid var(--color-border); border-radius: 6px; padding: 12px;">
+          <strong style="display: block; margin-bottom: 8px; font-size: 13px; color: var(--color-text-secondary);">Tác nhân chính (Actors)</strong>
+          <div class="badge-list" style="display: flex; flex-wrap: wrap; gap: 6px;">
+            ${design.mainActors.map(actor => `<span class="actor-badge" style="background: rgba(147, 197, 253, 0.1); color: #93c5fd; padding: 4px 8px; border-radius: 4px; border: 1px solid rgba(147, 197, 253, 0.2); font-size: 11px; font-family: var(--font-mono); font-weight: bold;">${escapeHtml(actor)}</span>`).join('')}
+          </div>
+        </div>
+        <div class="meta-section" style="background: rgba(255, 255, 255, 0.01); border: 1px solid var(--color-border); border-radius: 6px; padding: 12px;">
+          <strong style="display: block; margin-bottom: 8px; font-size: 13px; color: var(--color-text-secondary);">Thực thể chính (Entities)</strong>
+          <div class="badge-list" style="display: flex; flex-wrap: wrap; gap: 6px;">
+            ${design.mainEntities.map(entity => `<span class="entity-badge" style="background: rgba(167, 243, 208, 0.1); color: #a7f3d0; padding: 4px 8px; border-radius: 4px; border: 1px solid rgba(167, 243, 208, 0.2); font-size: 11px; font-family: var(--font-mono); font-weight: bold;">${escapeHtml(entity)}</span>`).join('')}
+          </div>
+        </div>
+      </div>
+
+      <div class="diagram-section" style="background: rgba(255, 255, 255, 0.01); border: 1px solid var(--color-border); border-radius: 6px; padding: 16px;">
+        <h4 style="margin: 0 0 12px 0; font-size: 13px; color: var(--color-text-secondary);">Sơ đồ Use Case sơ bộ</h4>
+        <div class="mermaid-container" style="background: rgba(0,0,0,0.15); border-radius: 4px; padding: 12px; overflow-x: auto; display: flex; justify-content: center;">
+          <pre class="mermaid" style="margin: 0; background: transparent; padding: 0; font-family: var(--font-mono); font-size: 12px; line-height: 1.4; color: var(--color-text);">${escapeHtml(design.useCaseMermaid)}</pre>
+        </div>
+      </div>
+
+      <div class="diagram-section" style="background: rgba(255, 255, 255, 0.01); border: 1px solid var(--color-border); border-radius: 6px; padding: 16px;">
+        <h4 style="margin: 0 0 12px 0; font-size: 13px; color: var(--color-text-secondary);">Sơ đồ lớp thực thể (ERD) sơ bộ</h4>
+        <div class="mermaid-container" style="background: rgba(0,0,0,0.15); border-radius: 4px; padding: 12px; overflow-x: auto; display: flex; justify-content: center;">
+          <pre class="mermaid" style="margin: 0; background: transparent; padding: 0; font-family: var(--font-mono); font-size: 12px; line-height: 1.4; color: var(--color-text);">${escapeHtml(design.erdMermaid)}</pre>
+        </div>
+      </div>
+    </div>
+  ` : `
+    <div class="empty" style="padding: 24px;">
+      <strong>Không có gợi ý thiết kế</strong>
+      <span>Vui lòng thu thập nhiều yêu cầu hơn để AI có thể phân tích sơ đồ.</span>
+    </div>
+  `
+
   return `
     <section class="evaluation" data-animate="fade-up" style="--index: 0">
       <div class="score-card ${formatScoreClass(evaluation.coverageScore)}">
@@ -551,18 +596,35 @@ function renderEvaluation(evaluation: EvaluationResult) {
         <span>Trích xuất: <strong>${evaluation.extractedCount}</strong></span>
         <span>Tổng yêu cầu: <strong>${total}</strong></span>
       </div>
-      ${evaluation.scoringPolicy ? renderScoringPolicy(evaluation.scoringPolicy) : ''}
-      ${feedback ? `
-        <div class="feedback-block">
-          ${renderFeedbackList('Điểm mạnh', feedback.strengths)}
-          ${renderFeedbackList('Cần cải thiện', feedback.weaknesses)}
-          ${renderFeedbackList('Gợi ý tiếp theo', feedback.suggestions)}
-        </div>
-      ` : ''}
-      ${evaluation.matches?.length ? renderRequirementReport(evaluation.matches) : ''}
+
+      <div class="eval-tabs" style="margin-top: 24px; border-bottom: 1px solid var(--color-border); display: flex; gap: 20px; margin-bottom: 16px;">
+        <button class="eval-tab-btn active" data-tab="feedback" style="background: none; border: none; border-bottom: 2px solid var(--color-primary); padding: 8px 4px; color: var(--color-text); font-weight: bold; cursor: pointer; transition: all 0.2s ease;">Đánh giá & Feedback</button>
+        <button class="eval-tab-btn" data-tab="design" style="background: none; border: none; border-bottom: 2px solid transparent; padding: 8px 4px; color: var(--color-text-secondary); cursor: pointer; transition: all 0.2s ease;">Mô hình Thiết kế sơ bộ</button>
+        <button class="eval-tab-btn" data-tab="matching" style="background: none; border: none; border-bottom: 2px solid transparent; padding: 8px 4px; color: var(--color-text-secondary); cursor: pointer; transition: all 0.2s ease;">So khớp Chi tiết</button>
+      </div>
+
+      <div class="eval-tab-content active" id="tab-feedback">
+        ${evaluation.scoringPolicy ? renderScoringPolicy(evaluation.scoringPolicy) : ''}
+        ${feedback ? `
+          <div class="feedback-block" style="margin-top: 16px;">
+            ${renderFeedbackList('Điểm mạnh', feedback.strengths)}
+            ${renderFeedbackList('Cần cải thiện', feedback.weaknesses)}
+            ${renderFeedbackList('Gợi ý tiếp theo', feedback.suggestions)}
+          </div>
+        ` : ''}
+      </div>
+
+      <div class="eval-tab-content" id="tab-design" style="display: none;">
+        ${designTabHtml}
+      </div>
+
+      <div class="eval-tab-content" id="tab-matching" style="display: none;">
+        ${evaluation.matches?.length ? renderRequirementReport(evaluation.matches) : ''}
+      </div>
     </section>
   `
 }
+
 
 function renderScoringPolicy(policy: ScoringPolicy) {
   return `
@@ -634,3 +696,44 @@ function renderEmpty(title: string, detail?: string) {
     </div>
   `
 }
+
+// Tab switcher event delegation và tích hợp render Mermaid
+document.addEventListener('click', (e) => {
+  const btn = (e.target as HTMLElement).closest('.eval-tab-btn')
+  if (!btn) return
+  
+  const container = btn.closest('.evaluation')
+  if (!container) return
+  
+  const tabName = btn.getAttribute('data-tab')
+  if (!tabName) return
+
+  // Cập nhật trạng thái active cho các nút tab
+  container.querySelectorAll('.eval-tab-btn').forEach(b => {
+    b.classList.remove('active')
+  })
+  btn.classList.add('active')
+
+  // Ẩn tất cả các nội dung tab
+  container.querySelectorAll('.eval-tab-content').forEach(c => {
+    (c as HTMLElement).style.display = 'none'
+  })
+  
+  // Hiển thị nội dung tab mục tiêu
+  const targetContent = container.querySelector(`#tab-${tabName}`) as HTMLElement
+  if (targetContent) {
+    targetContent.style.display = 'block'
+  }
+
+  // Tự động kích hoạt Mermaid render khi chuyển sang tab design
+  if (tabName === 'design' && (window as any).mermaid) {
+    try {
+      (window as any).mermaid.run({
+        nodes: targetContent.querySelectorAll('.mermaid')
+      });
+    } catch (err) {
+      console.error('Mermaid render error:', err);
+    }
+  }
+})
+

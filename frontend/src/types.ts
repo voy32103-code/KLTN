@@ -33,11 +33,20 @@ export type ChatMessage = {
   pending?: boolean
 }
 
+export type DesignSuggestions = {
+  useCaseMermaid: string
+  erdMermaid: string
+  mainActors: string[]
+  mainEntities: string[]
+}
+
 export type EvaluationFeedback = {
   strengths: string[]
   weaknesses: string[]
   suggestions: string[]
+  designSuggestions?: DesignSuggestions | null
 }
+
 
 export type EvaluationResult = {
   coverageScore: number | null

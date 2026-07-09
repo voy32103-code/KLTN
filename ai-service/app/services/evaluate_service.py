@@ -18,6 +18,8 @@ from app.services.evaluation_policy import (
     explain_match,
     generate_feedback,
 )
+from app.services.design_service import generate_design_models
+
 
 router = APIRouter()
 
@@ -92,11 +94,15 @@ async def evaluate(req: EvaluateRequest):
 
         coverage, _, _, _ = calculate_coverage(matches)
         strengths, weaknesses, suggestions = generate_feedback(matches, req.hiddenRequirements)
+        design_suggestions = generate_design_models(extracted_texts)
         feedback = FeedbackData(
             strengths=strengths,
             weaknesses=weaknesses,
             suggestions=suggestions,
+            designSuggestions=design_suggestions,
         )
+
+
 
         return EvaluateResponse(
             coverageScore=round(coverage, 2),

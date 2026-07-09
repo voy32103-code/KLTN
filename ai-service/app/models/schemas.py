@@ -81,10 +81,19 @@ class ReqMatch(BaseModel):
     reason: str
 
 
+class DesignSuggestionsData(BaseModel):
+    useCaseMermaid: str
+    erdMermaid: str
+    mainActors: list[str]
+    mainEntities: list[str]
+
+
 class FeedbackData(BaseModel):
     strengths: list[str]
     weaknesses: list[str]
     suggestions: list[str]
+    designSuggestions: DesignSuggestionsData | None = None
+
 
 
 class ScoringPolicyData(BaseModel):

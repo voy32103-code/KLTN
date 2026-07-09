@@ -74,7 +74,20 @@ public record PersonaStateUpdate(string Mood, decimal Patience, int TurnCount, L
 public record ExtractedReq(string Text, decimal Confidence);
 public record HiddenReq(string Id, string Text, string Category);
 public record ReqMatch(string HiddenId, string? HiddenText, string? ExtractedText, decimal Score, string MatchType, string Reason);
-public record FeedbackData(List<string> Strengths, List<string> Weaknesses, List<string> Suggestions);
+public record DesignSuggestionsData(
+    string UseCaseMermaid,
+    string ErdMermaid,
+    List<string> MainActors,
+    List<string> MainEntities
+);
+
+public record FeedbackData(
+    List<string> Strengths,
+    List<string> Weaknesses,
+    List<string> Suggestions,
+    DesignSuggestionsData? DesignSuggestions
+);
+
 public record ScoringPolicyData(
     string Preset,
     decimal ExactThreshold,
