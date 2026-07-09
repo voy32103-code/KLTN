@@ -39,12 +39,32 @@ def load_persona_state(req: Any) -> dict[str, Any]:
     except json.JSONDecodeError:
         return default_state
 
+    mood = raw_state.get("mood") or raw_state.get("Mood") or default_state["mood"]
+    
+    patience_val = raw_state.get("patience") if raw_state.get("patience") is not None else raw_state.get("Patience")
+    patience = float(patience_val) if patience_val is not None else default_state["patience"]
+    
+    turn_count_val = (
+        raw_state.get("turn_count") 
+        if raw_state.get("turn_count") is not None 
+        else (raw_state.get("turnCount") if raw_state.get("turnCount") is not None else raw_state.get("TurnCount"))
+    )
+    turn_count = int(turn_count_val) if turn_count_val is not None else 0
+    
+    revealed_reqs_val = (
+        raw_state.get("revealed_requirements") 
+        or raw_state.get("revealedRequirements") 
+        or raw_state.get("RevealedRequirements")
+    )
+    revealed_requirements = list(revealed_reqs_val) if revealed_reqs_val is not None else []
+
     return {
-        "mood": raw_state.get("mood", default_state["mood"]),
-        "patience": float(raw_state.get("patience", default_state["patience"])),
-        "turn_count": int(raw_state.get("turn_count", 0)),
-        "revealed_requirements": list(raw_state.get("revealed_requirements", [])),
+        "mood": mood,
+        "patience": patience,
+        "turn_count": turn_count,
+        "revealed_requirements": revealed_requirements,
     }
+
 
 
 def detect_question_type(message: str) -> str | None:
