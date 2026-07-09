@@ -1,0 +1,304 @@
+{
+  "scenario_key": "university_course_registration",
+  "scenario_title": "University Course Registration System",
+  "context": "TechEd University is modernizing its course registration process with a new online course registration system. The student is interviewing the university registrar to understand business needs, constraints, and special cases in the registration workflow.",
+  "general_keywords": [
+    "system",
+    "purpose",
+    "goal",
+    "main",
+    "overall",
+    "process",
+    "registration",
+    "problem",
+    "workflow",
+    "currently",
+    "manual",
+    "online"
+  ],
+  "gate_keyword_groups": {
+    "1": [
+      "prerequisite",
+      "prerequisites",
+      "eligibility",
+      "condition",
+      "conditions",
+      "rule",
+      "rules",
+      "deadline",
+      "schedule",
+      "calendar",
+      "close",
+      "closing",
+      "full",
+      "capacity",
+      "waitlist",
+      "wait-list",
+      "slot"
+    ],
+    "2": [
+      "fee",
+      "fees",
+      "tuition",
+      "financial",
+      "finance",
+      "payment",
+      "pay",
+      "unpaid",
+      "owe",
+      "owed",
+      "balance",
+      "blocked",
+      "block",
+      "hold",
+      "integration",
+      "integrate",
+      "existing system"
+    ],
+    "3": [
+      "exception",
+      "exceptions",
+      "special case",
+      "special cases",
+      "override",
+      "advisor",
+      "approval",
+      "probation",
+      "manual approval",
+      "approved case"
+    ],
+    "4": [
+      "performance",
+      "load",
+      "concurrent",
+      "peak",
+      "traffic",
+      "slow",
+      "accessibility",
+      "accessible",
+      "wcag",
+      "disabled",
+      "disability",
+      "screen reader",
+      "usability"
+    ]
+  },
+  "question_type_gate_map": {
+    "ConstraintOriented": [1, 2],
+    "ExceptionOriented": [3]
+  },
+  "max_new_reveals_per_turn": 1,
+  "requirements": [
+    {
+      "id": "R1",
+      "text": "Students must be able to register for courses online.",
+      "gate": 0,
+      "keywords": [
+        "system",
+        "purpose",
+        "goal",
+        "main",
+        "overall",
+        "process",
+        "registration",
+        "online"
+      ],
+      "question_types": [
+        "OpenEnded",
+        "Closed"
+      ],
+      "reveal_condition": "General question about system purpose or current registration workflow.",
+      "reveal_difficulty": "Easy"
+    },
+    {
+      "id": "R2",
+      "text": "The system must enforce prerequisite checking before allowing registration.",
+      "gate": 1,
+      "keywords": [
+        "prerequisite",
+        "prerequisites",
+        "eligibility",
+        "condition",
+        "conditions",
+        "allowed",
+        "register"
+      ],
+      "question_types": [
+        "OpenEnded",
+        "Clarifying",
+        "Probing",
+        "ConstraintOriented",
+        "Closed"
+      ],
+      "reveal_condition": "Question about registration rules, student eligibility, or prerequisite checks.",
+      "reveal_difficulty": "Medium"
+    },
+    {
+      "id": "R3",
+      "text": "Registration must close two weeks before the semester starts.",
+      "gate": 1,
+      "keywords": [
+        "deadline",
+        "close",
+        "closing",
+        "calendar",
+        "schedule",
+        "when"
+      ],
+      "question_types": [
+        "OpenEnded",
+        "Clarifying",
+        "Closed",
+        "ConstraintOriented"
+      ],
+      "reveal_condition": "Question about the registration timeline or deadline.",
+      "reveal_difficulty": "Medium"
+    },
+    {
+      "id": "R4",
+      "text": "The system must support at least 500 concurrent users during peak registration.",
+      "gate": 4,
+      "keywords": [
+        "performance",
+        "load",
+        "concurrent",
+        "peak",
+        "traffic"
+      ],
+      "question_types": [
+        "OpenEnded",
+        "Clarifying",
+        "Probing"
+      ],
+      "reveal_condition": "Direct question about load, performance, or peak-time behavior.",
+      "reveal_difficulty": "Hard"
+    },
+    {
+      "id": "R5",
+      "text": "Professors can override prerequisites for specific students in approved cases.",
+      "gate": 3,
+      "keywords": [
+        "override",
+        "exception",
+        "special case",
+        "special cases",
+        "approved case"
+      ],
+      "question_types": [
+        "ExceptionOriented",
+        "Probing",
+        "Clarifying"
+      ],
+      "reveal_condition": "Question about exceptions or approved manual overrides.",
+      "reveal_difficulty": "Hard"
+    },
+    {
+      "id": "R6",
+      "text": "The system must integrate with the existing financial system to calculate registration-related fees.",
+      "gate": 2,
+      "keywords": [
+        "fee",
+        "fees",
+        "tuition",
+        "financial",
+        "finance",
+        "payment",
+        "integrate",
+        "integration"
+      ],
+      "question_types": [
+        "OpenEnded",
+        "Clarifying",
+        "Probing",
+        "ConstraintOriented"
+      ],
+      "reveal_condition": "Question about tuition, payment dependencies, or existing systems.",
+      "reveal_difficulty": "Medium"
+    },
+    {
+      "id": "R7",
+      "text": "The system must provide a wait-list when a course section is full.",
+      "gate": 1,
+      "keywords": [
+        "full",
+        "capacity",
+        "waitlist",
+        "wait-list",
+        "slot"
+      ],
+      "question_types": [
+        "OpenEnded",
+        "Clarifying",
+        "Probing"
+      ],
+      "reveal_condition": "Question about what happens when a class is already full.",
+      "reveal_difficulty": "Medium"
+    },
+    {
+      "id": "R8",
+      "text": "Students with unpaid fees must be blocked from registration until the outstanding balance is cleared.",
+      "gate": 2,
+      "keywords": [
+        "unpaid",
+        "fees",
+        "blocked",
+        "block",
+        "hold",
+        "balance",
+        "owe",
+        "owed"
+      ],
+      "question_types": [
+        "ConstraintOriented",
+        "Clarifying",
+        "Probing",
+        "Closed"
+      ],
+      "reveal_condition": "Question about blocked registration or financial holds after the fee topic has surfaced.",
+      "reveal_difficulty": "Hard",
+      "requires": [
+        "The system must integrate with the existing financial system to calculate registration-related fees."
+      ]
+    },
+    {
+      "id": "R9",
+      "text": "The system should meet WCAG 2.1 AA accessibility expectations for students with disabilities.",
+      "gate": 4,
+      "keywords": [
+        "accessibility",
+        "accessible",
+        "wcag",
+        "disabled",
+        "disability",
+        "screen reader"
+      ],
+      "question_types": [
+        "OpenEnded",
+        "Clarifying",
+        "Probing"
+      ],
+      "reveal_condition": "Question about accessibility or support for students with disabilities.",
+      "reveal_difficulty": "Hard"
+    },
+    {
+      "id": "R10",
+      "text": "Students on academic probation must obtain advisor approval before registering.",
+      "gate": 3,
+      "keywords": [
+        "probation",
+        "advisor",
+        "approval",
+        "special case",
+        "special cases"
+      ],
+      "question_types": [
+        "ExceptionOriented",
+        "Clarifying",
+        "Probing",
+        "Closed"
+      ],
+      "reveal_condition": "Question about special student status or approval flow.",
+      "reveal_difficulty": "Hard"
+    }
+  ]
+}

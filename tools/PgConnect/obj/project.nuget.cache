@@ -1,0 +1,54 @@
+{
+  "version": 2,
+  "dgSpecHash": "y0Z6urQOMzY=",
+  "success": false,
+  "projectFilePath": "D:\\KLTN\\tools\\PgConnect\\PgConnect.csproj",
+  "expectedPackageFiles": [],
+  "logs": [
+    {
+      "code": "NU1101",
+      "level": "Error",
+      "message": "Unable to find package BCrypt.Net-Next. No packages exist with this id in source(s): LocalGlobalPackages, VisualStudioOfflinePackages",
+      "libraryId": "BCrypt.Net-Next",
+      "targetGraphs": [
+        "net9.0"
+      ]
+    },
+    {
+      "code": "NU1101",
+      "level": "Error",
+      "message": "Unable to find package Microsoft.AspNetCore.Authentication.JwtBearer. No packages exist with this id in source(s): LocalGlobalPackages, VisualStudioOfflinePackages",
+      "libraryId": "Microsoft.AspNetCore.Authentication.JwtBearer",
+      "targetGraphs": [
+        "net9.0"
+      ]
+    },
+    {
+      "code": "NU1101",
+      "level": "Error",
+      "message": "Unable to find package Microsoft.AspNetCore.OpenApi. No packages exist with this id in source(s): LocalGlobalPackages, VisualStudioOfflinePackages",
+      "libraryId": "Microsoft.AspNetCore.OpenApi",
+      "targetGraphs": [
+        "net9.0"
+      ]
+    },
+    {
+      "code": "NU1101",
+      "level": "Error",
+      "message": "Unable to find package Npgsql.EntityFrameworkCore.PostgreSQL. No packages exist with this id in source(s): LocalGlobalPackages, VisualStudioOfflinePackages",
+      "libraryId": "Npgsql.EntityFrameworkCore.PostgreSQL",
+      "targetGraphs": [
+        "net9.0"
+      ]
+    },
+    {
+      "code": "NU1101",
+      "level": "Error",
+      "message": "Unable to find package Swashbuckle.AspNetCore. No packages exist with this id in source(s): LocalGlobalPackages, VisualStudioOfflinePackages",
+      "libraryId": "Swashbuckle.AspNetCore",
+      "targetGraphs": [
+        "net9.0"
+      ]
+    }
+  ]
+}

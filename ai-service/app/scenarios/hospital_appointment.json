@@ -1,0 +1,127 @@
+{
+  "scenario_key": "hospital_appointment",
+  "scenario_title": "Hospital Appointment System",
+  "context": "CityCare Clinic wants an online appointment booking system. The student interviews the clinic operations coordinator to understand appointment scheduling, patient safety, privacy, reminders, and integrations with existing clinic systems.",
+  "general_keywords": ["appointment", "booking", "clinic", "hospital", "patient", "system", "purpose", "goal", "online"],
+  "gate_keyword_groups": {
+    "1": ["availability", "available", "doctor", "time slot", "slot", "reschedule", "cancel", "reminder", "sms", "email", "no-show", "block"],
+    "2": ["ehr", "patient data", "demographic", "insurance", "eligibility", "existing system", "integrate", "integration"],
+    "3": ["urgent", "emergency", "symptom", "triage", "danger", "critical"],
+    "4": ["privacy", "role", "permission", "audit", "timestamp", "identity", "language", "vietnamese", "english", "performance", "concurrent", "peak"]
+  },
+  "question_type_gate_map": {
+    "ConstraintOriented": [2, 4],
+    "ExceptionOriented": [3]
+  },
+  "max_new_reveals_per_turn": 1,
+  "requirements": [
+    {
+      "id": "H1",
+      "text": "Patients must be able to book appointments online.",
+      "gate": 0,
+      "keywords": ["appointment", "booking", "book", "online", "purpose", "goal"],
+      "question_types": ["OpenEnded", "Closed"],
+      "reveal_condition": "General question about online appointment booking.",
+      "reveal_difficulty": "Easy"
+    },
+    {
+      "id": "H2",
+      "text": "The system must show available doctor time slots before confirming an appointment.",
+      "gate": 1,
+      "keywords": ["availability", "available", "doctor", "time slot", "slot", "confirm"],
+      "question_types": ["OpenEnded", "Clarifying", "Probing", "Closed"],
+      "reveal_condition": "Question about doctor availability or appointment time slots.",
+      "reveal_difficulty": "Medium"
+    },
+    {
+      "id": "H3",
+      "text": "Urgent symptoms must trigger guidance to contact emergency services instead of booking a routine appointment.",
+      "gate": 3,
+      "keywords": ["urgent", "emergency", "symptom", "triage", "danger", "critical"],
+      "question_types": ["ExceptionOriented", "Probing", "Clarifying"],
+      "reveal_condition": "Question about urgent symptoms or emergency cases.",
+      "reveal_difficulty": "Hard"
+    },
+    {
+      "id": "H4",
+      "text": "Patients can reschedule or cancel appointments up to 24 hours before the appointment time.",
+      "gate": 1,
+      "keywords": ["reschedule", "cancel", "change", "24 hours", "before"],
+      "question_types": ["OpenEnded", "Clarifying", "Closed"],
+      "reveal_condition": "Question about changing or canceling appointments.",
+      "reveal_difficulty": "Medium"
+    },
+    {
+      "id": "H5",
+      "text": "The system should send appointment reminders by SMS or email.",
+      "gate": 1,
+      "keywords": ["reminder", "sms", "email", "notify", "notification", "no-show"],
+      "question_types": ["OpenEnded", "Clarifying", "Probing"],
+      "reveal_condition": "Question about reminders or reducing no-shows.",
+      "reveal_difficulty": "Easy"
+    },
+    {
+      "id": "H6",
+      "text": "The system must integrate with the existing EHR to retrieve patient demographics.",
+      "gate": 2,
+      "keywords": ["ehr", "patient data", "demographic", "existing system", "integrate", "integration"],
+      "question_types": ["OpenEnded", "Clarifying", "Probing", "ConstraintOriented"],
+      "reveal_condition": "Question about patient data or existing clinical systems.",
+      "reveal_difficulty": "Medium"
+    },
+    {
+      "id": "H7",
+      "text": "The system should support insurance eligibility checks before appointment confirmation.",
+      "gate": 2,
+      "keywords": ["insurance", "eligibility", "coverage", "payment", "confirm"],
+      "question_types": ["OpenEnded", "Clarifying", "Probing", "ConstraintOriented"],
+      "reveal_condition": "Question about insurance or eligibility before confirmation.",
+      "reveal_difficulty": "Hard"
+    },
+    {
+      "id": "H8",
+      "text": "Doctors must be able to block unavailable time slots.",
+      "gate": 1,
+      "keywords": ["doctor", "block", "unavailable", "time slot", "slot"],
+      "question_types": ["OpenEnded", "Clarifying", "Probing"],
+      "reveal_condition": "Question about doctor calendars or unavailable periods.",
+      "reveal_difficulty": "Medium"
+    },
+    {
+      "id": "H9",
+      "text": "Access to patient appointment data must be role-based.",
+      "gate": 4,
+      "keywords": ["privacy", "role", "permission", "access", "patient data"],
+      "question_types": ["ConstraintOriented", "Clarifying", "Probing"],
+      "reveal_condition": "Question about privacy, roles, or patient data access.",
+      "reveal_difficulty": "Hard"
+    },
+    {
+      "id": "H10",
+      "text": "Appointment changes must be auditable with timestamp and staff/user identity.",
+      "gate": 4,
+      "keywords": ["audit", "timestamp", "identity", "staff", "change", "trace"],
+      "question_types": ["ConstraintOriented", "Clarifying", "Probing"],
+      "reveal_condition": "Question about tracking appointment changes.",
+      "reveal_difficulty": "Hard"
+    },
+    {
+      "id": "H11",
+      "text": "The system should support both Vietnamese and English patient-facing screens.",
+      "gate": 4,
+      "keywords": ["language", "vietnamese", "english", "multilingual", "patient-facing"],
+      "question_types": ["OpenEnded", "Clarifying", "Probing"],
+      "reveal_condition": "Question about language support or patient diversity.",
+      "reveal_difficulty": "Medium"
+    },
+    {
+      "id": "H12",
+      "text": "The system must support at least 200 concurrent booking requests during morning peak hours.",
+      "gate": 4,
+      "keywords": ["performance", "concurrent", "peak", "morning", "load", "traffic"],
+      "question_types": ["OpenEnded", "Clarifying", "Probing"],
+      "reveal_condition": "Question about peak load or performance.",
+      "reveal_difficulty": "Hard"
+    }
+  ]
+}

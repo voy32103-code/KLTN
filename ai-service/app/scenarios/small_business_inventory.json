@@ -1,0 +1,100 @@
+{
+  "scenario_key": "small_business_inventory",
+  "scenario_title": "Small Business Inventory Management",
+  "context": "A small retail shop wants to replace manual inventory notes and spreadsheets with a simple inventory management system. The student interviews the shop owner to understand stock tracking, daily operations, supplier handling, reporting, permissions, and offline needs.",
+  "general_keywords": ["inventory", "stock", "product", "shop", "store", "system", "purpose", "goal", "current"],
+  "gate_keyword_groups": {
+    "1": ["stock-in", "stock out", "stock-out", "transaction", "receive", "sell", "low stock", "threshold", "alert", "warning"],
+    "2": ["barcode", "scan", "supplier", "purchase order", "po", "sales system", "pos", "integrate", "integration"],
+    "3": ["permission", "owner", "staff", "cost price", "supplier information", "report", "daily", "movement"],
+    "4": ["offline", "internet", "sync", "outage", "network"]
+  },
+  "question_type_gate_map": {
+    "ConstraintOriented": [3, 4],
+    "ExceptionOriented": [4]
+  },
+  "max_new_reveals_per_turn": 1,
+  "requirements": [
+    {
+      "id": "I1",
+      "text": "Staff must be able to view current stock levels for each product.",
+      "gate": 0,
+      "keywords": ["inventory", "stock", "current", "product", "view", "level"],
+      "question_types": ["OpenEnded", "Closed"],
+      "reveal_condition": "General question about inventory tracking.",
+      "reveal_difficulty": "Easy"
+    },
+    {
+      "id": "I2",
+      "text": "Staff must be able to record stock-in and stock-out transactions.",
+      "gate": 1,
+      "keywords": ["stock-in", "stock out", "stock-out", "transaction", "receive", "sell", "record"],
+      "question_types": ["OpenEnded", "Clarifying", "Probing", "Closed"],
+      "reveal_condition": "Question about receiving or removing stock.",
+      "reveal_difficulty": "Easy"
+    },
+    {
+      "id": "I3",
+      "text": "The system should alert the owner when product stock falls below a configurable threshold.",
+      "gate": 1,
+      "keywords": ["low stock", "threshold", "alert", "warning", "below", "minimum"],
+      "question_types": ["OpenEnded", "Clarifying", "Probing"],
+      "reveal_condition": "Question about low stock or reorder alerts.",
+      "reveal_difficulty": "Medium"
+    },
+    {
+      "id": "I4",
+      "text": "The system should support barcode scanning for faster product lookup.",
+      "gate": 2,
+      "keywords": ["barcode", "scan", "scanning", "lookup", "fast", "faster"],
+      "question_types": ["OpenEnded", "Clarifying", "Probing"],
+      "reveal_condition": "Question about faster product lookup or barcode scanning.",
+      "reveal_difficulty": "Medium"
+    },
+    {
+      "id": "I5",
+      "text": "The system must support creating purchase orders for suppliers.",
+      "gate": 2,
+      "keywords": ["supplier", "purchase order", "po", "order", "reorder"],
+      "question_types": ["OpenEnded", "Clarifying", "Probing"],
+      "reveal_condition": "Question about suppliers or reordering stock.",
+      "reveal_difficulty": "Medium"
+    },
+    {
+      "id": "I6",
+      "text": "The inventory system should integrate with the existing sales system to reduce manual updates.",
+      "gate": 2,
+      "keywords": ["sales system", "pos", "integrate", "integration", "manual update", "sale"],
+      "question_types": ["OpenEnded", "Clarifying", "Probing", "ConstraintOriented"],
+      "reveal_condition": "Question about sales/POS integration.",
+      "reveal_difficulty": "Hard"
+    },
+    {
+      "id": "I7",
+      "text": "Only the owner can edit product cost prices and supplier information.",
+      "gate": 3,
+      "keywords": ["permission", "owner", "staff", "cost price", "supplier information", "edit"],
+      "question_types": ["ConstraintOriented", "Clarifying", "Probing"],
+      "reveal_condition": "Question about permission or sensitive inventory data.",
+      "reveal_difficulty": "Medium"
+    },
+    {
+      "id": "I8",
+      "text": "The system should generate daily stock movement and low-stock reports.",
+      "gate": 3,
+      "keywords": ["report", "daily", "movement", "low-stock", "low stock", "summary"],
+      "question_types": ["OpenEnded", "Clarifying", "Probing"],
+      "reveal_condition": "Question about daily reporting.",
+      "reveal_difficulty": "Medium"
+    },
+    {
+      "id": "I9",
+      "text": "The system should continue recording transactions during temporary internet outages and sync later.",
+      "gate": 4,
+      "keywords": ["offline", "internet", "sync", "outage", "network", "temporary"],
+      "question_types": ["ExceptionOriented", "ConstraintOriented", "Clarifying", "Probing"],
+      "reveal_condition": "Question about offline use or internet outages.",
+      "reveal_difficulty": "Hard"
+    }
+  ]
+}

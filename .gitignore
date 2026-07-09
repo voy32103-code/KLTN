@@ -1,0 +1,31 @@
+# .NET
+backend/**/bin/
+backend/**/obj/
+backend/**/*.user
+
+# Python
+ai-service/__pycache__/
+ai-service/**/__pycache__/
+ai-service/.venv/
+ai-service/*.egg-info/
+tools/__pycache__/
+
+# Node
+frontend/node_modules/
+frontend/dist/
+
+# Environment
+.env
+*.env.local
+tools/logs/
+backend/ReqSimulator.API/.keys/
+
+# IDE
+.vs/
+.vscode/
+.idea/
+*.swp
+
+# Documents
+docs/
+

@@ -1,0 +1,6 @@
+@ReqSimulator.API_HostAddress = http://localhost:5206
+
+GET {{ReqSimulator.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
