@@ -470,25 +470,59 @@ public class SessionsController : ControllerBase
         if (string.IsNullOrWhiteSpace(content))
             return BadRequest("Message content is required.");
 
+        // 1. Tải thông tin ban đầu không khóa và nằm ngoài transaction
+        var sessionInit = await _db.SimulationSessions
+            .AsNoTracking()
+            .Include(s => s.Persona)
+            .Include(s => s.Scenario)
+            .FirstOrDefaultAsync(s => s.Id == sessionId);
+
+        if (sessionInit is null) return NotFound();
+        if (!CanAccessSession(sessionInit, userId.Value)) return Forbid();
+        if (!sessionInit.IsActive) return BadRequest("Session already ended");
+
+        // Lấy lịch sử chat hiện tại để truyền cho AI
+        var messagesHistory = await _db.Messages
+            .AsNoTracking()
+            .Where(m => m.SessionId == sessionId)
+            .OrderBy(m => m.Timestamp)
+            .Select(m => new ChatMessage(m.Sender.ToString(), m.Content, m.Timestamp))
+            .ToListAsync();
+
+        var personaStateInit = DeserializePersonaState(sessionInit.PersonaState, sessionInit.Persona);
+
+        var hiddenRequirements = await _db.HiddenRequirements
+            .AsNoTracking()
+            .Where(r => r.ScenarioId == sessionInit.ScenarioId)
+            .ToListAsync();
+
+        // 2. Thực hiện cuộc gọi HTTP API ngoại mạng (được chạy bên ngoài transaction)
+        var aiResponse = await _ai.Chat(new AiChatRequest(
+            SessionId: sessionId.ToString(),
+            ScenarioTitle: sessionInit.Scenario.Title,
+            StudentMessage: content,
+            History: messagesHistory,
+            Persona: new PersonaProfile(
+                sessionInit.Persona.Name,
+                sessionInit.Persona.RoleTitle ?? "",
+                sessionInit.Persona.PersonalityTraits,
+                sessionInit.Persona.CommunicationStyle ?? "neutral",
+                personaStateInit.Mood,
+                personaStateInit.Patience),
+            PersonaStateJson: sessionInit.PersonaState,
+            AvailableRequirements: hiddenRequirements.Select(r => r.RequirementText).ToList()
+        ));
+
+        // 3. Mở transaction cục bộ ngắn và khóa dòng FOR UPDATE để lưu kết quả nhanh
         await using var transaction = await _db.Database.BeginTransactionAsync();
 
-        // Lock row to prevent concurrent state updates (race condition)
         var session = await _db.SimulationSessions
             .FromSqlInterpolated($"SELECT * FROM simulation_sessions WHERE id = {sessionId} FOR UPDATE")
             .Include(s => s.Persona)
-            .Include(s => s.Scenario)
-            .Include(s => s.Messages)
             .FirstOrDefaultAsync();
 
         if (session is null) return NotFound();
-        
-        // Order messages locally to ensure correct chronological history
-        session.Messages = session.Messages.OrderBy(m => m.Timestamp).ToList();
-
-        if (!CanAccessSession(session, userId.Value)) return Forbid();
         if (!session.IsActive) return BadRequest("Session already ended");
-
-        var personaState = DeserializePersonaState(session.PersonaState, session.Persona);
 
         var studentMsg = new Message
         {
@@ -498,39 +532,20 @@ public class SessionsController : ControllerBase
         };
         _db.Messages.Add(studentMsg);
 
-        var hiddenRequirements = await _db.HiddenRequirements
-            .Where(r => r.ScenarioId == session.ScenarioId)
-            .ToListAsync();
-
-        var aiResponse = await _ai.Chat(new AiChatRequest(
-            SessionId: sessionId.ToString(),
-            ScenarioTitle: session.Scenario.Title,
-            StudentMessage: content,
-            History: session.Messages.Select(m =>
-                new ChatMessage(m.Sender.ToString(), m.Content, m.Timestamp)).ToList(),
-            Persona: new PersonaProfile(
-                session.Persona.Name,
-                session.Persona.RoleTitle ?? "",
-                session.Persona.PersonalityTraits,
-                session.Persona.CommunicationStyle ?? "neutral",
-                personaState.Mood,
-                personaState.Patience),
-            PersonaStateJson: session.PersonaState,
-            AvailableRequirements: hiddenRequirements.Select(r => r.RequirementText).ToList()
-        ));
-
         var stakeholderMsg = new Message
         {
             SessionId = sessionId,
             Sender = SenderType.Stakeholder,
             Content = aiResponse.StakeholderReply
         };
+        _db.Messages.Add(stakeholderMsg);
 
         if (Enum.TryParse<QuestionType>(aiResponse.DetectedQuestionType, true, out var questionType))
             studentMsg.DetectedQuestionType = questionType;
 
         if (aiResponse.StateUpdate is not null)
         {
+            var personaState = DeserializePersonaState(session.PersonaState, session.Persona);
             personaState.Mood = aiResponse.StateUpdate.Mood;
             personaState.Patience = aiResponse.StateUpdate.Patience;
             personaState.TurnCount = aiResponse.StateUpdate.TurnCount;
@@ -544,7 +559,6 @@ public class SessionsController : ControllerBase
             session.PersonaState = JsonSerializer.Serialize(personaState);
         }
 
-        _db.Messages.Add(stakeholderMsg);
         await _db.SaveChangesAsync();
         await transaction.CommitAsync();
 
