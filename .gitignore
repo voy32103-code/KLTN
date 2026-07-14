@@ -31,3 +31,7 @@ backup.sql
 # Documents
 docs/
 
+# Local Brain/Agent context
+brain/
+
+
