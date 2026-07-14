@@ -214,6 +214,7 @@ async function loadScenarios(showLoading = true) {
 }
 
 async function selectScenario(scenarioId: string) {
+  if (state.busy) return
   await withBusy(async () => {
     const scenario = await api.request<ScenarioDetail>(`/api/Scenarios/${scenarioId}`)
     state.selectedScenario = scenario
@@ -274,6 +275,7 @@ async function loadReviewSessions(showLoading = true) {
 }
 
 async function selectReviewSession(sessionId: string) {
+  if (state.busy) return
   await withBusy(async () => {
     state.selectedReviewSessionId = sessionId
     state.reviewDetail = await api.request<ReviewSessionDetail>(`/api/Sessions/review/${sessionId}`)

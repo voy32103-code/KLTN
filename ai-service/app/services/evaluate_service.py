@@ -4,9 +4,12 @@ Multi-level matching: Exact → Semantic → Partial → Missed.
 Dùng sentence-transformers cho semantic similarity (RQ3).
 """
 import os
-from fastapi import APIRouter, HTTPException
-from sentence_transformers import SentenceTransformer
+import difflib
+import logging
 import numpy as np
+from fastapi import APIRouter, HTTPException
+
+logger = logging.getLogger(__name__)
 from app.models.schemas import (
     EvaluateRequest, EvaluateResponse,
     ReqMatch, FeedbackData, ScoringPolicyData
@@ -21,28 +24,59 @@ from app.services.evaluation_policy import (
 from app.services.design_service import generate_design_models
 
 
+import threading
+
 router = APIRouter()
 
-# Load embedding model 1 lần khi startup (all-MiniLM-L6-v2 ≈ 80MB)
+# Thread-safe lazy loading setup for sentence-transformers
+_embedder_lock = threading.Lock()
+_embedder_initialized = False
+has_transformers = False
+embedder = None
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "all-MiniLM-L6-v2")
-embedder = SentenceTransformer(EMBEDDING_MODEL)
+
+def _init_embedder():
+    global embedder, has_transformers, _embedder_initialized
+    if not _embedder_initialized:
+        with _embedder_lock:
+            if not _embedder_initialized:
+                try:
+                    from sentence_transformers import SentenceTransformer
+                    embedder = SentenceTransformer(EMBEDDING_MODEL)
+                    has_transformers = True
+                except Exception:
+                    has_transformers = False
+                    embedder = None
+                _embedder_initialized = True
 
 def compute_similarity_matrix(
     extracted_texts: list[str],
     hidden_texts: list[str]
 ) -> np.ndarray:
     """
-    Tính cosine similarity matrix giữa mọi cặp (extracted, hidden).
+    Tính similarity matrix giữa mọi cặp (extracted, hidden).
     Returns: matrix shape (len(extracted), len(hidden))
     """
     if not extracted_texts or not hidden_texts:
         return np.array([])
 
-    ext_embeddings = embedder.encode(extracted_texts, normalize_embeddings=True)
-    hid_embeddings = embedder.encode(hidden_texts, normalize_embeddings=True)
+    _init_embedder()
 
-    # Cosine similarity = dot product khi vectors đã normalize
-    return np.dot(ext_embeddings, hid_embeddings.T)
+    if has_transformers and embedder is not None:
+        try:
+            ext_embeddings = embedder.encode(extracted_texts, normalize_embeddings=True)
+            hid_embeddings = embedder.encode(hidden_texts, normalize_embeddings=True)
+            # Cosine similarity = dot product khi vectors đã normalize
+            return np.dot(ext_embeddings, hid_embeddings.T)
+        except Exception:
+            pass
+
+    # Fallback to difflib text similarity ratio (no PyTorch/sentence-transformers dependency)
+    matrix = np.zeros((len(extracted_texts), len(hidden_texts)))
+    for i, ext in enumerate(extracted_texts):
+        for j, hid in enumerate(hidden_texts):
+            matrix[i, j] = difflib.SequenceMatcher(None, ext.lower(), hid.lower()).ratio()
+    return matrix
 
 @router.post("/evaluate", response_model=EvaluateResponse)
 async def evaluate(req: EvaluateRequest):
@@ -112,4 +146,5 @@ async def evaluate(req: EvaluateRequest):
         )
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Evaluation error: {str(e)}")
+        logger.exception("Evaluation error occurred.")
+        raise HTTPException(status_code=500, detail="An error occurred during evaluation processing.")

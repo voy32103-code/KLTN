@@ -7,6 +7,9 @@ using Npgsql;
 using ReqSimulator.API.Data;
 using ReqSimulator.API.Models;
 using ReqSimulator.API.Services;
+using Microsoft.AspNetCore.RateLimiting;
+using System.Threading.RateLimiting;
+using System.Security.Claims;
 
 LoadDotEnvFiles(
     Path.Combine(Directory.GetCurrentDirectory(), ".env"),
@@ -156,9 +159,9 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 // ===== JWT Authentication =====
 var jwtConfig = builder.Configuration.GetSection("Jwt");
-var jwtKey = GetRequiredConfig(builder.Configuration, "Jwt:Key");
-if (Encoding.UTF8.GetByteCount(jwtKey) < 32)
-    throw new InvalidOperationException("Jwt:Key must be at least 32 bytes long.");
+var jwtKey = builder.Configuration["Jwt:Key"];
+if (string.IsNullOrEmpty(jwtKey) || Encoding.UTF8.GetByteCount(jwtKey) < 32)
+    throw new InvalidOperationException("Jwt:Key must be configured and must be at least 32 bytes long.");
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -183,6 +186,7 @@ builder.Services.AddHttpClient<AiServiceClient>(client =>
 {
     client.BaseAddress = new Uri(GetRequiredConfig(builder.Configuration, "AiService:BaseUrl"));
     client.Timeout = TimeSpan.FromSeconds(120); // LLM calls can be slow.
+    client.DefaultRequestHeaders.Add("X-AI-Service-Key", builder.Configuration["AiService:InternalKey"] ?? "dev-internal-key");
 });
 
 // ===== CORS: allow the React frontend (port 5173) to call the API =====
@@ -192,6 +196,27 @@ builder.Services.AddCors(options =>
         policy.WithOrigins("http://localhost:5173", "http://127.0.0.1:5173")
               .AllowAnyMethod()
               .AllowAnyHeader());
+});
+
+// ===== Rate Limiting =====
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy("ai_chat_limit", httpContext =>
+    {
+        var userKey = httpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value 
+                      ?? httpContext.Connection.RemoteIpAddress?.ToString() 
+                      ?? "anonymous";
+
+        return RateLimitPartition.GetFixedWindowLimiter(userKey, _ => new FixedWindowRateLimiterOptions
+        {
+            AutoReplenishment = true,
+            PermitLimit = 10,
+            Window = TimeSpan.FromMinutes(1),
+            QueueLimit = 2,
+            QueueProcessingOrder = QueueProcessingOrder.OldestFirst
+        });
+    });
 });
 
 builder.Services.AddControllers();
@@ -216,6 +241,7 @@ if (app.Environment.IsDevelopment())
 app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseRateLimiter();
 app.MapControllers();
 
 app.Run();

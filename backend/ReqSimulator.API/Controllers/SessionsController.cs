@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using ReqSimulator.API.Data;
@@ -41,7 +42,7 @@ public class SessionsController : ControllerBase
     }
 
     public record CreateSessionDto(Guid ScenarioId, Guid PersonaId);
-    public record SendMessageDto([Required, MaxLength(4000)] string Content);
+    public record SendMessageDto([Required, StringLength(4000)] string Content);
 
     private record RequirementMatchReport(
         string HiddenId,
@@ -461,10 +462,11 @@ public class SessionsController : ControllerBase
     }
 
     [HttpPost("{sessionId}/messages")]
+    [EnableRateLimiting("ai_chat_limit")]
     public async Task<IActionResult> SendMessage(Guid sessionId, [FromBody] SendMessageDto dto)
     {
-        var userId = GetCurrentUserId();
-        if (userId == null) return Unauthorized();
+        var rawUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (!Guid.TryParse(rawUserId, out var parsedUserId)) return Unauthorized();
 
         var content = dto.Content?.Trim();
         if (string.IsNullOrWhiteSpace(content))
@@ -478,7 +480,9 @@ public class SessionsController : ControllerBase
             .FirstOrDefaultAsync(s => s.Id == sessionId);
 
         if (sessionInit is null) return NotFound();
-        if (!CanAccessSession(sessionInit, userId.Value)) return Forbid();
+
+        var isPrivileged = IsPrivilegedUser();
+        if (!isPrivileged && sessionInit.StudentId != parsedUserId) return Forbid();
         if (!sessionInit.IsActive) return BadRequest("Session already ended");
 
         // Lấy lịch sử chat hiện tại để truyền cho AI
@@ -518,10 +522,10 @@ public class SessionsController : ControllerBase
 
         var session = await _db.SimulationSessions
             .FromSqlInterpolated($"SELECT * FROM simulation_sessions WHERE id = {sessionId} FOR UPDATE")
-            .Include(s => s.Persona)
             .FirstOrDefaultAsync();
 
         if (session is null) return NotFound();
+        await _db.Entry(session).Reference(s => s.Persona).LoadAsync();
         if (!session.IsActive) return BadRequest("Session already ended");
 
         var studentMsg = new Message
@@ -571,10 +575,11 @@ public class SessionsController : ControllerBase
     }
 
     [HttpPost("{sessionId}/end")]
+    [EnableRateLimiting("ai_chat_limit")]
     public async Task<IActionResult> EndSession(Guid sessionId)
     {
-        var userId = GetCurrentUserId();
-        if (userId == null) return Unauthorized();
+        var rawUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (!Guid.TryParse(rawUserId, out var parsedUserId)) return Unauthorized();
 
         var session = await _db.SimulationSessions
             .AsNoTracking()
@@ -583,9 +588,11 @@ public class SessionsController : ControllerBase
 
         if (session is null) return NotFound();
 
+        var isPrivileged = IsPrivilegedUser();
+        if (!isPrivileged && session.StudentId != parsedUserId) return Forbid();
+
         // Order messages locally to ensure correct chronological history
         session.Messages = session.Messages.OrderBy(m => m.Timestamp).ToList();
-        if (!CanAccessSession(session, userId.Value)) return Forbid();
 
         var existingResponse = await TryGetExistingEvaluationResponse(sessionId);
         if (existingResponse is not null)
@@ -747,17 +754,20 @@ public class SessionsController : ControllerBase
     }
 
     [HttpGet("{sessionId}/messages")]
+    [EnableRateLimiting("ai_chat_limit")]
     public async Task<IActionResult> GetMessages(Guid sessionId)
     {
-        var userId = GetCurrentUserId();
-        if (userId == null) return Unauthorized();
+        var rawUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (!Guid.TryParse(rawUserId, out var parsedUserId)) return Unauthorized();
 
         var session = await _db.SimulationSessions
             .AsNoTracking()
             .FirstOrDefaultAsync(s => s.Id == sessionId);
 
         if (session is null) return NotFound();
-        if (!CanAccessSession(session, userId.Value)) return Forbid();
+
+        var isPrivileged = IsPrivilegedUser();
+        if (!isPrivileged && session.StudentId != parsedUserId) return Forbid();
 
         var messageRows = await _db.Messages
             .Where(m => m.SessionId == sessionId)

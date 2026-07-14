@@ -181,7 +181,7 @@ function renderScenarioPicker(state: AppState) {
 function renderScenarioItem(scenario: ScenarioSummary, state: AppState, index: number) {
   const active = scenario.id === state.selectedScenario?.id
   return `
-    <button class="scenario-item ${active ? 'active' : ''}" data-scenario-id="${escapeAttribute(scenario.id)}" type="button" data-animate="fade-up" style="--index: ${index}">
+    <button class="scenario-item ${active ? 'active' : ''}" data-scenario-id="${escapeAttribute(scenario.id)}" type="button" data-animate="fade-up" style="--index: ${index}" ${state.busy ? 'disabled' : ''}>
       <span class="scenario-title-block">
         <strong>${escapeHtml(scenario.title)}</strong>
         <small style="font-family: var(--font-mono); text-transform: uppercase;">${escapeHtml(scenario.domain ?? 'General')} · ${escapeHtml(scenario.difficulty)}</small>
@@ -261,6 +261,21 @@ function renderChat(state: AppState) {
   const lastQuestionType = [...state.messages].reverse().find((message) => message.detectedQuestionType)?.detectedQuestionType
   const sessionStatus = state.evaluation ? 'Đã hoàn thành' : 'Đang tiến hành'
 
+  const isThinking = state.busy && !state.evaluation && state.messages.length > 0 && state.messages[state.messages.length - 1].sender === 'Student'
+  const thinkingHtml = isThinking ? `
+    <article class="message stakeholder thinking" data-animate="fade-up" style="--index: ${state.messages.length}">
+      <div class="message-meta">
+        <span class="font-serif">${escapeHtml(persona?.name ?? 'Stakeholder')}</span>
+        <small>Đang suy nghĩ...</small>
+      </div>
+      <div class="thinking-indicator">
+        <span class="dot"></span>
+        <span class="dot"></span>
+        <span class="dot"></span>
+      </div>
+    </article>
+  ` : ''
+
   return `
     <section class="chat-layout">
       <aside class="faux-chrome session-panel" data-animate="fade-up" style="--index: 0">
@@ -285,6 +300,7 @@ function renderChat(state: AppState) {
         <dl>
           <div><dt>Stakeholder</dt><dd class="font-serif" style="font-size: 16px;">${escapeHtml(persona?.name ?? 'Stakeholder')}</dd></div>
           <div><dt>Vai trò</dt><dd>${escapeHtml(persona?.roleTitle ?? 'N/A')}</dd></div>
+          <div><dt>Mô hình AI</dt><dd style="font-family: var(--font-mono); font-size: 12px; color: var(--pastel-blue-text); font-weight: bold;">Gemini 2.5 Flash</dd></div>
           <div><dt>Loại câu hỏi gần nhất</dt><dd>${escapeHtml(lastQuestionType ?? 'Chưa phát hiện')}</dd></div>
           <div><dt>Session ID</dt><dd style="font-family: var(--font-mono); font-size: 12px;">${escapeHtml(shortId(state.session?.id ?? ''))}</dd></div>
         </dl>
@@ -301,13 +317,14 @@ function renderChat(state: AppState) {
         </div>
         <div class="chat-header">
           <div>
-            <p class="section-kicker">Live Transcript</p>
+            <p class="section-kicker">Live Transcript (Gemini 2.5 Flash)</p>
             <h2 class="font-serif">${escapeHtml(persona?.name ?? 'Stakeholder')}</h2>
           </div>
           <span class="view-pill liquid-glass">${state.evaluation ? 'Review mode' : state.busy ? 'Processing' : 'Ready'}</span>
         </div>
         <div class="messages" id="messages">
           ${state.messages.length === 0 ? renderEmpty('Chưa có tin nhắn trong phiên này.', 'Bắt đầu bằng một câu hỏi khảo sát nghiệp vụ.') : state.messages.map((msg, index) => renderMessage(msg, index)).join('')}
+          ${thinkingHtml}
         </div>
         <form class="composer" id="message-form">
           <textarea name="content" rows="3" maxlength="4000" placeholder="Nhập câu hỏi nghiệp vụ gửi cho stakeholder..." ${state.busy || Boolean(state.evaluation) ? 'disabled' : ''}></textarea>
@@ -386,7 +403,7 @@ function renderReviewSessionItem(session: ReviewSessionSummary, state: AppState,
   const active = session.id === state.selectedReviewSessionId
   const score = session.evaluation?.coverageScore
   return `
-    <button class="review-session-item ${active ? 'active' : ''}" data-review-session-id="${escapeAttribute(session.id)}" type="button" data-animate="fade-up" style="--index: ${index}">
+    <button class="review-session-item ${active ? 'active' : ''}" data-review-session-id="${escapeAttribute(session.id)}" type="button" data-animate="fade-up" style="--index: ${index}" ${state.busy ? 'disabled' : ''}>
       <span class="scenario-title-block">
         <strong>${escapeHtml(session.student.name || session.student.email)}</strong>
         <small>${escapeHtml(session.scenario.title)}</small>

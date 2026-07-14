@@ -1,6 +1,6 @@
 # .NET
-backend/**/bin/
-backend/**/obj/
+**/bin/
+**/obj/
 backend/**/*.user
 
 # Python
@@ -17,8 +17,10 @@ frontend/dist/
 # Environment
 .env
 *.env.local
-tools/logs/
+**/tools/logs/
 backend/ReqSimulator.API/.keys/
+.keys/
+backup.sql
 
 # IDE
 .vs/

@@ -1,19 +1,23 @@
 import os
 import json
+import threading
 from google import genai
 from app.models.schemas import DesignSuggestionsData
 
 _client: genai.Client | None = None
+_client_lock = threading.Lock()
 MODEL = os.getenv("MODEL_NAME", "gemini-2.5-flash")
 
 
 def _get_client() -> genai.Client:
     global _client
     if _client is None:
-        api_key = os.getenv("GEMINI_API_KEY")
-        if not api_key:
-            raise RuntimeError("GEMINI_API_KEY is not configured.")
-        _client = genai.Client(api_key=api_key)
+        with _client_lock:
+            if _client is None:
+                api_key = os.getenv("GEMINI_API_KEY")
+                if not api_key:
+                    raise RuntimeError("GEMINI_API_KEY is not configured.")
+                _client = genai.Client(api_key=api_key)
     return _client
 
 

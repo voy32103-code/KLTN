@@ -2143,6 +2143,10 @@ internal static class Program
             if (!string.IsNullOrWhiteSpace(jwtKey))
                 startInfo.Environment["Jwt__Key"] = jwtKey;
 
+            var internalKey = Environment.GetEnvironmentVariable("AiService__InternalKey");
+            if (!string.IsNullOrWhiteSpace(internalKey))
+                startInfo.Environment["AiService__InternalKey"] = internalKey;
+
             var process = new Process
             {
                 StartInfo = startInfo,

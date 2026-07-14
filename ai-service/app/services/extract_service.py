@@ -10,9 +10,10 @@ import os
 import re
 import logging
 import asyncio
+import threading
 from collections.abc import Iterable
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from google import genai
 
 from app.models.schemas import ExtractRequest, ExtractResponse, ExtractedReq
@@ -20,6 +21,7 @@ from app.models.schemas import ExtractRequest, ExtractResponse, ExtractedReq
 router = APIRouter()
 logger = logging.getLogger(__name__)
 _client: genai.Client | None = None
+_client_lock = threading.Lock()
 MODEL = os.getenv("MODEL_NAME", "gemini-2.5-flash")
 
 # ... (EXTRACT_PROMPT and REQUIREMENT_CUES remain unchanged, but let's provide them so the replacement matches exactly)
@@ -64,39 +66,45 @@ REQUIREMENT_CUES = (
 
 @router.post("/extract", response_model=ExtractResponse)
 async def extract_requirements(req: ExtractRequest):
-    conversation_text = _format_conversation(req.history)
-    requirements = []
-    max_retries = 3
+    try:
+        conversation_text = _format_conversation(req.history)
+        requirements = []
+        max_retries = 3
 
-    for attempt in range(max_retries):
-        try:
-            response = _get_client().models.generate_content(
-                model=MODEL,
-                contents=f"{EXTRACT_PROMPT}\n\n--- CONVERSATION ---\n{conversation_text}",
-                config={"temperature": 0.2, "max_output_tokens": 2000},
-            )
-            requirements = _parse_extraction_json(getattr(response, "text", "") or "")
-            break
-        except Exception as e:
-            if attempt == max_retries - 1:
-                logger.warning(
-                    f"Gemini extraction failed after {max_retries} attempts: {e}. "
-                    "Falling back to regex parser."
+        for attempt in range(max_retries):
+            try:
+                response = _get_client().models.generate_content(
+                    model=MODEL,
+                    contents=f"{EXTRACT_PROMPT}\n\n--- CONVERSATION ---\n{conversation_text}",
+                    config={"temperature": 0.2, "max_output_tokens": 2000},
                 )
-                requirements = _fallback_extract_requirements(req.history)
-            else:
-                await asyncio.sleep(1 * (attempt + 1))
+                requirements = _parse_extraction_json(getattr(response, "text", "") or "")
+                break
+            except Exception as e:
+                if attempt == max_retries - 1:
+                    logger.warning(
+                        f"Gemini extraction failed after {max_retries} attempts: {e}. "
+                        "Falling back to regex parser."
+                    )
+                    requirements = _fallback_extract_requirements(req.history)
+                else:
+                    await asyncio.sleep(1 * (attempt + 1))
 
-    return ExtractResponse(requirements=requirements)
+        return ExtractResponse(requirements=requirements)
+    except Exception as e:
+        logger.exception("Requirement extraction error.")
+        raise HTTPException(status_code=500, detail="An error occurred during requirement extraction.")
 
 
 def _get_client() -> genai.Client:
     global _client
     if _client is None:
-        api_key = os.getenv("GEMINI_API_KEY")
-        if not api_key:
-            raise RuntimeError("GEMINI_API_KEY is not configured.")
-        _client = genai.Client(api_key=api_key)
+        with _client_lock:
+            if _client is None:
+                api_key = os.getenv("GEMINI_API_KEY")
+                if not api_key:
+                    raise RuntimeError("GEMINI_API_KEY is not configured.")
+                _client = genai.Client(api_key=api_key)
     return _client
 
 

@@ -2,9 +2,13 @@
 Chat service for persona-driven stakeholder replies with scenario-config gating.
 """
 import os
+import threading
+import logging
 
 from fastapi import APIRouter, HTTPException
 from google import genai
+
+logger = logging.getLogger(__name__)
 
 from app.models.schemas import ChatRequest, ChatResponse
 from app.services.consistency_checker import (
@@ -23,16 +27,19 @@ from app.services.scenario_config_service import ScenarioConfig, get_scenario_co
 router = APIRouter()
 
 _client: genai.Client | None = None
+_client_lock = threading.Lock()
 MODEL = os.getenv("MODEL_NAME", "gemini-2.5-flash")
 
 
 def _get_client() -> genai.Client:
     global _client
     if _client is None:
-        api_key = os.getenv("GEMINI_API_KEY")
-        if not api_key:
-            raise RuntimeError("GEMINI_API_KEY is not configured.")
-        _client = genai.Client(api_key=api_key)
+        with _client_lock:
+            if _client is None:
+                api_key = os.getenv("GEMINI_API_KEY")
+                if not api_key:
+                    raise RuntimeError("GEMINI_API_KEY is not configured.")
+                _client = genai.Client(api_key=api_key)
     return _client
 
 
@@ -200,6 +207,7 @@ async def chat(req: ChatRequest):
         )
 
     except Exception as e:
+        logger.warning("Primary AI chat failed, attempting fallback. Error: %s", str(e), exc_info=True)
         try:
             question_type = detect_question_type(req.studentMessage)
             state = load_persona_state(req)
@@ -222,9 +230,10 @@ async def chat(req: ChatRequest):
                 stateUpdate=state_update,
             )
         except Exception as fallback_error:
+            logger.exception("AI chat error and fallback failed.")
             raise HTTPException(
                 status_code=500,
-                detail=f"AI chat error: {str(e)}; fallback error: {str(fallback_error)}",
+                detail="An error occurred during chat processing and fallback generation.",
             ) from fallback_error
 
 
