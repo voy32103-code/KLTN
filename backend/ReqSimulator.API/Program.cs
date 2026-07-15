@@ -20,6 +20,9 @@ LoadDotEnvFiles(
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Định nghĩa tên cho chính sách CORS
+var AllowVercelOrigin = "_allowVercelOrigin";
+
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 builder.Logging.AddDebug();
@@ -189,13 +192,20 @@ builder.Services.AddHttpClient<AiServiceClient>(client =>
     client.DefaultRequestHeaders.Add("X-AI-Service-Key", builder.Configuration["AiService:InternalKey"] ?? "dev-internal-key");
 });
 
-// ===== CORS: allow the React frontend (port 5173) to call the API =====
+// ===== CORS: allow the React frontend (localhost + Vercel) to call the API =====
 builder.Services.AddCors(options =>
 {
-    options.AddDefaultPolicy(policy =>
-        policy.WithOrigins("http://localhost:5173", "http://127.0.0.1:5173")
-              .AllowAnyMethod()
-              .AllowAnyHeader());
+    options.AddPolicy(name: AllowVercelOrigin,
+        policy =>
+        {
+            policy.WithOrigins(
+                      "https://kltn-chi.vercel.app",
+                      "http://localhost:5173",
+                      "http://127.0.0.1:5173")
+                  .AllowAnyHeader()
+                  .AllowAnyMethod()
+                  .AllowCredentials();
+        });
 });
 
 // ===== Rate Limiting =====
@@ -238,7 +248,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseCors();
+app.UseRouting();
+app.UseCors(AllowVercelOrigin);
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseRateLimiter();
