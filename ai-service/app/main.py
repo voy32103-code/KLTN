@@ -46,8 +46,11 @@ app.include_router(evaluate_router, prefix="/api")
 
 
 @app.get("/")
-def index():
-    return {"status": "ok", "service": "ai-service", "message": "ReqSimulator AI Service is running."}
+async def root():
+    return {
+        "status": "healthy",
+        "service": "ReqSimulator AI Service"
+    }
 
 
 @app.get("/health")
