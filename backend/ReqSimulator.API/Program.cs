@@ -80,37 +80,44 @@ static string GetRequiredConfig(IConfiguration configuration, string key)
 
 static string NormalizePostgresConnectionString(string value)
 {
-    if (!Uri.TryCreate(value, UriKind.Absolute, out var uri) ||
-        (uri.Scheme != "postgres" && uri.Scheme != "postgresql"))
+    NpgsqlConnectionStringBuilder builder;
+    if (Uri.TryCreate(value, UriKind.Absolute, out var uri) &&
+        (uri.Scheme == "postgres" || uri.Scheme == "postgresql"))
     {
-        return value;
-    }
+        var credentials = uri.UserInfo.Split(':', 2);
+        var username = credentials.Length > 0 ? Uri.UnescapeDataString(credentials[0]) : "";
+        var password = credentials.Length > 1 ? Uri.UnescapeDataString(credentials[1]) : "";
 
-    var credentials = uri.UserInfo.Split(':', 2);
-    var username = credentials.Length > 0 ? Uri.UnescapeDataString(credentials[0]) : "";
-    var password = credentials.Length > 1 ? Uri.UnescapeDataString(credentials[1]) : "";
-
-    var builder = new NpgsqlConnectionStringBuilder
-    {
-        Host = uri.Host,
-        Port = uri.IsDefaultPort ? 5432 : uri.Port,
-        Database = Uri.UnescapeDataString(uri.AbsolutePath.TrimStart('/')),
-        Username = username,
-        Password = password
-    };
-
-    foreach (var parameter in ParseQueryString(uri.Query))
-    {
-        switch (parameter.Key)
+        builder = new NpgsqlConnectionStringBuilder
         {
-            case "sslmode":
-                builder["SSL Mode"] = parameter.Value;
-                break;
-            case "channel_binding":
-                builder["Channel Binding"] = parameter.Value;
-                break;
+            Host = uri.Host,
+            Port = uri.IsDefaultPort ? 5432 : uri.Port,
+            Database = Uri.UnescapeDataString(uri.AbsolutePath.TrimStart('/')),
+            Username = username,
+            Password = password
+        };
+
+        foreach (var parameter in ParseQueryString(uri.Query))
+        {
+            switch (parameter.Key)
+            {
+                case "sslmode":
+                    builder["SSL Mode"] = parameter.Value;
+                    break;
+                case "channel_binding":
+                    builder["Channel Binding"] = parameter.Value;
+                    break;
+            }
         }
     }
+    else
+    {
+        builder = new NpgsqlConnectionStringBuilder(value);
+    }
+
+    // Giới hạn kết nối pool để bảo vệ Neon PostgreSQL Free Tier khỏi rủi ro quá tải slots (max 10-20 connections)
+    builder.MaxPoolSize = 8;
+    builder.Pooling = true;
 
     return builder.ConnectionString;
 }
