@@ -35,7 +35,7 @@ public class AiServiceClient
     {
         try
         {
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(40));
             var response = await _http.PostAsJsonAsync("/api/chat", request, cts.Token);
             response.EnsureSuccessStatusCode();
             return (await response.Content.ReadFromJsonAsync<AiChatResponse>(cts.Token))!;
@@ -62,7 +62,7 @@ public class AiServiceClient
     {
         try
         {
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(40));
             var response = await _http.PostAsJsonAsync("/api/extract", request, cts.Token);
             response.EnsureSuccessStatusCode();
             return (await response.Content.ReadFromJsonAsync<AiExtractResponse>(cts.Token))!;
@@ -89,7 +89,7 @@ public class AiServiceClient
     {
         try
         {
-            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(40));
             var response = await _http.PostAsJsonAsync("/api/evaluate", request, cts.Token);
             response.EnsureSuccessStatusCode();
             return (await response.Content.ReadFromJsonAsync<AiEvaluateResponse>(cts.Token))!;
