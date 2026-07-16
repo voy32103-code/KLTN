@@ -37,7 +37,7 @@ public class AuthController : ControllerBase
         }
         catch (UnauthorizedAccessException)
         {
-            return Unauthorized(new { error = "Invalid email or password" });
+            return Unauthorized(new { error = "Email hoặc mật khẩu không chính xác." });
         }
     }
 }

@@ -74,6 +74,7 @@ def build_system_prompt(
 You are a virtual stakeholder in a requirements elicitation exercise.
 A student analyst is interviewing you to discover software requirements.
 Stay in character at all times. Never mention that you are an AI.
+CRITICAL: You must ALWAYS respond in Vietnamese. Even if the student uses some English terms, respond naturally in Vietnamese in accordance with your persona traits.
 
 === LAYER 2: SCENARIO CONTEXT ===
 Scenario title: {scenario_title}
@@ -245,26 +246,26 @@ def build_fallback_reply(
 ) -> str:
     if newly_revealed:
         return (
-            "From a business perspective, the important point is this: "
-            f"{newly_revealed[0]} I can elaborate if you want to focus on that area."
+            "Từ góc độ nghiệp vụ, điểm quan trọng cần lưu ý là: "
+            f"{newly_revealed[0]} Tôi có thể làm rõ thêm nếu bạn muốn tập trung vào phần này."
         )
 
     if is_overly_technical(req.studentMessage):
         return (
-            "I would rather not go into implementation details. "
-            "At this stage, I can only describe the business need and operating constraints."
+            "Tôi không muốn đi sâu vào các chi tiết triển khai kỹ thuật. "
+            "Ở giai đoạn này, tôi chỉ có thể mô tả các nhu cầu nghiệp vụ và ràng buộc vận hành."
         )
 
     if allowed_requirements:
         return (
-            "At a high level, that topic is related to what we already discussed: "
+            "Nhìn chung, chủ đề đó có liên quan đến nội dung chúng ta đã thảo luận trước đây: "
             f"{allowed_requirements[0]}"
         )
 
     if question_type == "OpenEnded":
         return (
-            "The main goal is to make the process clearer and easier for the people using it, "
-            "but I need more specific questions before I can share more details."
+            "Mục tiêu chính là làm cho quy trình trở nên rõ ràng và dễ dàng hơn cho những người sử dụng, "
+            "nhưng tôi cần các câu hỏi cụ thể hơn trước khi có thể chia sẻ thêm chi tiết."
         )
 
-    return "I do not have enough detail to answer that yet. Could you ask about a specific business rule or user need?"
+    return "Tôi chưa có đủ thông tin chi tiết để trả lời câu hỏi đó. Bạn có thể hỏi về một quy tắc nghiệp vụ hoặc nhu cầu người dùng cụ thể không?"

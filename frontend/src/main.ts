@@ -209,7 +209,7 @@ async function loadScenarios(showLoading = true) {
       state.selectedScenario = null
       state.selectedPersonaId = null
     }
-    if (showLoading) setNotice('success', 'Đã tải danh sách scenario.')
+    if (showLoading) setNotice('success', 'Đã tải danh sách kịch bản.')
   })
 }
 
@@ -239,7 +239,7 @@ async function startSession() {
     state.messages = []
     state.evaluation = null
     state.view = 'chat'
-    setNotice('success', 'Session đã được tạo.')
+    setNotice('success', 'Phiên phỏng vấn đã được tạo.')
   })
 }
 
@@ -270,7 +270,7 @@ async function loadReviewSessions(showLoading = true) {
       state.reviewDetail = await api.request<ReviewSessionDetail>(`/api/Sessions/review/${sessions[0].id}`)
     }
 
-    if (showLoading) setNotice('success', 'Đã tải lecturer review dashboard.')
+    if (showLoading) setNotice('success', 'Đã tải bảng điều khiển giảng viên.')
   })
 }
 
@@ -337,13 +337,13 @@ async function endSession() {
     state.evaluation = await api.request<EvaluationResult>(`/api/Sessions/${state.session?.id}/end`, {
       method: 'POST',
     })
-    setNotice('success', 'Đã kết thúc session và nhận kết quả đánh giá.')
+    setNotice('success', 'Đã kết thúc phiên phỏng vấn và nhận kết quả đánh giá.')
   })
 }
 
 function exportReviewArtifact() {
   if (!state.reviewDetail) {
-    setNotice('error', 'Chọn một session trước khi export artifact.')
+    setNotice('error', 'Chọn một phiên phỏng vấn trước khi xuất dữ liệu.')
     return
   }
 
@@ -366,12 +366,12 @@ function exportReviewArtifact() {
   link.click()
   link.remove()
   URL.revokeObjectURL(url)
-  setNotice('success', 'Đã export session artifact JSON.')
+  setNotice('success', 'Đã xuất dữ liệu phiên phỏng vấn dưới dạng JSON.')
 }
 
 function exportReviewCsv() {
   if (!state.reviewDetail) {
-    setNotice('error', 'Chọn một session trước khi export artifact.')
+    setNotice('error', 'Chọn một phiên phỏng vấn trước khi xuất dữ liệu.')
     return
   }
 
@@ -385,7 +385,7 @@ function exportReviewCsv() {
   link.click()
   link.remove()
   URL.revokeObjectURL(url)
-  setNotice('success', 'Đã export session artifact CSV.')
+  setNotice('success', 'Đã xuất dữ liệu phiên phỏng vấn dưới dạng CSV.')
 }
 
 async function withBusy(task: () => Promise<void>) {

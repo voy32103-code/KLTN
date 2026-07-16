@@ -42,10 +42,10 @@ export function renderApp(state: AppState) {
 
 function renderTopbar(state: AppState) {
   const viewLabels: Record<AppView, string> = {
-    auth: 'Access Portal',
-    scenarios: 'Scenario picker',
-    chat: state.evaluation ? 'Evaluation report' : 'Live Interview',
-    review: 'Review dashboard',
+    auth: 'Cổng truy cập',
+    scenarios: 'Lựa chọn kịch bản',
+    chat: state.evaluation ? 'Báo cáo đánh giá' : 'Phỏng vấn trực tiếp',
+    review: 'Bảng điều khiển review',
   }
   const canReview = isPrivilegedRole(state.user?.role)
 
@@ -56,7 +56,7 @@ function renderTopbar(state: AppState) {
         <div>
           <p class="eyebrow">ReqSimulator</p>
           <h1 style="font-size: 20px; font-family: var(--font-sans); font-weight: 700;">
-            Requirement Elicitation Lab
+            Phòng thực hành Khai thác yêu cầu
           </h1>
         </div>
       </div>
@@ -142,7 +142,7 @@ function renderScenarioPicker(state: AppState) {
   return `
     <section class="section-head" data-animate="fade-up" style="--index: 0">
       <div>
-        <p class="section-kicker">Scenario Setup</p>
+        <p class="section-kicker">Thiết lập kịch bản</p>
         <h2>Chọn tình huống và đối tác phỏng vấn</h2>
       </div>
       <button class="ghost-button" data-action="refresh-scenarios" type="button" ${state.busy ? 'disabled' : ''}>
@@ -184,7 +184,7 @@ function renderScenarioItem(scenario: ScenarioSummary, state: AppState, index: n
     <button class="scenario-item ${active ? 'active' : ''}" data-scenario-id="${escapeAttribute(scenario.id)}" type="button" data-animate="fade-up" style="--index: ${index}" ${state.busy ? 'disabled' : ''}>
       <span class="scenario-title-block">
         <strong>${escapeHtml(scenario.title)}</strong>
-        <small style="font-family: var(--font-mono); text-transform: uppercase;">${escapeHtml(scenario.domain ?? 'General')} · ${escapeHtml(scenario.difficulty)}</small>
+        <small style="font-family: var(--font-mono); text-transform: uppercase;">${escapeHtml(scenario.domain ?? 'Nghiệp vụ')} · ${escapeHtml(scenario.difficulty)}</small>
       </span>
       <span class="scenario-stats">
         <span>${scenario.personaCount} stakeholder</span>
@@ -199,7 +199,7 @@ function renderScenarioPlaceholder() {
     <div class="placeholder">
       <p class="section-kicker">Bắt đầu</p>
       <h2>Chọn kịch bản để xem chi tiết</h2>
-      <p>Thông tin kịch bản sẽ hiển thị domain, độ khó, danh sách các hidden requirements và stakeholder đối tác.</p>
+      <p>Thông tin kịch bản sẽ hiển thị lĩnh vực, độ khó, danh sách các hidden requirements và stakeholder đối tác.</p>
     </div>
   `
 }
@@ -209,19 +209,19 @@ function renderScenarioDetail(scenario: ScenarioDetail, state: AppState) {
   return `
     <div class="detail-header" data-animate="fade-up" style="--index: 0">
       <div>
-        <p class="section-kicker">${escapeHtml(scenario.domain ?? 'Scenario')}</p>
+        <p class="section-kicker">${escapeHtml(scenario.domain ?? 'Kịch bản')}</p>
         <h2>${escapeHtml(scenario.title)}</h2>
         <p>${escapeHtml(scenario.description)}</p>
       </div>
       <div class="metrics">
         <span>Stakeholder: <strong>${scenario.personaCount}</strong></span>
-        <span>Hidden Req: <strong>${scenario.requirementCount}</strong></span>
+        <span>Yêu cầu ẩn: <strong>${scenario.requirementCount}</strong></span>
         <span>Độ khó: <strong style="font-family: var(--font-sans); text-transform: uppercase;">${escapeHtml(scenario.difficulty)}</strong></span>
       </div>
     </div>
     <div class="persona-section">
       <div class="subsection-heading" data-animate="fade-up" style="--index: 1">
-        <h3>Stakeholder Persona</h3>
+        <h3>Đối tác Stakeholder</h3>
         ${selectedPersona ? `<span class="view-pill liquid-glass font-serif">${escapeHtml(selectedPersona.name)}</span>` : ''}
       </div>
       <div class="persona-grid">
@@ -249,7 +249,7 @@ function renderPersonaCard(persona: Persona, state: AppState, index: number) {
         <span class="difficulty-badge liquid-glass">${escapeHtml(persona.difficulty)}</span>
       </span>
       <span>${escapeHtml(persona.roleTitle ?? 'Stakeholder')}</span>
-      <small>${escapeHtml(persona.communicationStyle ?? 'neutral')} · ${escapeHtml(persona.knowledgeLevel ?? 'standard')}</small>
+      <small>${escapeHtml(persona.communicationStyle ?? 'trung lập')} · ${escapeHtml(persona.knowledgeLevel ?? 'tiêu chuẩn')}</small>
     </button>
   `
 }
@@ -317,10 +317,10 @@ function renderChat(state: AppState) {
         </div>
         <div class="chat-header">
           <div>
-            <p class="section-kicker">Live Transcript (Gemini 2.5 Flash)</p>
+            <p class="section-kicker">Hội thoại Trực tiếp (Gemini 2.5 Flash)</p>
             <h2 class="font-serif">${escapeHtml(persona?.name ?? 'Stakeholder')}</h2>
           </div>
-          <span class="view-pill liquid-glass">${state.evaluation ? 'Review mode' : state.busy ? 'Processing' : 'Ready'}</span>
+          <span class="view-pill liquid-glass">${state.evaluation ? 'Chế độ xem lại' : state.busy ? 'Đang xử lý' : 'Sẵn sàng'}</span>
         </div>
         <div class="messages" id="messages">
           ${state.messages.length === 0 ? renderEmpty('Chưa có tin nhắn trong phiên này.', 'Bắt đầu bằng một câu hỏi khảo sát nghiệp vụ.') : state.messages.map((msg, index) => renderMessage(msg, index)).join('')}
@@ -345,7 +345,7 @@ function renderReviewDashboard(state: AppState) {
   return `
     <section class="section-head" data-animate="fade-up" style="--index: 0">
       <div>
-        <p class="section-kicker">Lecturer Review</p>
+        <p class="section-kicker">Đánh giá của Giảng viên</p>
         <h2>Bảng kết quả phỏng vấn của sinh viên</h2>
       </div>
       <button class="ghost-button" data-action="refresh-review" type="button" ${state.busy ? 'disabled' : ''}>
@@ -367,7 +367,7 @@ function renderReviewDashboard(state: AppState) {
       </span>
       <span>
         <strong>${averageCoverage}</strong>
-        <small>coverage trung bình</small>
+        <small>độ bao phủ trung bình</small>
       </span>
     </section>
     <section class="review-layout">
@@ -379,7 +379,7 @@ function renderReviewDashboard(state: AppState) {
         </div>
         <div class="panel-heading">
           <div>
-            <p class="section-kicker">Pilot Artifacts</p>
+            <p class="section-kicker">Bản ghi thử nghiệm</p>
             <h2>Các phiên gần nhất</h2>
           </div>
         </div>
@@ -410,7 +410,7 @@ function renderReviewSessionItem(session: ReviewSessionSummary, state: AppState,
       </span>
       <span class="scenario-stats">
         <span>${session.studentTurnCount} lượt hỏi</span>
-        <span>${session.finalizationStatus}</span>
+        <span>${session.finalizationStatus === 'completed' ? 'Đã hoàn thành' : 'Đang thực hiện'}</span>
         <span>${typeof score === 'number' ? formatScore(score) : 'Chưa điểm'}</span>
       </span>
     </button>
@@ -432,7 +432,7 @@ function renderReviewSessionDetail(detail: ReviewSessionDetail) {
   return `
     <div class="review-detail-header" data-animate="fade-up" style="--index: 0">
       <div>
-        <p class="section-kicker">${escapeHtml(detail.session.scenario.domain ?? 'Scenario')}</p>
+        <p class="section-kicker">${escapeHtml(detail.session.scenario.domain ?? 'Nghiệp vụ')}</p>
         <h2>${escapeHtml(detail.session.scenario.title)}</h2>
         <p>${escapeHtml(detail.session.scenario.description)}</p>
       </div>
@@ -451,7 +451,7 @@ function renderReviewSessionDetail(detail: ReviewSessionDetail) {
     <div class="review-identity-grid" data-animate="fade-up" style="--index: 1">
       <span><strong>Sinh viên</strong>${escapeHtml(detail.session.student.name)} · ${escapeHtml(detail.session.student.email)}</span>
       <span><strong>Stakeholder</strong><span class="font-serif">${escapeHtml(detail.session.persona.name)}</span> · ${escapeHtml(detail.session.persona.roleTitle ?? 'Stakeholder')}</span>
-      <span><strong>Trạng thái</strong>${escapeHtml(detail.session.finalizationStatus)} · ${detail.session.isActive ? 'Đang hoạt động' : 'Đã đóng'}</span>
+      <span><strong>Trạng thái</strong>${detail.session.finalizationStatus === 'completed' ? 'Đã hoàn thành' : 'Đang thực hiện'} · ${detail.session.isActive ? 'Đang hoạt động' : 'Đã đóng'}</span>
     </div>
     <div class="review-content-grid">
       <section class="review-block" data-animate="fade-up" style="--index: 2">
@@ -507,7 +507,7 @@ function renderExtractedRequirements(requirements: ReviewExtractedRequirement[])
 
 function renderHiddenRequirements(requirements: ReviewHiddenRequirement[]) {
   if (requirements.length === 0) {
-    return renderEmpty('Scenario chưa có hidden requirement.')
+    return renderEmpty('Scenario này chưa có hidden requirement.')
   }
 
   return `
@@ -515,7 +515,7 @@ function renderHiddenRequirements(requirements: ReviewHiddenRequirement[]) {
       ${requirements.map((requirement) => `
         <article>
           <strong>${escapeHtml(requirement.requirementText)}</strong>
-          <small>Cấp độ: ${requirement.gateOrder} · Loại: ${escapeHtml(requirement.category)} · Độ khó: ${escapeHtml(requirement.revealDifficulty)}</small>
+          <small>Cấp độ: ${requirement.gateOrder} · Nhóm: ${escapeHtml(requirement.category)} · Độ khó: ${escapeHtml(requirement.revealDifficulty)}</small>
           ${requirement.revealCondition ? `<small>Điều kiện: ${escapeHtml(requirement.revealCondition)}</small>` : ''}
         </article>
       `).join('')}
@@ -548,6 +548,7 @@ function calculateAverageCoverage(sessions: ReviewSessionSummary[]) {
   return formatScore(scores.reduce((sum, score) => sum + score, 0) / scores.length)
 }
 
+// Format score helper
 function formatNullablePercent(value?: number | null) {
   return typeof value === 'number' ? formatScore(value * 100) : 'N/A'
 }
@@ -578,14 +579,14 @@ function renderEvaluation(evaluation: EvaluationResult) {
           </div>
         </div>
       </div>
-
+ 
       <div class="diagram-section" style="background: rgba(255, 255, 255, 0.01); border: 1px solid var(--color-border); border-radius: 6px; padding: 16px;">
         <h4 style="margin: 0 0 12px 0; font-size: 13px; color: var(--color-text-secondary);">Sơ đồ Use Case sơ bộ</h4>
         <div class="mermaid-container" style="background: rgba(0,0,0,0.15); border-radius: 4px; padding: 12px; overflow-x: auto; display: flex; justify-content: center;">
           <pre class="mermaid" style="margin: 0; background: transparent; padding: 0; font-family: var(--font-mono); font-size: 12px; line-height: 1.4; color: var(--color-text);">${escapeHtml(design.useCaseMermaid)}</pre>
         </div>
       </div>
-
+ 
       <div class="diagram-section" style="background: rgba(255, 255, 255, 0.01); border: 1px solid var(--color-border); border-radius: 6px; padding: 16px;">
         <h4 style="margin: 0 0 12px 0; font-size: 13px; color: var(--color-text-secondary);">Sơ đồ lớp thực thể (ERD) sơ bộ</h4>
         <div class="mermaid-container" style="background: rgba(0,0,0,0.15); border-radius: 4px; padding: 12px; overflow-x: auto; display: flex; justify-content: center;">
@@ -599,12 +600,12 @@ function renderEvaluation(evaluation: EvaluationResult) {
       <span>Vui lòng thu thập nhiều yêu cầu hơn để AI có thể phân tích sơ đồ.</span>
     </div>
   `
-
+ 
   return `
     <section class="evaluation" data-animate="fade-up" style="--index: 0">
       <div class="score-card ${formatScoreClass(evaluation.coverageScore)}">
         <span>${formatScore(evaluation.coverageScore)}</span>
-        <small>Coverage score</small>
+        <small>Mức độ bao phủ</small>
       </div>
       <div class="score-grid">
         <span>Trùng khớp: <strong>${evaluation.matchedCount}</strong></span>
@@ -613,13 +614,13 @@ function renderEvaluation(evaluation: EvaluationResult) {
         <span>Trích xuất: <strong>${evaluation.extractedCount}</strong></span>
         <span>Tổng yêu cầu: <strong>${total}</strong></span>
       </div>
-
+ 
       <div class="eval-tabs" style="margin-top: 24px; border-bottom: 1px solid var(--color-border); display: flex; gap: 20px; margin-bottom: 16px;">
         <button class="eval-tab-btn active" data-tab="feedback" style="background: none; border: none; border-bottom: 2px solid var(--color-primary); padding: 8px 4px; color: var(--color-text); font-weight: bold; cursor: pointer; transition: all 0.2s ease;">Đánh giá & Feedback</button>
         <button class="eval-tab-btn" data-tab="design" style="background: none; border: none; border-bottom: 2px solid transparent; padding: 8px 4px; color: var(--color-text-secondary); cursor: pointer; transition: all 0.2s ease;">Mô hình Thiết kế sơ bộ</button>
         <button class="eval-tab-btn" data-tab="matching" style="background: none; border: none; border-bottom: 2px solid transparent; padding: 8px 4px; color: var(--color-text-secondary); cursor: pointer; transition: all 0.2s ease;">So khớp Chi tiết</button>
       </div>
-
+ 
       <div class="eval-tab-content active" id="tab-feedback">
         ${evaluation.scoringPolicy ? renderScoringPolicy(evaluation.scoringPolicy) : ''}
         ${feedback ? `
@@ -630,32 +631,31 @@ function renderEvaluation(evaluation: EvaluationResult) {
           </div>
         ` : ''}
       </div>
-
+ 
       <div class="eval-tab-content" id="tab-design" style="display: none;">
         ${designTabHtml}
       </div>
-
+ 
       <div class="eval-tab-content" id="tab-matching" style="display: none;">
         ${evaluation.matches?.length ? renderRequirementReport(evaluation.matches) : ''}
       </div>
     </section>
   `
 }
-
-
+ 
 function renderScoringPolicy(policy: ScoringPolicy) {
   return `
     <div class="policy-card">
       <div class="subsection-heading">
-        <h3>Scoring policy</h3>
-        <span style="font-family: var(--font-mono); font-size: 11px;">Preset: ${escapeHtml(policy.preset)}</span>
+        <h3>Chính sách tính điểm</h3>
+        <span style="font-family: var(--font-mono); font-size: 11px;">Thiết lập: ${escapeHtml(policy.preset)}</span>
       </div>
       <div class="policy-grid">
-        <span>Exact: <strong>${formatThreshold(policy.exactThreshold)}</strong></span>
-        <span>Semantic: <strong>${formatThreshold(policy.semanticThreshold)}</strong></span>
-        <span>Partial: <strong>${formatThreshold(policy.partialThreshold)}</strong></span>
+        <span>Khớp hoàn toàn: <strong>${formatThreshold(policy.exactThreshold)}</strong></span>
+        <span>Khớp ngữ nghĩa: <strong>${formatThreshold(policy.semanticThreshold)}</strong></span>
+        <span>Khớp một phần: <strong>${formatThreshold(policy.partialThreshold)}</strong></span>
         <span>Rubric: <strong>${policy.rubricPartialMatcher ? 'bật' : 'tắt'}</strong></span>
-        <span>Embedding: <strong>${escapeHtml(policy.embeddingModel)}</strong></span>
+        <span>Mô hình nhúng: <strong>${escapeHtml(policy.embeddingModel)}</strong></span>
       </div>
     </div>
   `

@@ -27,7 +27,7 @@ class ChatServiceFallbackTests(unittest.TestCase):
 
         reply = build_fallback_reply(req, "OpenEnded", [], [])
 
-        self.assertIn("implementation details", reply)
+        self.assertIn("chi tiết triển khai", reply)
 
     def test_consistency_guard_replaces_out_of_gate_reply_with_contextual_fallback(self):
         config = get_scenario_config("University Course Registration System", [])
@@ -62,7 +62,7 @@ class ChatServiceFallbackTests(unittest.TestCase):
             config=None,
         )
 
-        self.assertIn("implementation details", reply)
+        self.assertIn("chi tiết triển khai", reply)
 
 
 if __name__ == "__main__":

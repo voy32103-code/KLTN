@@ -167,14 +167,14 @@ def _semantic_terms(text: str) -> set[str]:
 
 def explain_match(hidden_text: str, extracted_text: str | None, score: float, match_type: str) -> str:
     if match_type == "exact":
-        return f"The extracted requirement closely matches the hidden requirement (similarity {score:.0%})."
+        return f"Yêu cầu được trích xuất khớp hoàn toàn với yêu cầu ẩn (độ tương đồng {score:.0%})."
     if match_type == "semantic":
-        return f"The wording differs, but the extracted requirement preserves the core meaning (similarity {score:.0%})."
+        return f"Cách diễn đạt khác biệt, nhưng yêu cầu được trích xuất vẫn giữ nguyên ý nghĩa cốt lõi (độ tương đồng {score:.0%})."
     if match_type == "partial":
-        return f"The extracted requirement is related, but it misses an important actor, condition, constraint, or specificity from the hidden requirement (similarity {score:.0%})."
+        return f"Yêu cầu được trích xuất có liên quan, nhưng thiếu một tác nhân, điều kiện, ràng buộc hoặc chi tiết quan trọng từ yêu cầu ẩn (độ tương đồng {score:.0%})."
     if extracted_text:
-        return f"No extracted requirement reached the partial threshold for this hidden requirement; the closest candidate scored {score:.0%}."
-    return "No extracted requirement was available to match this hidden requirement."
+        return f"Không có yêu cầu trích xuất nào đạt ngưỡng khớp một phần cho yêu cầu ẩn này; ứng viên gần nhất đạt điểm số {score:.0%}."
+    return "Không có yêu cầu trích xuất nào khả dụng để so khớp với yêu cầu ẩn này."
 
 
 def calculate_coverage(matches: list[Any]) -> tuple[float, int, int, int]:
@@ -200,22 +200,22 @@ def generate_feedback(matches: list[Any], hidden_reqs: list[Any]) -> tuple[list[
 
         if match.matchType in ("exact", "semantic"):
             strengths.append(
-                f"Successfully identified: {hidden.text} (similarity: {match.score:.0%})"
+                f"Đã xác định thành công: {hidden.text} (độ tương đồng: {match.score:.0%})"
             )
         elif match.matchType == "partial":
             weaknesses.append(
-                f"Partially identified: {hidden.text} — Your understanding was incomplete"
+                f"Xác định được một phần: {hidden.text} — Sự hiểu biết của bạn chưa đầy đủ"
             )
             suggestions.append(
-                f"Ask more detailed questions about: {hidden.category} requirements"
+                f"Đặt câu hỏi chi tiết hơn về các yêu cầu thuộc nhóm: {hidden.category}"
             )
         else:
-            weaknesses.append(f"Missed requirement: {hidden.category} area")
+            weaknesses.append(f"Bỏ sót yêu cầu thuộc lĩnh vực: {hidden.category}")
             suggestions.append(
-                f"Consider asking about {hidden.category.lower()} aspects of the system"
+                f"Cân nhắc hỏi thêm về các khía cạnh {hidden.category.lower()} của hệ thống"
             )
 
     if not strengths:
-        strengths.append("Keep practicing — try asking more open-ended questions first")
+        strengths.append("Hãy tiếp tục luyện tập — thử đặt thêm các câu hỏi mở trước")
 
     return strengths, weaknesses, suggestions

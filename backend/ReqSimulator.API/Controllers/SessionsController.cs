@@ -428,18 +428,18 @@ public class SessionsController : ControllerBase
         if (userId == null) return Unauthorized();
 
         if (dto.ScenarioId == Guid.Empty || dto.PersonaId == Guid.Empty)
-            return BadRequest("ScenarioId and PersonaId are required.");
+            return BadRequest("Thiếu thông tin ScenarioId hoặc PersonaId.");
 
         var scenario = await _db.Scenarios
             .Include(s => s.Personas)
             .FirstOrDefaultAsync(s => s.Id == dto.ScenarioId && s.IsActive);
 
         if (scenario is null)
-            return NotFound("Scenario not found or inactive.");
+            return NotFound("Kịch bản không tồn tại hoặc đã bị ẩn.");
 
         var persona = scenario.Personas.FirstOrDefault(p => p.Id == dto.PersonaId);
         if (persona is null)
-            return BadRequest("Persona does not belong to the selected scenario.");
+            return BadRequest("Stakeholder không thuộc kịch bản đã chọn.");
 
         var session = new SimulationSession
         {
@@ -470,7 +470,7 @@ public class SessionsController : ControllerBase
 
         var content = dto.Content?.Trim();
         if (string.IsNullOrWhiteSpace(content))
-            return BadRequest("Message content is required.");
+            return BadRequest("Nội dung tin nhắn không được để trống.");
 
         // 1. Tải thông tin ban đầu không khóa và nằm ngoài transaction
         var sessionInit = await _db.SimulationSessions
@@ -483,7 +483,7 @@ public class SessionsController : ControllerBase
 
         var isPrivileged = IsPrivilegedUser();
         if (!isPrivileged && sessionInit.StudentId != parsedUserId) return Forbid();
-        if (!sessionInit.IsActive) return BadRequest("Session already ended");
+        if (!sessionInit.IsActive) return BadRequest("Phiên phỏng vấn này đã kết thúc.");
 
         // Lấy lịch sử chat hiện tại để truyền cho AI
         var messagesHistory = await _db.Messages
@@ -526,7 +526,7 @@ public class SessionsController : ControllerBase
 
         if (session is null) return NotFound();
         await _db.Entry(session).Reference(s => s.Persona).LoadAsync();
-        if (!session.IsActive) return BadRequest("Session already ended");
+        if (!session.IsActive) return BadRequest("Phiên phỏng vấn này đã kết thúc.");
 
         var studentMsg = new Message
         {
@@ -612,7 +612,7 @@ public class SessionsController : ControllerBase
                 if (existingResponse is not null)
                     return Ok(existingResponse);
 
-                return Conflict("Session finalization is already in progress.");
+                return Conflict("Phiên phỏng vấn đang được hệ thống đánh giá, vui lòng không gửi lại.");
             }
         }
 
@@ -877,14 +877,14 @@ public class SessionsController : ControllerBase
         return match.MatchType switch
         {
             RequirementMatchType.Exact =>
-                $"The extracted requirement closely matches the hidden requirement (similarity {score:P0}).",
+                $"Yêu cầu được trích xuất khớp hoàn toàn với yêu cầu ẩn (độ tương đồng {score:P0}).",
             RequirementMatchType.Semantic =>
-                $"The wording differs, but the extracted requirement preserves the core meaning (similarity {score:P0}).",
+                $"Cách diễn đạt khác biệt, nhưng yêu cầu được trích xuất vẫn giữ nguyên ý nghĩa cốt lõi (độ tương đồng {score:P0}).",
             RequirementMatchType.Partial =>
-                $"The extracted requirement is related, but incomplete (similarity {score:P0}).",
+                $"Yêu cầu được trích xuất có liên quan nhưng chưa đầy đủ (độ tương đồng {score:P0}).",
             _ when match.ExtractedRequirement is not null =>
-                $"No extracted requirement reached the partial threshold; the closest stored candidate scored {score:P0}.",
-            _ => "No extracted requirement was available to match this hidden requirement."
+                $"Không có yêu cầu trích xuất nào đạt ngưỡng khớp một phần; ứng viên gần nhất đạt điểm số {score:P0}.",
+            _ => "Không có yêu cầu trích xuất nào khả dụng để so khớp với yêu cầu ẩn này."
         };
     }
 

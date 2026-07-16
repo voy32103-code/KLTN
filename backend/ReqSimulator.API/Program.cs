@@ -259,7 +259,7 @@ app.UseExceptionHandler(exceptionHandlerApp =>
 
         context.Response.StatusCode = StatusCodes.Status500InternalServerError;
         context.Response.ContentType = "application/json";
-        await context.Response.WriteAsJsonAsync(new { error = "An internal server error occurred." });
+        await context.Response.WriteAsJsonAsync(new { error = "Đã xảy ra lỗi hệ thống nội bộ." });
     });
 });
 

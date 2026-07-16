@@ -27,7 +27,7 @@ public class AuthService
     public async Task<User> Register(string name, string email, string password, UserRole role = UserRole.Student)
     {
         if (await _db.Users.AnyAsync(u => u.Email == email))
-            throw new InvalidOperationException("Email already exists");
+            throw new InvalidOperationException("Email đã tồn tại");
 
         var user = new User
         {
@@ -44,10 +44,10 @@ public class AuthService
     public async Task<string> Login(string email, string password)
     {
         var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == email)
-            ?? throw new UnauthorizedAccessException("Invalid credentials");
+            ?? throw new UnauthorizedAccessException("Thông tin đăng nhập không chính xác");
 
         if (!BCrypt.Net.BCrypt.Verify(password, user.PasswordHash))
-            throw new UnauthorizedAccessException("Invalid credentials");
+            throw new UnauthorizedAccessException("Thông tin đăng nhập không chính xác");
 
         return GenerateToken(user);
     }

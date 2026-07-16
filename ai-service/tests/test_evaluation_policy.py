@@ -110,7 +110,7 @@ class EvaluationPolicyTests(unittest.TestCase):
             "partial",
         )
 
-        self.assertIn("misses an important actor", reason)
+        self.assertIn("thiếu một tác nhân", reason)
         self.assertIn("61%", reason)
 
     def test_generate_feedback_returns_strengths_and_suggestions(self):
@@ -128,8 +128,8 @@ class EvaluationPolicyTests(unittest.TestCase):
         self.assertEqual(len(strengths), 1)
         self.assertEqual(len(weaknesses), 1)
         self.assertEqual(len(suggestions), 1)
-        self.assertIn("Successfully identified", strengths[0])
-        self.assertIn("Missed requirement", weaknesses[0])
+        self.assertIn("Đã xác định thành công", strengths[0])
+        self.assertIn("Bỏ sót yêu cầu", weaknesses[0])
         self.assertIn("functional", suggestions[0].lower())
 
 
