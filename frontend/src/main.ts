@@ -245,7 +245,7 @@ async function startSession() {
 
 async function openReviewDashboard() {
   if (!isPrivilegedRole(state.user?.role)) {
-    setNotice('error', 'Bạn cần quyền Lecturer hoặc Admin để mở review dashboard.')
+    setNotice('error', 'Bạn cần quyền Giảng viên hoặc Quản trị viên để mở bảng điều khiển.')
     return
   }
 

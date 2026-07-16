@@ -57,7 +57,7 @@ export function createApiClient(options: ApiClientOptions) {
     }
 
     if (!response.ok) {
-      const message = extractApiError(data) ?? `Request thất bại (${response.status}).`
+      const message = extractApiError(data) ?? `Yêu cầu thất bại (${response.status}).`
       throw new Error(message)
     }
 

@@ -163,7 +163,7 @@ function renderScenarioPicker(state: AppState) {
           </div>
         </div>
         <div class="list-stack">
-          ${state.scenarios.length === 0 ? renderEmpty('Chưa có scenario active.', 'Kiểm tra backend seed data hoặc tải lại danh sách.') : state.scenarios.map((item, index) => renderScenarioItem(item, state, index)).join('')}
+          ${state.scenarios.length === 0 ? renderEmpty('Chưa có kịch bản nào được kích hoạt.', 'Kiểm tra dữ liệu mẫu của máy chủ hoặc tải lại danh sách.') : state.scenarios.map((item, index) => renderScenarioItem(item, state, index)).join('')}
         </div>
       </aside>
       <section class="faux-chrome detail-panel" data-animate="fade-up" style="--index: 2">
@@ -187,8 +187,8 @@ function renderScenarioItem(scenario: ScenarioSummary, state: AppState, index: n
         <small style="font-family: var(--font-mono); text-transform: uppercase;">${escapeHtml(scenario.domain ?? 'Nghiệp vụ')} · ${escapeHtml(scenario.difficulty)}</small>
       </span>
       <span class="scenario-stats">
-        <span>${scenario.personaCount} stakeholder</span>
-        <span>${scenario.requirementCount} req</span>
+        <span>${scenario.personaCount} đối tác</span>
+        <span>${scenario.requirementCount} yêu cầu</span>
       </span>
     </button>
   `
@@ -199,7 +199,7 @@ function renderScenarioPlaceholder() {
     <div class="placeholder">
       <p class="section-kicker">Bắt đầu</p>
       <h2>Chọn kịch bản để xem chi tiết</h2>
-      <p>Thông tin kịch bản sẽ hiển thị lĩnh vực, độ khó, danh sách các hidden requirements và stakeholder đối tác.</p>
+      <p>Thông tin kịch bản sẽ hiển thị lĩnh vực, độ khó, danh sách các yêu cầu ẩn và đối tác phỏng vấn.</p>
     </div>
   `
 }
@@ -214,7 +214,7 @@ function renderScenarioDetail(scenario: ScenarioDetail, state: AppState) {
         <p>${escapeHtml(scenario.description)}</p>
       </div>
       <div class="metrics">
-        <span>Stakeholder: <strong>${scenario.personaCount}</strong></span>
+        <span>Đối tác phỏng vấn: <strong>${scenario.personaCount}</strong></span>
         <span>Yêu cầu ẩn: <strong>${scenario.requirementCount}</strong></span>
         <span>Độ khó: <strong style="font-family: var(--font-sans); text-transform: uppercase;">${escapeHtml(scenario.difficulty)}</strong></span>
       </div>
@@ -225,13 +225,13 @@ function renderScenarioDetail(scenario: ScenarioDetail, state: AppState) {
         ${selectedPersona ? `<span class="view-pill liquid-glass font-serif">${escapeHtml(selectedPersona.name)}</span>` : ''}
       </div>
       <div class="persona-grid">
-        ${scenario.personas.length === 0 ? renderEmpty('Scenario này chưa có persona.', 'Cần seed persona trước khi bắt đầu phỏng vấn.') : scenario.personas.map((persona, index) => renderPersonaCard(persona, state, index + 2)).join('')}
+        ${scenario.personas.length === 0 ? renderEmpty('Kịch bản này chưa có đối tác phỏng vấn nào.', 'Cần khởi tạo dữ liệu đối tác trước khi bắt đầu phỏng vấn.') : scenario.personas.map((persona, index) => renderPersonaCard(persona, state, index + 2)).join('')}
       </div>
     </div>
     <div class="panel-footer" data-animate="fade-up" style="--index: 5">
       <div>
-        <strong>${selectedPersona ? escapeHtml(selectedPersona.roleTitle ?? 'Stakeholder') : 'Chưa chọn đối tác'}</strong>
-        <span>${selectedPersona ? 'Phiên mô phỏng phỏng vấn phác thảo sẽ bắt đầu với nhân vật này.' : 'Vui lòng lựa chọn một stakeholder để bắt đầu.'}</span>
+        <strong>${selectedPersona ? escapeHtml(selectedPersona.roleTitle ?? 'Đối tác') : 'Chưa chọn đối tác'}</strong>
+        <span>${selectedPersona ? 'Phiên mô phỏng phỏng vấn phác thảo sẽ bắt đầu với nhân vật này.' : 'Vui lòng lựa chọn một đối tác phỏng vấn để bắt đầu.'}</span>
       </div>
       <button class="primary-button" data-action="start-session" type="button" ${!state.selectedPersonaId || state.busy ? 'disabled' : ''}>
         ${state.busy ? 'Đang khởi tạo...' : 'Bắt đầu phỏng vấn'}
@@ -248,7 +248,7 @@ function renderPersonaCard(persona: Persona, state: AppState, index: number) {
         <strong class="font-serif">${escapeHtml(persona.name)}</strong>
         <span class="difficulty-badge liquid-glass">${escapeHtml(persona.difficulty)}</span>
       </span>
-      <span>${escapeHtml(persona.roleTitle ?? 'Stakeholder')}</span>
+      <span>${escapeHtml(persona.roleTitle ?? 'Đối tác')}</span>
       <small>${escapeHtml(persona.communicationStyle ?? 'trung lập')} · ${escapeHtml(persona.knowledgeLevel ?? 'tiêu chuẩn')}</small>
     </button>
   `
@@ -265,7 +265,7 @@ function renderChat(state: AppState) {
   const thinkingHtml = isThinking ? `
     <article class="message stakeholder thinking" data-animate="fade-up" style="--index: ${state.messages.length}">
       <div class="message-meta">
-        <span class="font-serif">${escapeHtml(persona?.name ?? 'Stakeholder')}</span>
+        <span class="font-serif">${escapeHtml(persona?.name ?? 'Đối tác')}</span>
         <small>Đang suy nghĩ...</small>
       </div>
       <div class="thinking-indicator">
@@ -290,7 +290,7 @@ function renderChat(state: AppState) {
         </button>
         <div class="session-title">
           <p class="section-kicker">Phiên phỏng vấn</p>
-          <h2>${escapeHtml(scenario?.title ?? 'Session')}</h2>
+          <h2>${escapeHtml(scenario?.title ?? 'Phiên')}</h2>
         </div>
         <div class="session-status ${state.evaluation ? 'completed' : 'active'}">
           <span>${sessionStatus}</span>
@@ -298,11 +298,11 @@ function renderChat(state: AppState) {
           <small>Lượt hỏi</small>
         </div>
         <dl>
-          <div><dt>Stakeholder</dt><dd class="font-serif" style="font-size: 16px;">${escapeHtml(persona?.name ?? 'Stakeholder')}</dd></div>
+          <div><dt>Đối tác phỏng vấn</dt><dd class="font-serif" style="font-size: 16px;">${escapeHtml(persona?.name ?? 'Đối tác')}</dd></div>
           <div><dt>Vai trò</dt><dd>${escapeHtml(persona?.roleTitle ?? 'N/A')}</dd></div>
           <div><dt>Mô hình AI</dt><dd style="font-family: var(--font-mono); font-size: 12px; color: var(--pastel-blue-text); font-weight: bold;">Gemini 2.5 Flash</dd></div>
           <div><dt>Loại câu hỏi gần nhất</dt><dd>${escapeHtml(lastQuestionType ?? 'Chưa phát hiện')}</dd></div>
-          <div><dt>Session ID</dt><dd style="font-family: var(--font-mono); font-size: 12px;">${escapeHtml(shortId(state.session?.id ?? ''))}</dd></div>
+          <div><dt>Mã phiên phỏng vấn</dt><dd style="font-family: var(--font-mono); font-size: 12px;">${escapeHtml(shortId(state.session?.id ?? ''))}</dd></div>
         </dl>
         <button class="danger-button" data-action="end-session" type="button" ${state.busy || Boolean(state.evaluation) ? 'disabled' : ''}>
           ${state.busy ? 'Đang xử lý...' : state.evaluation ? 'Đã kết thúc phiên' : 'Kết thúc & Chấm điểm'}
@@ -318,7 +318,7 @@ function renderChat(state: AppState) {
         <div class="chat-header">
           <div>
             <p class="section-kicker">Hội thoại Trực tiếp (Gemini 2.5 Flash)</p>
-            <h2 class="font-serif">${escapeHtml(persona?.name ?? 'Stakeholder')}</h2>
+            <h2 class="font-serif">${escapeHtml(persona?.name ?? 'Đối tác')}</h2>
           </div>
           <span class="view-pill liquid-glass">${state.evaluation ? 'Chế độ xem lại' : state.busy ? 'Đang xử lý' : 'Sẵn sàng'}</span>
         </div>
@@ -327,7 +327,7 @@ function renderChat(state: AppState) {
           ${thinkingHtml}
         </div>
         <form class="composer" id="message-form">
-          <textarea name="content" rows="3" maxlength="4000" placeholder="Nhập câu hỏi nghiệp vụ gửi cho stakeholder..." ${state.busy || Boolean(state.evaluation) ? 'disabled' : ''}></textarea>
+          <textarea name="content" rows="3" maxlength="4000" placeholder="Nhập câu hỏi nghiệp vụ gửi cho đối tác phỏng vấn..." ${state.busy || Boolean(state.evaluation) ? 'disabled' : ''}></textarea>
           <button class="primary-button" type="submit" ${state.busy || Boolean(state.evaluation) ? 'disabled' : ''}>
             ${state.busy ? 'Đang gửi...' : 'Gửi'}
           </button>
@@ -349,7 +349,7 @@ function renderReviewDashboard(state: AppState) {
         <h2>Bảng kết quả phỏng vấn của sinh viên</h2>
       </div>
       <button class="ghost-button" data-action="refresh-review" type="button" ${state.busy ? 'disabled' : ''}>
-        Tải lại sessions
+        Tải lại danh sách phiên
       </button>
     </section>
     <section class="review-metrics" data-animate="fade-up" style="--index: 1">
@@ -384,7 +384,7 @@ function renderReviewDashboard(state: AppState) {
           </div>
         </div>
         <div class="list-stack">
-          ${state.reviewSessions.length === 0 ? renderEmpty('Chưa có session để review.', 'Chạy thử một session rồi quay lại dashboard.') : state.reviewSessions.map((session, index) => renderReviewSessionItem(session, state, index)).join('')}
+          ${state.reviewSessions.length === 0 ? renderEmpty('Chưa có phiên phỏng vấn nào để đánh giá.', 'Hãy thực hiện một phiên phỏng vấn rồi quay lại bảng điều khiển.') : state.reviewSessions.map((session, index) => renderReviewSessionItem(session, state, index)).join('')}
         </div>
       </aside>
       <section class="faux-chrome review-detail" data-animate="fade-up" style="--index: 3">
@@ -421,7 +421,7 @@ function renderReviewPlaceholder() {
   return `
     <div class="placeholder">
       <p class="section-kicker">Review</p>
-      <h2>Chọn session để xem transcript chi tiết</h2>
+      <h2>Chọn phiên phỏng vấn để xem chi tiết lịch sử hội thoại</h2>
       <p>Bảng tổng quan hiển thị hội thoại phỏng vấn sinh viên, các yêu cầu trích xuất, và báo cáo đối soát chấm điểm tự động.</p>
     </div>
   `
@@ -450,7 +450,7 @@ function renderReviewSessionDetail(detail: ReviewSessionDetail) {
     </div>
     <div class="review-identity-grid" data-animate="fade-up" style="--index: 1">
       <span><strong>Sinh viên</strong>${escapeHtml(detail.session.student.name)} · ${escapeHtml(detail.session.student.email)}</span>
-      <span><strong>Stakeholder</strong><span class="font-serif">${escapeHtml(detail.session.persona.name)}</span> · ${escapeHtml(detail.session.persona.roleTitle ?? 'Stakeholder')}</span>
+      <span><strong>Đối tác</strong><span class="font-serif">${escapeHtml(detail.session.persona.name)}</span> · ${escapeHtml(detail.session.persona.roleTitle ?? 'Đối tác')}</span>
       <span><strong>Trạng thái</strong>${detail.session.finalizationStatus === 'completed' ? 'Đã hoàn thành' : 'Đang thực hiện'} · ${detail.session.isActive ? 'Đang hoạt động' : 'Đã đóng'}</span>
     </div>
     <div class="review-content-grid">
@@ -460,7 +460,7 @@ function renderReviewSessionDetail(detail: ReviewSessionDetail) {
           <span>${detail.messages.length} tin nhắn</span>
         </div>
         <div class="review-transcript">
-          ${detail.messages.length === 0 ? renderEmpty('Session chưa có transcript.') : detail.messages.map((msg, index) => renderMessage(msg, index)).join('')}
+          ${detail.messages.length === 0 ? renderEmpty('Phiên phỏng vấn chưa có lịch sử hội thoại.') : detail.messages.map((msg, index) => renderMessage(msg, index)).join('')}
         </div>
       </section>
       <section class="review-block" data-animate="fade-up" style="--index: 3">
@@ -468,18 +468,18 @@ function renderReviewSessionDetail(detail: ReviewSessionDetail) {
           <h3>Báo cáo chấm điểm</h3>
           <span>${detail.evaluation ? 'Đã lưu' : 'Chưa đánh giá'}</span>
         </div>
-        ${detail.evaluation ? renderEvaluation(detail.evaluation) : renderEmpty('Session chưa được chấm điểm.', 'Kết thúc phiên phỏng vấn để tiến hành đánh giá.')}
+        ${detail.evaluation ? renderEvaluation(detail.evaluation) : renderEmpty('Phiên phỏng vấn chưa được chấm điểm.', 'Kết thúc phiên phỏng vấn để tiến hành đánh giá.')}
       </section>
       <section class="review-block" data-animate="fade-up" style="--index: 4">
         <div class="subsection-heading">
-          <h3>Yêu cầu trích xuất (Extracted)</h3>
+          <h3>Yêu cầu trích xuất (Đã thu thập)</h3>
           <span>${detail.extractedRequirements.length} mục</span>
         </div>
         ${renderExtractedRequirements(detail.extractedRequirements)}
       </section>
       <section class="review-block" data-animate="fade-up" style="--index: 5">
         <div class="subsection-heading">
-          <h3>Yêu cầu ẩn (Hidden Requirements)</h3>
+          <h3>Yêu cầu ẩn (Hidden)</h3>
           <span>${detail.hiddenRequirements.length} mục</span>
         </div>
         ${renderHiddenRequirements(detail.hiddenRequirements)}
@@ -490,7 +490,7 @@ function renderReviewSessionDetail(detail: ReviewSessionDetail) {
 
 function renderExtractedRequirements(requirements: ReviewExtractedRequirement[]) {
   if (requirements.length === 0) {
-    return renderEmpty('Chưa có extracted requirement.')
+    return renderEmpty('Chưa có yêu cầu trích xuất nào.')
   }
 
   return `
@@ -507,7 +507,7 @@ function renderExtractedRequirements(requirements: ReviewExtractedRequirement[])
 
 function renderHiddenRequirements(requirements: ReviewHiddenRequirement[]) {
   if (requirements.length === 0) {
-    return renderEmpty('Scenario này chưa có hidden requirement.')
+    return renderEmpty('Kịch bản này chưa có yêu cầu ẩn nào.')
   }
 
   return `
@@ -561,7 +561,7 @@ function renderEvaluation(evaluation: EvaluationResult) {
   const designTabHtml = design ? `
     <div class="design-suggestions-card" style="display: flex; flex-direction: column; gap: 16px; margin-top: 8px;">
       <div class="subsection-heading">
-        <h3>Gợi ý Mô hình thiết kế sơ bộ (AI Suggestion)</h3>
+        <h3>Gợi ý Mô hình thiết kế sơ bộ (Gợi ý từ AI)</h3>
         <span style="font-size: 11px; opacity: 0.7;">Được sinh tự động dựa trên các yêu cầu thu thập được</span>
       </div>
       
@@ -675,7 +675,7 @@ function renderRequirementReport(matches: RequirementMatchReport[]) {
               <strong style="font-family: var(--font-mono); font-size: 12px;">${escapeHtml(match.hiddenId)}</strong>
               ${renderMatchBadge(match.matchType, match.score)}
             </div>
-            <p>${escapeHtml(match.hiddenText ?? 'Hidden requirement')}</p>
+            <p>${escapeHtml(match.hiddenText ?? 'Yêu cầu ẩn')}</p>
             <div class="evidence-line">
               <span>Bằng chứng hội thoại (Extracted)</span>
               <small>${escapeHtml(match.extractedText ?? 'Không tìm thấy thông tin trùng khớp')}</small>
