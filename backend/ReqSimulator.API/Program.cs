@@ -255,14 +255,23 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-// Giữ lại CORS header kể cả khi Backend crash (500) để trình duyệt
-// hiển thị đúng lỗi thay vì báo nhầm thành lỗi CORS.
 app.UseExceptionHandler(exceptionHandlerApp =>
 {
     exceptionHandlerApp.Run(async context =>
     {
-        context.Response.Headers["Access-Control-Allow-Origin"] = "https://kltn-chi.vercel.app";
-        context.Response.Headers["Access-Control-Allow-Credentials"] = "true";
+        var origin = context.Request.Headers["Origin"].ToString();
+        var allowedOrigins = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "https://kltn-chi.vercel.app",
+            "http://localhost:5173",
+            "http://127.0.0.1:5173"
+        };
+
+        if (!string.IsNullOrEmpty(origin) && allowedOrigins.Contains(origin))
+        {
+            context.Response.Headers["Access-Control-Allow-Origin"] = origin;
+            context.Response.Headers["Access-Control-Allow-Credentials"] = "true";
+        }
 
         context.Response.StatusCode = StatusCodes.Status500InternalServerError;
         context.Response.ContentType = "application/json";
