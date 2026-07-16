@@ -26,7 +26,7 @@ public static class SeedData
         }
 
         scenario.Title = ScenarioTitle;
-        scenario.Description = "TechEd University wants to modernize its course registration process through a new online registration system.";
+        scenario.Description = "HUFLIT wants to modernize its course registration process through a new online registration system.";
         scenario.Domain = "Education";
         scenario.Difficulty = PersonaDifficulty.Medium;
         scenario.Version = 1;

@@ -46,6 +46,7 @@ app.include_router(evaluate_router, prefix="/api")
 
 
 @app.get("/")
+@app.head("/")
 async def root():
     return {
         "status": "healthy",
@@ -54,5 +55,6 @@ async def root():
 
 
 @app.get("/health")
+@app.head("/health")
 def health():
     return {"status": "ok", "service": "ai-service"}

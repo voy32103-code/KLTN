@@ -1,7 +1,7 @@
 {
   "scenario_key": "university_course_registration",
   "scenario_title": "University Course Registration System",
-  "context": "TechEd University is modernizing its course registration process with a new online course registration system. The student is interviewing the university registrar to understand business needs, constraints, and special cases in the registration workflow.",
+  "context": "HUFLIT is modernizing its course registration process with a new online course registration system. The student is interviewing the university registrar to understand business needs, constraints, and special cases in the registration workflow.",
   "general_keywords": [
     "system",
     "purpose",
