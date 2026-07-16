@@ -26,21 +26,8 @@ from app.services.scenario_config_service import ScenarioConfig, get_scenario_co
 
 router = APIRouter()
 
-_client: genai.Client | None = None
-_client_lock = threading.Lock()
+from app.services.api_client_manager import client_manager
 MODEL = os.getenv("MODEL_NAME", "gemini-2.5-flash")
-
-
-def _get_client() -> genai.Client:
-    global _client
-    if _client is None:
-        with _client_lock:
-            if _client is None:
-                api_key = os.getenv("GEMINI_API_KEY")
-                if not api_key:
-                    raise RuntimeError("GEMINI_API_KEY is not configured.")
-                _client = genai.Client(api_key=api_key)
-    return _client
 
 
 def build_system_prompt(
@@ -181,14 +168,13 @@ async def chat(req: ChatRequest):
 
         contents.append({"role": "user", "parts": [{"text": req.studentMessage}]})
 
-        response = _get_client().models.generate_content(
-            model=MODEL,
+        selected_model = req.selectedModel or MODEL
+        response = await client_manager.generate_content(
+            model=selected_model,
             contents=contents,
-            config={
-                "system_instruction": system_prompt,
-                "temperature": 0.65,
-                "max_output_tokens": 350,
-            }
+            system_instruction=system_prompt,
+            temperature=0.65,
+            max_output_tokens=350,
         )
 
         reply = apply_consistency_guard(

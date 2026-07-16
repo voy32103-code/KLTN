@@ -25,6 +25,17 @@ import {
   shortId,
 } from './utils'
 
+function getFriendlyModelName(modelId?: string): string {
+  if (!modelId) return 'Gemini 2.5 Flash'
+  switch (modelId) {
+    case 'gemini-2.5-flash': return 'Gemini 2.5 Flash'
+    case 'gemini-2.5-pro': return 'Gemini 2.5 Pro'
+    case 'llama-3.3-70b-versatile': return 'Llama 3.3 70B (Groq)'
+    case 'llama-3.1-8b-instant': return 'Llama 3.1 8B (Groq)'
+    default: return modelId
+  }
+}
+
 export function renderApp(state: AppState) {
   return `
     <div class="shell">
@@ -233,9 +244,17 @@ function renderScenarioDetail(scenario: ScenarioDetail, state: AppState) {
         <strong>${selectedPersona ? escapeHtml(selectedPersona.roleTitle ?? 'Đối tác') : 'Chưa chọn đối tác'}</strong>
         <span>${selectedPersona ? 'Phiên mô phỏng phỏng vấn phác thảo sẽ bắt đầu với nhân vật này.' : 'Vui lòng lựa chọn một đối tác phỏng vấn để bắt đầu.'}</span>
       </div>
-      <button class="primary-button" data-action="start-session" type="button" ${!state.selectedPersonaId || state.busy ? 'disabled' : ''}>
-        ${state.busy ? 'Đang khởi tạo...' : 'Bắt đầu phỏng vấn'}
-      </button>
+      <div style="display: flex; gap: var(--spacing-sm); align-items: center; flex-wrap: wrap;">
+        <select id="ai-model-select" class="liquid-glass" style="padding: 0.625rem 1rem; border-radius: var(--radius-md); border: 1px solid var(--glass-border); background: var(--glass-bg); color: var(--text-primary); font-size: 0.875rem; cursor: pointer; outline: none; font-weight: 500;">
+          <option value="gemini-2.5-flash" ${state.selectedModel === 'gemini-2.5-flash' ? 'selected' : ''}>Gemini 2.5 Flash</option>
+          <option value="gemini-2.5-pro" ${state.selectedModel === 'gemini-2.5-pro' ? 'selected' : ''}>Gemini 2.5 Pro</option>
+          <option value="llama-3.3-70b-versatile" ${state.selectedModel === 'llama-3.3-70b-versatile' ? 'selected' : ''}>Llama 3.3 70B (Groq)</option>
+          <option value="llama-3.1-8b-instant" ${state.selectedModel === 'llama-3.1-8b-instant' ? 'selected' : ''}>Llama 3.1 8B (Groq)</option>
+        </select>
+        <button class="primary-button" data-action="start-session" type="button" ${!state.selectedPersonaId || state.busy ? 'disabled' : ''}>
+          ${state.busy ? 'Đang khởi tạo...' : 'Bắt đầu phỏng vấn'}
+        </button>
+      </div>
     </div>
   `
 }
@@ -300,7 +319,7 @@ function renderChat(state: AppState) {
         <dl>
           <div><dt>Đối tác phỏng vấn</dt><dd class="font-serif" style="font-size: 16px;">${escapeHtml(persona?.name ?? 'Đối tác')}</dd></div>
           <div><dt>Vai trò</dt><dd>${escapeHtml(persona?.roleTitle ?? 'N/A')}</dd></div>
-          <div><dt>Mô hình AI</dt><dd style="font-family: var(--font-mono); font-size: 12px; color: var(--pastel-blue-text); font-weight: bold;">Gemini 2.5 Flash</dd></div>
+          <div><dt>Mô hình AI</dt><dd style="font-family: var(--font-mono); font-size: 12px; color: var(--pastel-blue-text); font-weight: bold;">${getFriendlyModelName(state.session?.selectedModel || state.selectedModel)}</dd></div>
           <div><dt>Loại câu hỏi gần nhất</dt><dd>${escapeHtml(lastQuestionType ?? 'Chưa phát hiện')}</dd></div>
           <div><dt>Mã phiên phỏng vấn</dt><dd style="font-family: var(--font-mono); font-size: 12px;">${escapeHtml(shortId(state.session?.id ?? ''))}</dd></div>
         </dl>
@@ -317,7 +336,7 @@ function renderChat(state: AppState) {
         </div>
         <div class="chat-header">
           <div>
-            <p class="section-kicker">Hội thoại Trực tiếp (Gemini 2.5 Flash)</p>
+            <p class="section-kicker">Hội thoại Trực tiếp (${getFriendlyModelName(state.session?.selectedModel || state.selectedModel)})</p>
             <h2 class="font-serif">${escapeHtml(persona?.name ?? 'Đối tác')}</h2>
           </div>
           <span class="view-pill liquid-glass">${state.evaluation ? 'Chế độ xem lại' : state.busy ? 'Đang xử lý' : 'Sẵn sàng'}</span>

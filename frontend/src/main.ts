@@ -21,9 +21,11 @@ const root = document.querySelector<HTMLDivElement>('#app')
 if (!root) throw new Error('Missing #app root')
 const app: HTMLDivElement = root
 
+const MODEL_KEY = 'req_simulator_selected_model'
 const storedToken = localStorage.getItem(TOKEN_KEY)
 const hasExpiredStoredToken = Boolean(storedToken && isTokenExpired(storedToken))
 const initialToken = hasExpiredStoredToken ? null : storedToken
+const initialModel = localStorage.getItem(MODEL_KEY) || 'gemini-2.5-flash'
 
 const state: AppState = {
   token: initialToken,
@@ -34,6 +36,7 @@ const state: AppState = {
   selectedScenario: null,
   selectedPersonaId: null,
   session: null,
+  selectedModel: initialModel,
   messages: [],
   evaluation: null,
   reviewSessions: [],
@@ -119,6 +122,13 @@ function bindEvents() {
   })
 
   document.querySelector('#messages')?.scrollTo({ top: 999999 })
+
+  document.querySelector('#ai-model-select')?.addEventListener('change', (event) => {
+    const select = event.currentTarget as HTMLSelectElement
+    state.selectedModel = select.value
+    localStorage.setItem(MODEL_KEY, select.value)
+    render()
+  })
 }
 
 
@@ -233,6 +243,7 @@ async function startSession() {
       body: {
         scenarioId: state.selectedScenario?.id,
         personaId: state.selectedPersonaId,
+        selectedModel: state.selectedModel,
       },
     })
     state.session = session

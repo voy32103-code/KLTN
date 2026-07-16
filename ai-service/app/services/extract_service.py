@@ -20,8 +20,7 @@ from app.models.schemas import ExtractRequest, ExtractResponse, ExtractedReq
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
-_client: genai.Client | None = None
-_client_lock = threading.Lock()
+from app.services.api_client_manager import client_manager
 MODEL = os.getenv("MODEL_NAME", "gemini-2.5-flash")
 
 # ... (EXTRACT_PROMPT and REQUIREMENT_CUES remain unchanged, but let's provide them so the replacement matches exactly)
@@ -73,10 +72,12 @@ async def extract_requirements(req: ExtractRequest):
 
         for attempt in range(max_retries):
             try:
-                response = _get_client().models.generate_content(
-                    model=MODEL,
+                selected_model = req.selectedModel or MODEL
+                response = await client_manager.generate_content(
+                    model=selected_model,
                     contents=f"{EXTRACT_PROMPT}\n\n--- CONVERSATION ---\n{conversation_text}",
-                    config={"temperature": 0.2, "max_output_tokens": 2000},
+                    temperature=0.2,
+                    max_output_tokens=2000,
                 )
                 requirements = _parse_extraction_json(getattr(response, "text", "") or "")
                 break
@@ -96,16 +97,7 @@ async def extract_requirements(req: ExtractRequest):
         raise HTTPException(status_code=500, detail="An error occurred during requirement extraction.")
 
 
-def _get_client() -> genai.Client:
-    global _client
-    if _client is None:
-        with _client_lock:
-            if _client is None:
-                api_key = os.getenv("GEMINI_API_KEY")
-                if not api_key:
-                    raise RuntimeError("GEMINI_API_KEY is not configured.")
-                _client = genai.Client(api_key=api_key)
-    return _client
+# _get_client removed
 
 
 def _format_conversation(history: Iterable) -> str:

@@ -141,7 +141,8 @@ public record AiChatRequest(
     List<ChatMessage> History,
     PersonaProfile Persona,
     string? PersonaStateJson,
-    List<string> AvailableRequirements  // chat_service sẽ gate trước khi đưa vào prompt
+    List<string> AvailableRequirements,  // chat_service sẽ gate trước khi đưa vào prompt
+    string? SelectedModel
 );
 
 public record AiChatResponse(
@@ -150,12 +151,13 @@ public record AiChatResponse(
     PersonaStateUpdate? StateUpdate
 );
 
-public record AiExtractRequest(string SessionId, List<ChatMessage> History);
+public record AiExtractRequest(string SessionId, List<ChatMessage> History, string? SelectedModel);
 public record AiExtractResponse(List<ExtractedReq> Requirements);
 
 public record AiEvaluateRequest(
     List<ExtractedReq> Extracted,
-    List<HiddenReq> HiddenRequirements
+    List<HiddenReq> HiddenRequirements,
+    string? SelectedModel
 );
 public record AiEvaluateResponse(
     decimal CoverageScore,

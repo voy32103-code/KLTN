@@ -28,34 +28,12 @@ import threading
 
 router = APIRouter()
 
-# Thread-safe lazy loading setup for Gemini Client
-_embedder_lock = threading.Lock()
-_embedder_initialized = False
-has_gemini = False
-gemini_client = None
+from app.services.api_client_manager import client_manager
 
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "models/text-embedding-004")
 ACTUAL_EMBEDDING_MODEL = EMBEDDING_MODEL
 
-def _init_embedder():
-    global gemini_client, has_gemini, _embedder_initialized
-    if not _embedder_initialized:
-        with _embedder_lock:
-            if not _embedder_initialized:
-                try:
-                    from google import genai
-                    api_key = os.getenv("GEMINI_API_KEY")
-                    if not api_key:
-                        raise RuntimeError("GEMINI_API_KEY is not configured.")
-                    gemini_client = genai.Client(api_key=api_key)
-                    has_gemini = True
-                except Exception as e:
-                    logger.warning("Failed to initialize Gemini embedder client: %s", str(e))
-                    has_gemini = False
-                    gemini_client = None
-                _embedder_initialized = True
-
-def compute_similarity_matrix(
+async def compute_similarity_matrix(
     extracted_texts: list[str],
     hidden_texts: list[str]
 ) -> np.ndarray:
@@ -66,56 +44,54 @@ def compute_similarity_matrix(
     if not extracted_texts or not hidden_texts:
         return np.array([])
 
-    _init_embedder()
+    try:
+        # Cố gắng sử dụng model được cấu hình, nếu không được tự động thử các ứng cử viên khả dụng
+        models_to_try = [EMBEDDING_MODEL, "models/gemini-embedding-2", "models/gemini-embedding-001"]
+        res_ext = None
+        res_hid = None
+        used_model = EMBEDDING_MODEL
 
-    if has_gemini and gemini_client is not None:
-        try:
-            # Cố gắng sử dụng model được cấu hình, nếu không được tự động thử các ứng cử viên khả dụng
-            models_to_try = [EMBEDDING_MODEL, "models/gemini-embedding-2", "models/gemini-embedding-001"]
-            res_ext = None
-            res_hid = None
-            used_model = EMBEDDING_MODEL
+        for model_name in models_to_try:
+            try:
+                res_ext = await client_manager.embed_content(
+                    model=model_name,
+                    contents=extracted_texts
+                )
+                res_hid = await client_manager.embed_content(
+                    model=model_name,
+                    contents=hidden_texts
+                )
+                used_model = model_name
+                break
+            except Exception as api_err:
+                logger.warning("Embeddings call failed with model %s: %s. Trying next candidate...", model_name, str(api_err))
+                continue
 
-            for model_name in models_to_try:
-                try:
-                    res_ext = gemini_client.models.embed_content(
-                        model=model_name,
-                        contents=extracted_texts
-                    )
-                    res_hid = gemini_client.models.embed_content(
-                        model=model_name,
-                        contents=hidden_texts
-                    )
-                    used_model = model_name
-                    break
-                except Exception as api_err:
-                    logger.warning("Embeddings call failed with model %s: %s. Trying next candidate...", model_name, str(api_err))
-                    continue
+        if res_ext is not None and res_hid is not None:
+            ext_vectors = np.array([e.values for e in res_ext.embeddings])
+            hid_vectors = np.array([e.values for e in res_hid.embeddings])
 
-            if res_ext is not None and res_hid is not None:
-                ext_vectors = np.array([e.values for e in res_ext.embeddings])
-                hid_vectors = np.array([e.values for e in res_hid.embeddings])
+            # Chuẩn hóa L2 norm để nhân dot product tương đương cosine similarity
+            ext_norm = ext_vectors / np.linalg.norm(ext_vectors, axis=1, keepdims=True)
+            hid_norm = hid_vectors / np.linalg.norm(hid_vectors, axis=1, keepdims=True)
 
-                # Chuẩn hóa L2 norm để nhân dot product tương đương cosine similarity
-                ext_norm = ext_vectors / np.linalg.norm(ext_vectors, axis=1, keepdims=True)
-                hid_norm = hid_vectors / np.linalg.norm(hid_vectors, axis=1, keepdims=True)
+            sim_matrix = np.dot(ext_norm, hid_norm.T)
 
-                sim_matrix = np.dot(ext_norm, hid_norm.T)
+            # Giải phóng bộ nhớ tối đa
+            del ext_vectors
+            del hid_vectors
+            del ext_norm
+            del hid_norm
+            import gc
+            gc.collect()
 
-                # Giải phóng bộ nhớ tối đa
-                del ext_vectors
-                del hid_vectors
-                del ext_norm
-                del hid_norm
-                import gc
-                gc.collect()
+            global ACTUAL_EMBEDDING_MODEL
+            ACTUAL_EMBEDDING_MODEL = used_model
+            return sim_matrix
 
-                global ACTUAL_EMBEDDING_MODEL
-                ACTUAL_EMBEDDING_MODEL = used_model
-                return sim_matrix
-        except Exception as e:
-            logger.warning("Gemini embeddings calculation failed, falling back to difflib. Error: %s", str(e))
-            pass
+    except Exception as e:
+        logger.warning("Gemini embeddings calculation failed, falling back to difflib. Error: %s", str(e))
+        pass
 
     # Fallback to difflib text similarity ratio (no PyTorch/sentence-transformers dependency)
     matrix = np.zeros((len(extracted_texts), len(hidden_texts)))
@@ -150,7 +126,7 @@ async def evaluate(req: EvaluateRequest):
                     reason=explain_match(hr.text, None, 0.0, "missed"),
                 ))
         else:
-            sim_matrix = compute_similarity_matrix(extracted_texts, hidden_texts)
+            sim_matrix = await compute_similarity_matrix(extracted_texts, hidden_texts)
 
             for j, hr in enumerate(req.hiddenRequirements):
                 # Tìm extracted requirement giống nhất
@@ -182,13 +158,21 @@ async def evaluate(req: EvaluateRequest):
             designSuggestions=design_suggestions,
         )
 
-
+        meta = build_scoring_policy_metadata(ACTUAL_EMBEDDING_MODEL)
+        scoring_policy = ScoringPolicyData(
+            preset=str(meta["preset"]),
+            exactThreshold=float(meta["exactThreshold"]),
+            semanticThreshold=float(meta["semanticThreshold"]),
+            partialThreshold=float(meta["partialThreshold"]),
+            rubricPartialMatcher=bool(meta["rubricPartialMatcher"]),
+            embeddingModel=str(meta["embeddingModel"]),
+        )
 
         return EvaluateResponse(
             coverageScore=round(coverage, 2),
             matches=matches,
             feedback=feedback,
-            scoringPolicy=ScoringPolicyData(**build_scoring_policy_metadata(ACTUAL_EMBEDDING_MODEL)),
+            scoringPolicy=scoring_policy,
         )
 
     except Exception as e:

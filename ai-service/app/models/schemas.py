@@ -37,6 +37,7 @@ class ChatRequest(BaseModel):
     persona: PersonaProfile
     personaStateJson: str | None = None
     availableRequirements: list[str]
+    selectedModel: str | None = None
 
 
 class ChatResponse(BaseModel):
@@ -49,6 +50,7 @@ class ChatResponse(BaseModel):
 class ExtractRequest(BaseModel):
     sessionId: str
     history: list[ChatMessage]
+    selectedModel: str | None = None
 
 
 class ExtractedReq(BaseModel):
@@ -70,6 +72,7 @@ class HiddenReq(BaseModel):
 class EvaluateRequest(BaseModel):
     extracted: list[ExtractedReq]
     hiddenRequirements: list[HiddenReq]
+    selectedModel: str | None = None
 
 
 class ReqMatch(BaseModel):

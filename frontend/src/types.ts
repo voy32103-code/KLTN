@@ -80,6 +80,7 @@ export type RequirementMatchReport = {
 export type SessionState = {
   id: string
   startedAt: string
+  selectedModel?: string
 }
 
 export type ReviewSessionSummary = {
@@ -110,6 +111,7 @@ export type ReviewSessionSummary = {
 }
 
 export type ReviewEvaluationSummary = {
+  id: string
   coverageScore?: number | null
   matchedCount: number
   partialCount: number
@@ -175,6 +177,7 @@ export type AppState = {
   selectedScenario: ScenarioDetail | null
   selectedPersonaId: string | null
   session: SessionState | null
+  selectedModel: string
   messages: ChatMessage[]
   evaluation: EvaluationResult | null
   reviewSessions: ReviewSessionSummary[]

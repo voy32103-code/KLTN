@@ -200,15 +200,17 @@ builder.Services.AddHttpClient<AiServiceClient>(client =>
 });
 
 // ===== CORS: allow the React frontend (localhost + Vercel) to call the API =====
+var allowedOriginsSetting = builder.Configuration["Cors:AllowedOrigins"] ?? "";
+var allowedOrigins = allowedOriginsSetting
+    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+    .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(name: AllowVercelOrigin,
         policy =>
         {
-            policy.WithOrigins(
-                      "https://kltn-chi.vercel.app",
-                      "http://localhost:5173",
-                      "http://127.0.0.1:5173")
+            policy.WithOrigins(allowedOrigins.ToArray())
                   .AllowAnyHeader()
                   .AllowAnyMethod()
                   .AllowCredentials();
@@ -260,12 +262,6 @@ app.UseExceptionHandler(exceptionHandlerApp =>
     exceptionHandlerApp.Run(async context =>
     {
         var origin = context.Request.Headers["Origin"].ToString();
-        var allowedOrigins = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-        {
-            "https://kltn-chi.vercel.app",
-            "http://localhost:5173",
-            "http://127.0.0.1:5173"
-        };
 
         if (!string.IsNullOrEmpty(origin) && allowedOrigins.Contains(origin))
         {

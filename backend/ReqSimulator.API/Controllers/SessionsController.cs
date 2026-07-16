@@ -39,9 +39,12 @@ public class SessionsController : ControllerBase
 
         [JsonPropertyName("turn_count")]
         public int TurnCount { get; set; }
+
+        [JsonPropertyName("selected_model")]
+        public string? SelectedModel { get; set; }
     }
 
-    public record CreateSessionDto(Guid ScenarioId, Guid PersonaId);
+    public record CreateSessionDto(Guid ScenarioId, Guid PersonaId, string? SelectedModel);
     public record SendMessageDto([Required, StringLength(4000)] string Content);
 
     private record RequirementMatchReport(
@@ -441,6 +444,7 @@ public class SessionsController : ControllerBase
         if (persona is null)
             return BadRequest("Stakeholder không thuộc kịch bản đã chọn.");
 
+        var selectedModel = string.IsNullOrWhiteSpace(dto.SelectedModel) ? "gemini-2.5-flash" : dto.SelectedModel;
         var session = new SimulationSession
         {
             StudentId = userId.Value,
@@ -451,14 +455,15 @@ public class SessionsController : ControllerBase
                 Mood = persona.InitialMood,
                 Patience = persona.InitialPatience,
                 RevealedRequirements = [],
-                TurnCount = 0
+                TurnCount = 0,
+                SelectedModel = selectedModel
             })
         };
 
         _db.SimulationSessions.Add(session);
         await _db.SaveChangesAsync();
 
-        return Ok(new { session.Id, session.StartedAt });
+        return Ok(new { session.Id, session.StartedAt, SelectedModel = selectedModel });
     }
 
     [HttpPost("{sessionId}/messages")]
@@ -514,7 +519,8 @@ public class SessionsController : ControllerBase
                 personaStateInit.Mood,
                 personaStateInit.Patience),
             PersonaStateJson: sessionInit.PersonaState,
-            AvailableRequirements: hiddenRequirements.Select(r => r.RequirementText).ToList()
+            AvailableRequirements: hiddenRequirements.Select(r => r.RequirementText).ToList(),
+            SelectedModel: personaStateInit.SelectedModel
         ));
 
         // 3. Mở transaction cục bộ ngắn và khóa dòng FOR UPDATE để lưu kết quả nhanh
@@ -629,8 +635,19 @@ public class SessionsController : ControllerBase
                 .Select(m => new ChatMessage(m.Sender.ToString(), m.Content, m.Timestamp))
                 .ToList();
 
+            var selectedModel = "gemini-2.5-flash";
+            try
+            {
+                var snapshot = JsonSerializer.Deserialize<PersonaStateSnapshot>(
+                    session.PersonaState ?? "{}",
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                if (snapshot?.SelectedModel is not null)
+                    selectedModel = snapshot.SelectedModel;
+            }
+            catch { }
+
             var extractResult = await _ai.ExtractRequirements(
-                new AiExtractRequest(sessionId.ToString(), history));
+                new AiExtractRequest(sessionId.ToString(), history, selectedModel));
 
             var hiddenRequirements = await _db.HiddenRequirements
                 .Where(r => r.ScenarioId == session.ScenarioId)
@@ -641,7 +658,8 @@ public class SessionsController : ControllerBase
                 hiddenRequirements.Select(r => new HiddenReq(
                     r.Id.ToString(),
                     r.RequirementText,
-                    r.Category.ToString())).ToList()
+                    r.Category.ToString())).ToList(),
+                selectedModel
             ));
 
             var evaluation = new EvaluationResult
