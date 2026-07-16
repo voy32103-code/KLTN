@@ -11,7 +11,7 @@ allowed_origins = [origin.strip() for origin in allowed_origins_raw.split(",") i
 
 # Service-to-Service API Key Authentication (SEC-09)
 async def verify_api_key(request: Request, x_ai_service_key: str = Header(None, alias="X-AI-Service-Key")):
-    if request.url.path == "/health":
+    if request.url.path in ["/", "/health"]:
         return
     if not x_ai_service_key:
         raise HTTPException(status_code=401, detail="Unauthorized: Missing X-AI-Service-Key header.")
@@ -43,6 +43,11 @@ from app.services.evaluate_service import router as evaluate_router
 app.include_router(chat_router, prefix="/api")
 app.include_router(extract_router, prefix="/api")
 app.include_router(evaluate_router, prefix="/api")
+
+
+@app.get("/")
+def index():
+    return {"status": "ok", "service": "ai-service", "message": "ReqSimulator AI Service is running."}
 
 
 @app.get("/health")
