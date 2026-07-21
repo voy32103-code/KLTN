@@ -48,12 +48,14 @@ public class SessionsController : ControllerBase
     public record SendMessageDto([Required, StringLength(4000)] string Content);
 
     private record RequirementMatchReport(
+        string MatchId,
         string HiddenId,
         string? HiddenText,
         string? ExtractedText,
         decimal Score,
         string MatchType,
-        string Reason);
+        string Reason,
+        string? OverriddenMatchType);
 
     private sealed record FinalizationLeaseClaim(Guid LeaseId, DateTime StartedAt, DateTime ExpiresAt);
     private sealed record FinalizationLeaseSnapshot(SessionFinalizationState Status, DateTime? ExpiresAt);
@@ -401,6 +403,7 @@ public class SessionsController : ControllerBase
 
         var evaluation = await _db.EvaluationResults
             .AsNoTracking()
+            .Include(e => e.OverriddenByLecturer)
             .FirstOrDefaultAsync(e => e.SessionId == sessionId);
 
         object? evaluationResponse = null;
@@ -422,6 +425,117 @@ public class SessionsController : ControllerBase
             HiddenRequirements = hiddenRequirements,
             Evaluation = evaluationResponse
         });
+    }
+
+    public record MatchOverrideItemDto(Guid MatchId, string NewMatchType);
+    public record LecturerOverrideDto(List<MatchOverrideItemDto> MatchOverrides, string? Comment);
+
+    /// <summary>
+    /// Giảng viên hoặc Admin chỉnh sửa MatchType của các yêu cầu và tự động tính lại CoverageScore
+    /// </summary>
+    [HttpPut("review/{sessionId:guid}/override")]
+    [Authorize(Roles = "Lecturer,Admin")]
+    public async Task<IActionResult> OverrideSessionEvaluation(Guid sessionId, [FromBody] LecturerOverrideDto dto)
+    {
+        var currentUserIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!Guid.TryParse(currentUserIdClaim, out var lecturerId))
+        {
+            return Unauthorized(new { message = "Không xác định được danh tính giảng viên." });
+        }
+
+        var evaluation = await _db.EvaluationResults
+            .Include(e => e.Matches)
+            .FirstOrDefaultAsync(e => e.SessionId == sessionId);
+
+        if (evaluation is null)
+        {
+            return NotFound(new { message = "Chưa có kết quả đánh giá cho phiên này." });
+        }
+
+        if (dto.MatchOverrides == null || dto.MatchOverrides.Count == 0)
+        {
+            return BadRequest(new { message = "Danh sách chỉnh sửa không được để trống." });
+        }
+
+        var matchDict = evaluation.Matches.ToDictionary(m => m.Id);
+        var auditLogs = new List<object>();
+
+        foreach (var item in dto.MatchOverrides)
+        {
+            if (!matchDict.TryGetValue(item.MatchId, out var match))
+            {
+                continue;
+            }
+
+            if (Enum.TryParse<RequirementMatchType>(item.NewMatchType, true, out var newType))
+            {
+                var originalType = match.OverriddenMatchType ?? match.MatchType;
+                match.OverriddenMatchType = newType;
+                auditLogs.Add(new
+                {
+                    matchId = match.Id,
+                    hiddenRequirementId = match.HiddenRequirementId,
+                    originalMatchType = originalType.ToString(),
+                    newMatchType = newType.ToString()
+                });
+            }
+        }
+
+        // Tự động tính lại MatchedCount, PartialCount, MissedCount & OverriddenCoverageScore (Option A)
+        int matched = 0, partial = 0, missed = 0;
+        foreach (var m in evaluation.Matches)
+        {
+            var effectiveType = m.OverriddenMatchType ?? m.MatchType;
+            switch (effectiveType)
+            {
+                case RequirementMatchType.Exact:
+                case RequirementMatchType.Semantic:
+                    matched++;
+                    break;
+                case RequirementMatchType.Partial:
+                    partial++;
+                    break;
+                default:
+                    missed++;
+                    break;
+            }
+        }
+
+        int total = evaluation.TotalRequirements > 0 ? evaluation.TotalRequirements : evaluation.Matches.Count;
+        decimal newCoverage = total > 0
+            ? Math.Round(((decimal)matched + (decimal)partial * 0.5m) / total * 100m, 2)
+            : 0m;
+
+        var originalScore = evaluation.OverriddenCoverageScore ?? evaluation.CoverageScore;
+
+        evaluation.OverriddenCoverageScore = newCoverage;
+        evaluation.OverriddenByLecturerId = lecturerId;
+        evaluation.OverriddenAt = DateTime.UtcNow;
+
+        var lecturerOverrideRecord = new LecturerOverride
+        {
+            Id = Guid.NewGuid(),
+            EvaluationId = evaluation.Id,
+            LecturerId = lecturerId,
+            OriginalCoverageScore = originalScore,
+            NewCoverageScore = newCoverage,
+            MatchOverrides = JsonSerializer.Serialize(auditLogs),
+            Comment = dto.Comment,
+            OverriddenAt = DateTime.UtcNow
+        };
+
+        _db.LecturerOverrides.Add(lecturerOverrideRecord);
+        await _db.SaveChangesAsync();
+
+        var updatedMatches = await LoadRequirementMatchReports(evaluation.Id);
+        var lecturer = await _db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == lecturerId);
+        evaluation.OverriddenByLecturer = lecturer;
+
+        return Ok(ToEvaluationResponse(
+            evaluation,
+            DeserializeFeedback(evaluation.Feedback),
+            evaluation.Matches.Count,
+            updatedMatches));
     }
 
     [HttpPost]
@@ -741,12 +855,14 @@ public class SessionsController : ControllerBase
                 session.FinalizationExpiresAt = null;
 
                 var matchReports = evaluateResult.Matches.Select(m => new RequirementMatchReport(
+                    Guid.Empty.ToString(),
                     m.HiddenId,
                     m.HiddenText,
                     m.ExtractedText,
                     m.Score,
                     m.MatchType,
-                    m.Reason));
+                    m.Reason,
+                    null));
 
                 return Ok(ToEvaluationResponse(
                     evaluation,
@@ -880,19 +996,22 @@ public class SessionsController : ControllerBase
             .ToListAsync();
 
         return matches.Select(m => new RequirementMatchReport(
+            m.Id.ToString(),
             m.HiddenRequirementId.ToString(),
             m.HiddenRequirement.RequirementText,
             m.ExtractedRequirement?.RequirementText,
             m.SimilarityScore ?? 0,
             m.MatchType.ToString().ToLowerInvariant(),
-            BuildStoredMatchReason(m)
+            BuildStoredMatchReason(m),
+            m.OverriddenMatchType?.ToString().ToLowerInvariant()
         )).ToList();
     }
 
     private static string BuildStoredMatchReason(RequirementMatch match)
     {
+        var effectiveType = match.OverriddenMatchType ?? match.MatchType;
         var score = match.SimilarityScore ?? 0;
-        return match.MatchType switch
+        return effectiveType switch
         {
             RequirementMatchType.Exact =>
                 $"Yêu cầu được trích xuất khớp hoàn toàn với yêu cầu ẩn (độ tương đồng {score:P0}).",
@@ -914,6 +1033,9 @@ public class SessionsController : ControllerBase
         ScoringPolicyData? scoringPolicy = null) => new
         {
             evaluation.CoverageScore,
+            evaluation.OverriddenCoverageScore,
+            OverriddenByLecturer = evaluation.OverriddenByLecturer?.Name,
+            evaluation.OverriddenAt,
             evaluation.MatchedCount,
             evaluation.PartialCount,
             evaluation.MissedCount,

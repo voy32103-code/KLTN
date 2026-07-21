@@ -580,7 +580,8 @@ textarea:focus {
 .scenario-stats span,
 .review-metrics span,
 .difficulty-badge,
-.match-badge {
+.match-badge,
+.override-badge {
   border: 1px solid var(--line);
   border-radius: 9999px;
   background: var(--surface-muted);
@@ -590,6 +591,12 @@ textarea:focus {
   font-weight: 600;
   letter-spacing: 0.03em;
   text-transform: uppercase;
+}
+
+.override-badge {
+  background: rgba(245, 158, 11, 0.2);
+  border-color: #f59e0b;
+  color: #fbbf24;
 }
 
 /* Detail Panel / Workspace */

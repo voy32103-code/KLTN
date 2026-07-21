@@ -148,8 +148,16 @@ public class EvaluationResult
 
     public DateTime EvaluatedAt { get; set; } = DateTime.UtcNow;
 
+    // === Lecturer override fields ===
+    /// <summary>Coverage score sau khi giảng viên chỉnh sửa matchType (auto-recalculated)</summary>
+    public decimal? OverriddenCoverageScore { get; set; }
+    public Guid? OverriddenByLecturerId { get; set; }
+    public DateTime? OverriddenAt { get; set; }
+
     [ForeignKey(nameof(SessionId))] public SimulationSession Session { get; set; } = null!;
+    [ForeignKey(nameof(OverriddenByLecturerId))] public User? OverriddenByLecturer { get; set; }
     public ICollection<RequirementMatch> Matches { get; set; } = [];
+    public ICollection<LecturerOverride> LecturerOverrides { get; set; } = [];
 }
 
 /// <summary>Chi tiết match giữa extracted requirement và hidden requirement</summary>
@@ -162,7 +170,33 @@ public class RequirementMatch
     public decimal? SimilarityScore { get; set; }
     public MatchType MatchType { get; set; } = MatchType.Missed;
 
+    // === Lecturer override fields ===
+    /// <summary>MatchType sau khi giảng viên chỉnh sửa (null = chưa chỉnh)</summary>
+    public MatchType? OverriddenMatchType { get; set; }
+
     [ForeignKey(nameof(EvaluationId))] public EvaluationResult Evaluation { get; set; } = null!;
     [ForeignKey(nameof(HiddenRequirementId))] public HiddenRequirement HiddenRequirement { get; set; } = null!;
     [ForeignKey(nameof(ExtractedRequirementId))] public ExtractedRequirement? ExtractedRequirement { get; set; }
+}
+
+/// <summary>Bản ghi audit trail khi giảng viên chỉnh sửa kết quả đánh giá AI</summary>
+public class LecturerOverride
+{
+    [Key] public Guid Id { get; set; }
+    public Guid EvaluationId { get; set; }
+    public Guid LecturerId { get; set; }
+
+    /// <summary>Coverage score AI gốc trước khi chỉnh</summary>
+    public decimal? OriginalCoverageScore { get; set; }
+    /// <summary>Coverage score mới sau khi tính lại từ matchType đã chỉnh</summary>
+    public decimal? NewCoverageScore { get; set; }
+
+    /// <summary>JSONB: [{matchId, originalMatchType, newMatchType}]</summary>
+    [Column(TypeName = "jsonb")] public string? MatchOverrides { get; set; }
+
+    [MaxLength(1000)] public string? Comment { get; set; }
+    public DateTime OverriddenAt { get; set; } = DateTime.UtcNow;
+
+    [ForeignKey(nameof(EvaluationId))] public EvaluationResult Evaluation { get; set; } = null!;
+    [ForeignKey(nameof(LecturerId))] public User Lecturer { get; set; } = null!;
 }

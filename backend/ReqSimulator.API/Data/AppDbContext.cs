@@ -20,6 +20,7 @@ public class AppDbContext : DbContext
     public DbSet<ExtractedRequirement> ExtractedRequirements => Set<ExtractedRequirement>();
     public DbSet<EvaluationResult> EvaluationResults => Set<EvaluationResult>();
     public DbSet<RequirementMatch> RequirementMatches => Set<RequirementMatch>();
+    public DbSet<LecturerOverride> LecturerOverrides => Set<LecturerOverride>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -39,6 +40,7 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<ExtractedRequirement>().ToTable("extracted_requirements");
         modelBuilder.Entity<EvaluationResult>().ToTable("evaluation_results");
         modelBuilder.Entity<RequirementMatch>().ToTable("requirement_matches");
+        modelBuilder.Entity<LecturerOverride>().ToTable("lecturer_overrides");
 
         modelBuilder.Entity<User>()
             .Property(u => u.Role)
@@ -68,6 +70,9 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<RequirementMatch>()
             .Property(m => m.MatchType)
             .HasColumnType("match_type");
+        modelBuilder.Entity<RequirementMatch>()
+            .Property(m => m.OverriddenMatchType)
+            .HasColumnType("match_type");
 
         foreach (var entity in modelBuilder.Model.GetEntityTypes())
         {
@@ -88,6 +93,10 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<EvaluationResult>()
             .HasIndex(e => e.SessionId)
             .IsUnique();
+
+        modelBuilder.Entity<LecturerOverride>()
+            .HasIndex(o => o.EvaluationId)
+            .HasDatabaseName("idx_lecturer_overrides_evaluation");
     }
 
     private static string ToSnakeCase(string name)

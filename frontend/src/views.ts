@@ -1,4 +1,6 @@
 import type {
+  AdminState,
+  AdminUserItem,
   AppState,
   AppView,
   ChatMessage,
@@ -46,6 +48,7 @@ export function renderApp(state: AppState) {
         ${state.view === 'scenarios' ? renderScenarioPicker(state) : ''}
         ${state.view === 'chat' ? renderChat(state) : ''}
         ${state.view === 'review' ? renderReviewDashboard(state) : ''}
+        ${state.view === 'admin' ? renderAdminDashboard(state) : ''}
       </main>
     </div>
   `
@@ -57,8 +60,10 @@ function renderTopbar(state: AppState) {
     scenarios: 'Lựa chọn kịch bản',
     chat: state.evaluation ? 'Báo cáo đánh giá' : 'Phỏng vấn trực tiếp',
     review: 'Bảng điều khiển review',
+    admin: 'Quản trị hệ thống (Admin)'
   }
   const canReview = isPrivilegedRole(state.user?.role)
+  const isAdmin = state.user?.role === 'Admin'
 
   return `
     <header class="topbar">
@@ -73,9 +78,10 @@ function renderTopbar(state: AppState) {
       </div>
       <div class="topbar-actions">
         <span class="view-pill">${escapeHtml(viewLabels[state.view])}</span>
-        ${state.user?.email ? `<span class="user-pill">${escapeHtml(state.user.email)}</span>` : ''}
+        ${state.user?.email ? `<span class="user-pill">${escapeHtml(state.user.email)} (${escapeHtml(state.user.role ?? 'Student')})</span>` : ''}
         ${canReview && state.view !== 'review' ? `<button class="ghost-button" data-action="open-review" type="button" ${state.busy ? 'disabled' : ''}>Bảng điều khiển</button>` : ''}
         ${canReview && state.view === 'review' ? `<button class="ghost-button" data-action="open-student-lab" type="button" ${state.busy ? 'disabled' : ''}>Phòng thực hành</button>` : ''}
+        ${isAdmin && state.view !== 'admin' ? `<button class="ghost-button" data-action="open-admin" type="button" ${state.busy ? 'disabled' : ''} style="border-color: var(--color-primary); color: #38bdf8;">Admin Console</button>` : ''}
         ${state.token ? `<button class="ghost-button" data-action="logout" type="button" ${state.busy ? 'disabled' : ''}>Đăng xuất</button>` : ''}
       </div>
     </header>
@@ -448,6 +454,9 @@ function renderReviewPlaceholder() {
 
 function renderReviewSessionDetail(detail: ReviewSessionDetail) {
   const studentTurns = detail.messages.filter((message) => message.sender === 'Student').length
+  const evalScore = detail.evaluation?.overriddenCoverageScore ?? detail.evaluation?.coverageScore ?? null
+  const isOverridden = typeof detail.evaluation?.overriddenCoverageScore === 'number'
+
   return `
     <div class="review-detail-header" data-animate="fade-up" style="--index: 0">
       <div>
@@ -457,7 +466,7 @@ function renderReviewSessionDetail(detail: ReviewSessionDetail) {
       </div>
       <div class="review-detail-actions">
         <div class="metrics">
-          <span>Điểm bao phủ: <strong>${formatScore(detail.evaluation?.coverageScore ?? null)}</strong></span>
+          <span>Điểm bao phủ: <strong>${formatScore(evalScore)}</strong> ${isOverridden ? '<span class="override-badge">Đã duyệt bởi GV</span>' : ''}</span>
           <span>Lượt hỏi: <strong>${studentTurns}</strong></span>
           <span>Yêu cầu ẩn: <strong>${detail.hiddenRequirements.length}</strong></span>
         </div>
@@ -472,6 +481,11 @@ function renderReviewSessionDetail(detail: ReviewSessionDetail) {
       <span><strong>Đối tác</strong><span class="font-serif">${escapeHtml(detail.session.persona.name)}</span> · ${escapeHtml(detail.session.persona.roleTitle ?? 'Đối tác')}</span>
       <span><strong>Trạng thái</strong>${detail.session.finalizationStatus === 'completed' ? 'Đã hoàn thành' : 'Đang thực hiện'} · ${detail.session.isActive ? 'Đang hoạt động' : 'Đã đóng'}</span>
     </div>
+    ${isOverridden && detail.evaluation?.overriddenByLecturer ? `
+      <div class="notice info" style="margin-top: 12px; margin-bottom: 0;">
+        Điểm số đã được chỉnh sửa bởi giảng viên <strong>${escapeHtml(detail.evaluation.overriddenByLecturer)}</strong> vào ${formatTime(detail.evaluation.overriddenAt!)}. Điểm AI gốc: ${formatScore(detail.evaluation.coverageScore ?? null)}.
+      </div>
+    ` : ''}
     <div class="review-content-grid">
       <section class="review-block" data-animate="fade-up" style="--index: 2">
         <div class="subsection-heading">
@@ -620,11 +634,17 @@ function renderEvaluation(evaluation: EvaluationResult) {
     </div>
   `
  
+  const isOverridden = typeof evaluation.overriddenCoverageScore === 'number'
+  const displayScore = isOverridden ? evaluation.overriddenCoverageScore : evaluation.coverageScore
+  const scoreFormatted = formatScore(displayScore ?? null)
+  const scoreClass = formatScoreClass(displayScore ?? null)
+
   return `
     <section class="evaluation" data-animate="fade-up" style="--index: 0">
-      <div class="score-card ${formatScoreClass(evaluation.coverageScore)}">
-        <span>${formatScore(evaluation.coverageScore)}</span>
-        <small>Mức độ bao phủ</small>
+      <div class="score-card ${scoreClass}">
+        <span>${scoreFormatted}</span>
+        <small>${isOverridden ? 'Điểm GV đã duyệt' : 'Mức độ bao phủ'}</small>
+        ${isOverridden ? `<small style="display:block; font-size: 10px; opacity:0.8;">(Gốc AI: ${formatScore(evaluation.coverageScore ?? null)})</small>` : ''}
       </div>
       <div class="score-grid">
         <span>Trùng khớp: <strong>${evaluation.matchedCount}</strong></span>
@@ -684,28 +704,49 @@ function renderRequirementReport(matches: RequirementMatchReport[]) {
   return `
     <div class="requirement-report">
       <div class="subsection-heading">
-        <h3>Báo cáo so khớp chi tiết</h3>
+        <h3>Báo cáo so khớp chi tiết & Đánh giá lại (Lecturer Override)</h3>
         <span>${matches.length} mục</span>
       </div>
-      <div class="report-table">
-        ${matches.map((match) => `
-          <article class="requirement-row ${escapeAttribute(match.matchType.toLowerCase())}">
-            <div class="requirement-row-header" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-              <strong style="font-family: var(--font-mono); font-size: 12px;">${escapeHtml(match.hiddenId)}</strong>
-              ${renderMatchBadge(match.matchType, match.score)}
-            </div>
-            <p>${escapeHtml(match.hiddenText ?? 'Yêu cầu ẩn')}</p>
-            <div class="evidence-line">
-              <span>Bằng chứng hội thoại (Extracted)</span>
-              <small>${escapeHtml(match.extractedText ?? 'Không tìm thấy thông tin trùng khớp')}</small>
-            </div>
-            <div class="evidence-line">
-              <span>Lý do đối soát</span>
-              <small>${escapeHtml(match.reason)}</small>
-            </div>
-          </article>
-        `).join('')}
-      </div>
+      <form id="override-form" class="report-table">
+        ${matches.map((match) => {
+          const activeType = (match.overriddenMatchType || match.matchType).toLowerCase()
+          return `
+            <article class="requirement-row ${escapeAttribute(activeType)}" data-match-id="${escapeAttribute(match.matchId)}">
+              <div class="requirement-row-header" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                <strong style="font-family: var(--font-mono); font-size: 12px;">${escapeHtml(match.hiddenId)}</strong>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  ${match.overriddenMatchType ? '<span class="override-badge">Đã chỉnh</span>' : ''}
+                  ${renderMatchBadge(match.overriddenMatchType || match.matchType, match.score)}
+                  <select class="override-type-select" data-match-id="${escapeAttribute(match.matchId)}" style="background: #1e293b; color: #f8fafc; border: 1px solid #475569; border-radius: 4px; padding: 2px 6px; font-size: 12px;">
+                    <option value="exact" ${activeType === 'exact' ? 'selected' : ''}>Exact</option>
+                    <option value="semantic" ${activeType === 'semantic' ? 'selected' : ''}>Semantic</option>
+                    <option value="partial" ${activeType === 'partial' ? 'selected' : ''}>Partial</option>
+                    <option value="missed" ${activeType === 'missed' ? 'selected' : ''}>Missed</option>
+                  </select>
+                </div>
+              </div>
+              <p>${escapeHtml(match.hiddenText ?? 'Yêu cầu ẩn')}</p>
+              <div class="evidence-line">
+                <span>Bằng chứng hội thoại (Extracted)</span>
+                <small>${escapeHtml(match.extractedText ?? 'Không tìm thấy thông tin trùng khớp')}</small>
+              </div>
+              <div class="evidence-line">
+                <span>Lý do đối soát</span>
+                <small>${escapeHtml(match.reason)}</small>
+              </div>
+            </article>
+          `
+        }).join('')}
+        <div class="override-action-panel" style="margin-top: 16px; padding: 16px; background: #0f172a; border-radius: 8px; border: 1px solid #334155;">
+          <h4 style="margin-bottom: 8px; color: #38bdf8;">Lưu thay đổi đánh giá của Giảng viên</h4>
+          <p style="font-size: 13px; color: #94a3b8; margin-bottom: 12px;">Hệ thống sẽ tự động tính lại <strong>Coverage Score</strong> dựa trên loại so khớp (MatchType) mới được chọn ở trên.</p>
+          <div style="margin-bottom: 12px;">
+            <label style="display: block; font-size: 12px; color: #cbd5e1; margin-bottom: 4px;">Ghi chú / Nhận xét của Giảng viên (tùy chọn):</label>
+            <textarea id="override-comment" rows="2" style="width: 100%; background: #1e293b; color: #f8fafc; border: 1px solid #475569; border-radius: 6px; padding: 8px; font-family: var(--font-sans); font-size: 13px;" placeholder="Nhập lý do điều chỉnh hoặc góp ý cho sinh viên..."></textarea>
+          </div>
+          <button class="primary-button" data-action="submit-override" type="button" style="background: var(--color-primary);">Lưu & Tính lại điểm số</button>
+        </div>
+      </form>
     </div>
   `
 }
@@ -729,6 +770,240 @@ function renderEmpty(title: string, detail?: string) {
     <div class="empty">
       <strong>${escapeHtml(title)}</strong>
       ${detail ? `<span>${escapeHtml(detail)}</span>` : ''}
+    </div>
+  `
+}
+
+export function renderAdminDashboard(state: AppState) {
+  const admin = state.adminState
+  if (!admin) {
+    return `
+      <section class="admin-dashboard">
+        <div class="placeholder">
+          <h2>Đang tải dữ liệu Quản trị hệ thống...</h2>
+        </div>
+      </section>
+    `
+  }
+
+  const isOverviewTab = admin.activeTab === 'overview'
+
+  return `
+    <section class="admin-dashboard" data-animate="fade-up">
+      <div class="admin-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <div>
+          <p class="section-kicker">Bảng điều khiển Admin</p>
+          <h2 style="font-size: 24px; font-weight: 700;">Thống kê Hệ thống & Quản lý Người dùng</h2>
+        </div>
+        <div class="admin-nav-tabs" style="display: flex; gap: 8px; background: #0f172a; padding: 4px; border-radius: 8px; border: 1px solid #334155;">
+          <button class="ghost-button ${isOverviewTab ? 'active' : ''}" data-action="set-admin-tab" data-tab="overview" type="button" style="${isOverviewTab ? 'background: var(--color-primary); color: #fff;' : ''}">Thống kê Analytics</button>
+          <button class="ghost-button ${!isOverviewTab ? 'active' : ''}" data-action="set-admin-tab" data-tab="users" type="button" style="${!isOverviewTab ? 'background: var(--color-primary); color: #fff;' : ''}">Quản lý Người dùng (CRUD)</button>
+        </div>
+      </div>
+
+      ${isOverviewTab ? renderAdminOverviewSection(admin) : renderAdminUserManagementSection(admin)}
+    </section>
+  `
+}
+
+function renderAdminOverviewSection(admin: AdminState) {
+  const overview = admin.overview
+  return `
+    <div class="admin-overview-stack" style="display: grid; gap: 24px;">
+      <!-- Metrics Overview Cards -->
+      <div class="admin-metrics-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 16px;">
+        <div class="admin-metric-card" style="background: #1e293b; padding: 16px; border-radius: 10px; border: 1px solid #334155;">
+          <span style="font-size: 12px; color: #94a3b8; display: block;">Tổng số phiên</span>
+          <strong style="font-size: 28px; color: #38bdf8; display: block; margin-top: 4px;">${overview?.totalSessions ?? 0}</strong>
+          <small style="font-size: 11px; color: #64748b;">${overview?.completedSessions ?? 0} hoàn thành · ${overview?.activeSessions ?? 0} đang mở</small>
+        </div>
+        <div class="admin-metric-card" style="background: #1e293b; padding: 16px; border-radius: 10px; border: 1px solid #334155;">
+          <span style="font-size: 12px; color: #94a3b8; display: block;">Sinh viên</span>
+          <strong style="font-size: 28px; color: #818cf8; display: block; margin-top: 4px;">${overview?.totalStudents ?? 0}</strong>
+          <small style="font-size: 11px; color: #64748b;">Tài khoản sinh viên</small>
+        </div>
+        <div class="admin-metric-card" style="background: #1e293b; padding: 16px; border-radius: 10px; border: 1px solid #334155;">
+          <span style="font-size: 12px; color: #94a3b8; display: block;">Kịch bản nghiệp vụ</span>
+          <strong style="font-size: 28px; color: #34d399; display: block; margin-top: 4px;">${overview?.totalScenarios ?? 0}</strong>
+          <small style="font-size: 11px; color: #64748b;">Kịch bản sẵn sàng</small>
+        </div>
+        <div class="admin-metric-card" style="background: #1e293b; padding: 16px; border-radius: 10px; border: 1px solid #334155;">
+          <span style="font-size: 12px; color: #94a3b8; display: block;">Coverage Score TB</span>
+          <strong style="font-size: 28px; color: #fbbf24; display: block; margin-top: 4px;">${overview?.averageCoverage ?? 0}%</strong>
+          <small style="font-size: 11px; color: #64748b;">Trung bình toàn hệ thống</small>
+        </div>
+      </div>
+
+      <!-- Charts 2x2 Grid -->
+      <div class="admin-charts-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+        <div class="chart-card" style="background: #1e293b; padding: 16px; border-radius: 10px; border: 1px solid #334155; height: 320px;">
+          <canvas id="chart-coverage-dist"></canvas>
+        </div>
+        <div class="chart-card" style="background: #1e293b; padding: 16px; border-radius: 10px; border: 1px solid #334155; height: 320px;">
+          <canvas id="chart-sessions-time"></canvas>
+        </div>
+        <div class="chart-card" style="background: #1e293b; padding: 16px; border-radius: 10px; border: 1px solid #334155; height: 320px;">
+          <canvas id="chart-scenario-stats"></canvas>
+        </div>
+        <div class="chart-card" style="background: #1e293b; padding: 16px; border-radius: 10px; border: 1px solid #334155; height: 320px;">
+          <canvas id="chart-match-breakdown"></canvas>
+        </div>
+      </div>
+
+      <!-- Top Students Table -->
+      <div class="top-students-card" style="background: #1e293b; padding: 20px; border-radius: 10px; border: 1px solid #334155;">
+        <h3 style="margin-bottom: 12px; font-size: 16px; color: #f8fafc;">Bảng xếp hạng Top Sinh viên</h3>
+        <div style="overflow-x: auto;">
+          <table style="width: 100%; border-collapse: collapse; font-size: 13px; text-align: left;">
+            <thead>
+              <tr style="border-bottom: 1px solid #334155; color: #94a3b8;">
+                <th style="padding: 10px;">Họ tên</th>
+                <th style="padding: 10px;">Email</th>
+                <th style="padding: 10px; text-align: center;">Phiên phỏng vấn</th>
+                <th style="padding: 10px; text-align: center;">Điểm cao nhất</th>
+                <th style="padding: 10px; text-align: center;">Coverage TB</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${admin.topStudents.length === 0 ? '<tr><td colspan="5" style="padding: 20px; text-align: center; color: #64748b;">Chưa có dữ liệu sinh viên hoàn thành phiên.</td></tr>' : admin.topStudents.map((s) => `
+                <tr style="border-bottom: 1px solid rgba(51, 65, 85, 0.5);">
+                  <td style="padding: 10px; font-weight: 600; color: #f1f5f9;">${escapeHtml(s.studentName)}</td>
+                  <td style="padding: 10px; color: #cbd5e1; font-family: var(--font-mono); font-size: 12px;">${escapeHtml(s.studentEmail)}</td>
+                  <td style="padding: 10px; text-align: center; color: #cbd5e1;">${s.completedCount} / ${s.sessionCount}</td>
+                  <td style="padding: 10px; text-align: center; font-weight: bold; color: #34d399;">${s.bestCoverage}%</td>
+                  <td style="padding: 10px; text-align: center; font-weight: bold; color: #38bdf8;">${s.averageCoverage}%</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  `
+}
+
+function renderAdminUserManagementSection(admin: AdminState) {
+  const users = admin.users
+  return `
+    <div class="admin-users-stack" style="display: grid; gap: 20px;">
+      <!-- Controls Bar -->
+      <div style="display: flex; gap: 12px; justify-content: space-between; align-items: center; background: #1e293b; padding: 14px; border-radius: 10px; border: 1px solid #334155;">
+        <div style="display: flex; gap: 12px; align-items: center; flex: 1;">
+          <input id="user-search-input" type="text" value="${escapeAttribute(admin.userSearch)}" placeholder="Tìm kiếm theo tên hoặc email..." style="background: #0f172a; color: #f8fafc; border: 1px solid #475569; border-radius: 6px; padding: 8px 12px; font-size: 13px; min-width: 250px;" />
+          <select id="user-role-filter" style="background: #0f172a; color: #f8fafc; border: 1px solid #475569; border-radius: 6px; padding: 8px 12px; font-size: 13px;">
+            <option value="" ${admin.userRoleFilter === '' ? 'selected' : ''}>Tất cả vai trò</option>
+            <option value="Student" ${admin.userRoleFilter === 'Student' ? 'selected' : ''}>Student</option>
+            <option value="Lecturer" ${admin.userRoleFilter === 'Lecturer' ? 'selected' : ''}>Lecturer</option>
+            <option value="Admin" ${admin.userRoleFilter === 'Admin' ? 'selected' : ''}>Admin</option>
+          </select>
+          <button class="ghost-button" data-action="filter-users" type="button">Lọc</button>
+        </div>
+        <button class="primary-button" data-action="open-create-user-modal" type="button" style="background: var(--color-primary);">+ Thêm người dùng mới</button>
+      </div>
+
+      <!-- Create / Edit User Modal / Panel if open -->
+      ${admin.isCreatingUser ? renderCreateUserForm() : ''}
+      ${admin.editingUser ? renderEditUserForm(admin.editingUser) : ''}
+
+      <!-- Users Table -->
+      <div style="background: #1e293b; padding: 20px; border-radius: 10px; border: 1px solid #334155;">
+        <h3 style="margin-bottom: 12px; font-size: 16px; color: #f8fafc;">Danh sách Người dùng (${users.length})</h3>
+        <div style="overflow-x: auto;">
+          <table style="width: 100%; border-collapse: collapse; font-size: 13px; text-align: left;">
+            <thead>
+              <tr style="border-bottom: 1px solid #334155; color: #94a3b8;">
+                <th style="padding: 10px;">Họ tên</th>
+                <th style="padding: 10px;">Email</th>
+                <th style="padding: 10px;">Vai trò</th>
+                <th style="padding: 10px;">Ngày tạo</th>
+                <th style="padding: 10px; text-align: right;">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${users.length === 0 ? '<tr><td colspan="5" style="padding: 20px; text-align: center; color: #64748b;">Không tìm thấy người dùng nào.</td></tr>' : users.map((u) => `
+                <tr style="border-bottom: 1px solid rgba(51, 65, 85, 0.5);">
+                  <td style="padding: 10px; font-weight: 600; color: #f1f5f9;">${escapeHtml(u.name)}</td>
+                  <td style="padding: 10px; color: #cbd5e1; font-family: var(--font-mono); font-size: 12px;">${escapeHtml(u.email)}</td>
+                  <td style="padding: 10px;"><span class="user-role-badge ${u.role.toLowerCase()}" style="padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; background: ${u.role === 'Admin' ? '#ef4444' : u.role === 'Lecturer' ? '#f59e0b' : '#3b82f6'}; color: #fff;">${escapeHtml(u.role)}</span></td>
+                  <td style="padding: 10px; color: #94a3b8; font-size: 12px;">${formatTime(u.createdAt)}</td>
+                  <td style="padding: 10px; text-align: right;">
+                    <button class="ghost-button" data-action="edit-user" data-user-id="${escapeAttribute(u.id)}" type="button" style="padding: 2px 8px; font-size: 12px;">Sửa</button>
+                    <button class="ghost-button" data-action="delete-user" data-user-id="${escapeAttribute(u.id)}" type="button" style="padding: 2px 8px; font-size: 12px; color: #f87171; border-color: rgba(248, 113, 113, 0.3);">Xóa</button>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  `
+}
+
+function renderCreateUserForm() {
+  return `
+    <div style="background: #0f172a; padding: 20px; border-radius: 10px; border: 1px solid var(--color-primary); margin-bottom: 16px;">
+      <h4 style="margin-bottom: 12px; color: #38bdf8;">Tạo mới Người dùng</h4>
+      <form id="create-user-form" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <div>
+          <label style="display: block; font-size: 12px; color: #cbd5e1; margin-bottom: 4px;">Họ và tên *</label>
+          <input name="name" type="text" required placeholder="Nguyễn Văn A" style="width: 100%; background: #1e293b; color: #fff; border: 1px solid #475569; border-radius: 6px; padding: 8px; font-size: 13px;" />
+        </div>
+        <div>
+          <label style="display: block; font-size: 12px; color: #cbd5e1; margin-bottom: 4px;">Email *</label>
+          <input name="email" type="email" required placeholder="user@example.com" style="width: 100%; background: #1e293b; color: #fff; border: 1px solid #475569; border-radius: 6px; padding: 8px; font-size: 13px;" />
+        </div>
+        <div>
+          <label style="display: block; font-size: 12px; color: #cbd5e1; margin-bottom: 4px;">Mật khẩu (tối thiểu 6 ký tự) *</label>
+          <input name="password" type="password" required minlength="6" placeholder="******" style="width: 100%; background: #1e293b; color: #fff; border: 1px solid #475569; border-radius: 6px; padding: 8px; font-size: 13px;" />
+        </div>
+        <div>
+          <label style="display: block; font-size: 12px; color: #cbd5e1; margin-bottom: 4px;">Vai trò *</label>
+          <select name="role" required style="width: 100%; background: #1e293b; color: #fff; border: 1px solid #475569; border-radius: 6px; padding: 8px; font-size: 13px;">
+            <option value="Student">Student (Sinh viên)</option>
+            <option value="Lecturer">Lecturer (Giảng viên)</option>
+            <option value="Admin">Admin (Quản trị viên)</option>
+          </select>
+        </div>
+        <div style="grid-column: 1 / -1; display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px;">
+          <button class="ghost-button" data-action="cancel-user-form" type="button">Hủy</button>
+          <button class="primary-button" data-action="submit-create-user" type="button" style="background: var(--color-primary);">Tạo người dùng</button>
+        </div>
+      </form>
+    </div>
+  `
+}
+
+function renderEditUserForm(user: AdminUserItem) {
+  return `
+    <div style="background: #0f172a; padding: 20px; border-radius: 10px; border: 1px solid #f59e0b; margin-bottom: 16px;">
+      <h4 style="margin-bottom: 12px; color: #f59e0b;">Cập nhật Người dùng: ${escapeHtml(user.name)}</h4>
+      <form id="edit-user-form" data-user-id="${escapeAttribute(user.id)}" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <div>
+          <label style="display: block; font-size: 12px; color: #cbd5e1; margin-bottom: 4px;">Họ và tên *</label>
+          <input name="name" type="text" value="${escapeAttribute(user.name)}" required style="width: 100%; background: #1e293b; color: #fff; border: 1px solid #475569; border-radius: 6px; padding: 8px; font-size: 13px;" />
+        </div>
+        <div>
+          <label style="display: block; font-size: 12px; color: #cbd5e1; margin-bottom: 4px;">Email *</label>
+          <input name="email" type="email" value="${escapeAttribute(user.email)}" required style="width: 100%; background: #1e293b; color: #fff; border: 1px solid #475569; border-radius: 6px; padding: 8px; font-size: 13px;" />
+        </div>
+        <div>
+          <label style="display: block; font-size: 12px; color: #cbd5e1; margin-bottom: 4px;">Mật khẩu mới (bỏ trống nếu không đổi)</label>
+          <input name="newPassword" type="password" placeholder="Để trống nếu giữ nguyên" style="width: 100%; background: #1e293b; color: #fff; border: 1px solid #475569; border-radius: 6px; padding: 8px; font-size: 13px;" />
+        </div>
+        <div>
+          <label style="display: block; font-size: 12px; color: #cbd5e1; margin-bottom: 4px;">Vai trò *</label>
+          <select name="role" required style="width: 100%; background: #1e293b; color: #fff; border: 1px solid #475569; border-radius: 6px; padding: 8px; font-size: 13px;">
+            <option value="Student" ${user.role === 'Student' ? 'selected' : ''}>Student (Sinh viên)</option>
+            <option value="Lecturer" ${user.role === 'Lecturer' ? 'selected' : ''}>Lecturer (Giảng viên)</option>
+            <option value="Admin" ${user.role === 'Admin' ? 'selected' : ''}>Admin (Quản trị viên)</option>
+          </select>
+        </div>
+        <div style="grid-column: 1 / -1; display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px;">
+          <button class="ghost-button" data-action="cancel-user-form" type="button">Hủy</button>
+          <button class="primary-button" data-action="submit-edit-user" type="button" style="background: #f59e0b; color: #000; font-weight: bold;">Lưu thay đổi</button>
+        </div>
+      </form>
     </div>
   `
 }

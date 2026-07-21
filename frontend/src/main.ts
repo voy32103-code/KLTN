@@ -2,20 +2,32 @@ import './style.css'
 import { createApiClient } from './api'
 import { API_BASE_URL, EXPIRED_SESSION_NOTICE, TOKEN_KEY } from './constants'
 import type {
+  AdminOverview,
+  AdminUserItem,
   AppState,
   ChatMessage,
+  CoverageDistributionBin,
   EvaluationResult,
+  MatchTypeBreakdownData,
   Notice,
   ReviewSessionDetail,
   ReviewSessionSummary,
   ScenarioDetail,
+  ScenarioStatItem,
   ScenarioSummary,
   SessionState,
+  SessionsOverTimeData,
+  TopStudentItem,
 } from './types'
 import { getErrorMessage, isPrivilegedRole, isTokenExpired, readUserFromToken } from './utils'
 import { renderApp } from './views'
-
-
+import {
+  destroyAllAdminCharts,
+  renderCoverageDistributionChart,
+  renderMatchTypeBreakdownChart,
+  renderScenarioStatsChart,
+  renderSessionsOverTimeChart
+} from './admin-charts'
 
 const root = document.querySelector<HTMLDivElement>('#app')
 if (!root) throw new Error('Missing #app root')
@@ -42,6 +54,7 @@ const state: AppState = {
   reviewSessions: [],
   selectedReviewSessionId: null,
   reviewDetail: null,
+  adminState: null,
   busy: false,
   notice: null,
 }
@@ -65,6 +78,7 @@ if (state.token) {
 }
 
 function render() {
+  destroyAllAdminCharts()
   app.innerHTML = renderApp(state)
   bindEvents()
 
@@ -72,6 +86,38 @@ function render() {
   document.body.className = ''
   document.body.classList.add(`view-${state.view}`)
   initAnimations()
+
+  // Trigger Admin Charts rendering if in admin overview view
+  if (state.view === 'admin' && state.adminState?.activeTab === 'overview') {
+    requestAnimationFrame(() => {
+      renderAdminCharts()
+    })
+  }
+}
+
+function renderAdminCharts() {
+  const admin = state.adminState
+  if (!admin) return
+
+  const covCanvas = document.querySelector<HTMLCanvasElement>('#chart-coverage-dist')
+  if (covCanvas && admin.coverageDistribution) {
+    renderCoverageDistributionChart(covCanvas, admin.coverageDistribution)
+  }
+
+  const timeCanvas = document.querySelector<HTMLCanvasElement>('#chart-sessions-time')
+  if (timeCanvas && admin.sessionsOverTime) {
+    renderSessionsOverTimeChart(timeCanvas, admin.sessionsOverTime)
+  }
+
+  const scenCanvas = document.querySelector<HTMLCanvasElement>('#chart-scenario-stats')
+  if (scenCanvas && admin.scenarioStats) {
+    renderScenarioStatsChart(scenCanvas, admin.scenarioStats)
+  }
+
+  const matchCanvas = document.querySelector<HTMLCanvasElement>('#chart-match-breakdown')
+  if (matchCanvas && admin.matchTypeBreakdown) {
+    renderMatchTypeBreakdownChart(matchCanvas, admin.matchTypeBreakdown)
+  }
 }
 
 function bindEvents() {
@@ -117,7 +163,10 @@ function bindEvents() {
 
   document.querySelectorAll<HTMLButtonElement>('[data-action]').forEach((button) => {
     button.addEventListener('click', () => {
-      void handleAction(button.dataset.action ?? '')
+      const action = button.dataset.action ?? ''
+      const tab = button.dataset.tab ?? ''
+      const userId = button.dataset.userId ?? ''
+      void handleAction(action, { tab, userId })
     })
   })
 
@@ -133,7 +182,7 @@ function bindEvents() {
 
 
 
-async function handleAction(action: string) {
+async function handleAction(action: string, options: { tab?: string; userId?: string } = {}) {
   if (state.busy) return
   switch (action) {
     case 'logout':
@@ -171,6 +220,56 @@ async function handleAction(action: string) {
       break
     case 'export-review-csv':
       exportReviewCsv()
+      break
+    case 'open-admin':
+      await openAdminDashboard()
+      break
+    case 'set-admin-tab':
+      if (state.adminState && (options.tab === 'overview' || options.tab === 'users')) {
+        state.adminState.activeTab = options.tab
+        render()
+      }
+      break
+    case 'submit-override':
+      await submitLecturerOverride()
+      break
+    case 'open-create-user-modal':
+      if (state.adminState) {
+        state.adminState.isCreatingUser = true
+        state.adminState.editingUser = null
+        render()
+      }
+      break
+    case 'cancel-user-form':
+      if (state.adminState) {
+        state.adminState.isCreatingUser = false
+        state.adminState.editingUser = null
+        render()
+      }
+      break
+    case 'submit-create-user':
+      await submitCreateUser()
+      break
+    case 'edit-user':
+      if (options.userId && state.adminState) {
+        const user = state.adminState.users.find(u => u.id === options.userId)
+        if (user) {
+          state.adminState.editingUser = user
+          state.adminState.isCreatingUser = false
+          render()
+        }
+      }
+      break
+    case 'submit-edit-user':
+      await submitEditUser()
+      break
+    case 'delete-user':
+      if (options.userId) {
+        await deleteUser(options.userId)
+      }
+      break
+    case 'filter-users':
+      await filterAdminUsers()
       break
   }
 }
@@ -349,6 +448,168 @@ async function endSession() {
       method: 'POST',
     })
     setNotice('success', 'Đã kết thúc phiên phỏng vấn và nhận kết quả đánh giá.')
+  })
+}
+
+async function submitLecturerOverride() {
+  if (!state.reviewDetail) return
+
+  const form = document.querySelector<HTMLFormElement>('#override-form')
+  if (!form) return
+
+  const matchSelects = form.querySelectorAll<HTMLSelectElement>('.override-type-select')
+  const overrides: { matchId: string; overriddenType: string }[] = []
+  matchSelects.forEach((select) => {
+    const matchId = select.dataset.matchId
+    if (matchId && matchId !== '00000000-0000-0000-0000-000000000000') {
+      overrides.push({ matchId, overriddenType: select.value })
+    }
+  })
+
+  const commentInput = document.querySelector<HTMLTextAreaElement>('#override-comment')
+  const comment = commentInput?.value?.trim() ?? ''
+
+  await withBusy(async () => {
+    const updatedEval = await api.request<EvaluationResult>(`/api/Sessions/review/${state.reviewDetail?.session.id}/override`, {
+      method: 'PUT',
+      body: { overrides, comment },
+    })
+
+    if (state.reviewDetail) {
+      state.reviewDetail.evaluation = updatedEval
+    }
+    // Update summary item score in list
+    const summaryItem = state.reviewSessions.find(s => s.id === state.reviewDetail?.session.id)
+    if (summaryItem && summaryItem.evaluation) {
+      summaryItem.evaluation.coverageScore = updatedEval.overriddenCoverageScore ?? updatedEval.coverageScore
+    }
+    setNotice('success', 'Đã cập nhật đánh giá lại của Giảng viên và tính lại Coverage Score.')
+  })
+}
+
+async function openAdminDashboard() {
+  await withBusy(async () => {
+    state.view = 'admin'
+    state.adminState = {
+      activeTab: 'overview',
+      overview: null,
+      coverageDistribution: null,
+      sessionsOverTime: null,
+      scenarioStats: [],
+      topStudents: [],
+      matchTypeBreakdown: null,
+      users: [],
+      userSearch: '',
+      userRoleFilter: '',
+      editingUser: null,
+      isCreatingUser: false,
+    }
+    clearNotice()
+
+    // Fetch Overview metrics & charts in parallel
+    const [ov, dist, time, scen, top, breakdown, userList] = await Promise.all([
+      api.request<AdminOverview>('/api/Admin/stats/overview'),
+      api.request<CoverageDistributionBin[]>('/api/Admin/stats/coverage-distribution'),
+      api.request<SessionsOverTimeData>('/api/Admin/stats/sessions-over-time'),
+      api.request<ScenarioStatItem[]>('/api/Admin/stats/by-scenario'),
+      api.request<TopStudentItem[]>('/api/Admin/stats/top-students'),
+      api.request<MatchTypeBreakdownData>('/api/Admin/stats/match-type-breakdown'),
+      api.request<AdminUserItem[]>('/api/Admin/users'),
+    ])
+
+    state.adminState.overview = ov
+    state.adminState.coverageDistribution = dist
+    state.adminState.sessionsOverTime = time
+    state.adminState.scenarioStats = scen
+    state.adminState.topStudents = top
+    state.adminState.matchTypeBreakdown = breakdown
+    state.adminState.users = userList
+  })
+}
+
+async function filterAdminUsers() {
+  if (!state.adminState) return
+  const searchInput = document.querySelector<HTMLInputElement>('#user-search-input')
+  const roleSelect = document.querySelector<HTMLSelectElement>('#user-role-filter')
+
+  const search = searchInput?.value?.trim() ?? ''
+  const role = roleSelect?.value ?? ''
+
+  state.adminState.userSearch = search
+  state.adminState.userRoleFilter = role
+
+  await withBusy(async () => {
+    const query = new URLSearchParams()
+    if (search) query.set('search', search)
+    if (role) query.set('role', role)
+
+    const userList = await api.request<AdminUserItem[]>(`/api/Admin/users?${query.toString()}`)
+    if (state.adminState) {
+      state.adminState.users = userList
+    }
+  })
+}
+
+async function submitCreateUser() {
+  const form = document.querySelector<HTMLFormElement>('#create-user-form')
+  if (!form) return
+  const formData = new FormData(form)
+  const name = String(formData.get('name') ?? '').trim()
+  const email = String(formData.get('email') ?? '').trim()
+  const password = String(formData.get('password') ?? '')
+  const role = String(formData.get('role') ?? 'Student')
+
+  if (!name || !email || !password) {
+    setNotice('error', 'Vui lòng điền đầy đủ các trường bắt buộc.')
+    return
+  }
+
+  await withBusy(async () => {
+    await api.request('/api/Admin/users', {
+      method: 'POST',
+      body: { name, email, password, role }
+    })
+    setNotice('success', `Đã tạo người dùng mới: ${email}`)
+    if (state.adminState) state.adminState.isCreatingUser = false
+    await filterAdminUsers()
+  })
+}
+
+async function submitEditUser() {
+  if (!state.adminState?.editingUser) return
+  const form = document.querySelector<HTMLFormElement>('#edit-user-form')
+  if (!form) return
+  const formData = new FormData(form)
+  const name = String(formData.get('name') ?? '').trim()
+  const email = String(formData.get('email') ?? '').trim()
+  const newPassword = String(formData.get('newPassword') ?? '')
+  const role = String(formData.get('role') ?? 'Student')
+
+  await withBusy(async () => {
+    await api.request(`/api/Admin/users/${state.adminState?.editingUser?.id}`, {
+      method: 'PUT',
+      body: {
+        name,
+        email,
+        newPassword: newPassword || null,
+        role
+      }
+    })
+    setNotice('success', `Đã cập nhật thông tin người dùng: ${email}`)
+    if (state.adminState) state.adminState.editingUser = null
+    await filterAdminUsers()
+  })
+}
+
+async function deleteUser(userId: string) {
+  if (!confirm('Bạn có chắc chắn muốn xóa người dùng này?')) return
+
+  await withBusy(async () => {
+    await api.request(`/api/Admin/users/${userId}`, {
+      method: 'DELETE'
+    })
+    setNotice('success', 'Đã xóa người dùng thành công.')
+    await filterAdminUsers()
   })
 }
 

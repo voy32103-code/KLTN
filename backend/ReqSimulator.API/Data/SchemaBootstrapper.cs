@@ -104,6 +104,37 @@ public static class SchemaBootstrapper
         END $$;
         """;
 
+    private const string LecturerOverrideSchemaSql = """
+        -- Add lecturer override columns to evaluation_results
+        ALTER TABLE evaluation_results
+        ADD COLUMN IF NOT EXISTS overridden_coverage_score numeric NULL;
+
+        ALTER TABLE evaluation_results
+        ADD COLUMN IF NOT EXISTS overridden_by_lecturer_id uuid NULL;
+
+        ALTER TABLE evaluation_results
+        ADD COLUMN IF NOT EXISTS overridden_at timestamp with time zone NULL;
+
+        -- Add lecturer override column to requirement_matches
+        ALTER TABLE requirement_matches
+        ADD COLUMN IF NOT EXISTS overridden_match_type match_type NULL;
+
+        -- Create lecturer_overrides audit trail table
+        CREATE TABLE IF NOT EXISTS lecturer_overrides (
+            id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+            evaluation_id uuid NOT NULL REFERENCES evaluation_results(id) ON DELETE CASCADE,
+            lecturer_id uuid NOT NULL REFERENCES users(id),
+            original_coverage_score numeric NULL,
+            new_coverage_score numeric NULL,
+            match_overrides jsonb NULL,
+            comment character varying(1000) NULL,
+            overridden_at timestamp with time zone NOT NULL DEFAULT NOW()
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_lecturer_overrides_evaluation
+            ON lecturer_overrides (evaluation_id);
+        """;
+
     public static async Task EnsureOperationalSchemaAsync(this IServiceProvider services, ILogger logger)
     {
         using var scope = services.CreateScope();
@@ -113,7 +144,8 @@ public static class SchemaBootstrapper
         await db.Database.ExecuteSqlRawAsync(CreateIndexSql);
         await db.Database.ExecuteSqlRawAsync(UpdateSessionsSql);
         await db.Database.ExecuteSqlRawAsync(CleanAndEnforceUniqueSql);
+        await db.Database.ExecuteSqlRawAsync(LecturerOverrideSchemaSql);
 
-        logger.LogInformation("Ensured operational schema and unique constraint for session evaluation results.");
+        logger.LogInformation("Ensured operational schema, unique constraint, and lecturer override tables.");
     }
 }

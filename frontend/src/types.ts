@@ -1,5 +1,5 @@
 export type AuthMode = 'login' | 'register'
-export type AppView = 'auth' | 'scenarios' | 'chat' | 'review'
+export type AppView = 'auth' | 'scenarios' | 'chat' | 'review' | 'admin'
 export type Sender = 'Student' | 'Stakeholder'
 
 export type ScenarioSummary = {
@@ -47,9 +47,11 @@ export type EvaluationFeedback = {
   designSuggestions?: DesignSuggestions | null
 }
 
-
 export type EvaluationResult = {
   coverageScore: number | null
+  overriddenCoverageScore?: number | null
+  overriddenByLecturer?: string | null
+  overriddenAt?: string | null
   matchedCount: number
   partialCount: number
   missedCount: number
@@ -69,12 +71,14 @@ export type ScoringPolicy = {
 }
 
 export type RequirementMatchReport = {
+  matchId: string
   hiddenId: string
   hiddenText?: string | null
   extractedText?: string | null
   score: number
   matchType: string
   reason: string
+  overriddenMatchType?: string | null
 }
 
 export type SessionState = {
@@ -158,6 +162,74 @@ export type ReviewSessionDetail = {
   evaluation?: EvaluationResult | null
 }
 
+// === Admin & User Management Types ===
+export type AdminOverview = {
+  totalSessions: number
+  totalStudents: number
+  totalScenarios: number
+  averageCoverage: number
+  completedSessions: number
+  activeSessions: number
+}
+
+export type CoverageDistributionBin = {
+  label: string
+  count: number
+}
+
+export type SessionsOverTimeData = {
+  labels: string[]
+  counts: number[]
+}
+
+export type ScenarioStatItem = {
+  scenarioId: string
+  scenarioTitle: string
+  sessionCount: number
+  averageCoverage: number
+  averageTurns: number
+}
+
+export type TopStudentItem = {
+  studentId: string
+  studentName: string
+  studentEmail: string
+  sessionCount: number
+  completedCount: number
+  bestCoverage: number
+  averageCoverage: number
+}
+
+export type MatchTypeBreakdownData = {
+  exact: number
+  semantic: number
+  partial: number
+  missed: number
+}
+
+export type AdminUserItem = {
+  id: string
+  name: string
+  email: string
+  role: string
+  createdAt: string
+}
+
+export type AdminState = {
+  activeTab: 'overview' | 'users'
+  overview: AdminOverview | null
+  coverageDistribution: CoverageDistributionBin[] | null
+  sessionsOverTime: SessionsOverTimeData | null
+  scenarioStats: ScenarioStatItem[]
+  topStudents: TopStudentItem[]
+  matchTypeBreakdown: MatchTypeBreakdownData | null
+  users: AdminUserItem[]
+  userSearch: string
+  userRoleFilter: string
+  editingUser: AdminUserItem | null
+  isCreatingUser: boolean
+}
+
 export type Notice = {
   type: 'info' | 'error' | 'success'
   text: string
@@ -183,6 +255,7 @@ export type AppState = {
   reviewSessions: ReviewSessionSummary[]
   selectedReviewSessionId: string | null
   reviewDetail: ReviewSessionDetail | null
+  adminState: AdminState | null
   busy: boolean
   notice: Notice | null
 }
