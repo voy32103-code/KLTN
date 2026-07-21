@@ -66,7 +66,10 @@ const api = createApiClient({
 })
 
 state.user = state.token ? readUserFromToken(state.token) : null
-state.view = state.token ? 'scenarios' : 'auth'
+state.view = state.token
+  ? (state.user?.role === 'Admin' ? 'admin' : state.user?.role === 'Lecturer' ? 'review' : 'scenarios')
+  : 'auth'
+
 if (hasExpiredStoredToken) {
   localStorage.removeItem(TOKEN_KEY)
   state.notice = { type: 'info', text: EXPIRED_SESSION_NOTICE }
@@ -74,7 +77,13 @@ if (hasExpiredStoredToken) {
 
 render()
 if (state.token) {
-  void loadScenarios()
+  if (state.user?.role === 'Admin') {
+    void openAdminDashboard()
+  } else if (state.user?.role === 'Lecturer') {
+    void openReviewDashboard()
+  } else {
+    void loadScenarios()
+  }
 }
 
 function render() {
@@ -304,9 +313,15 @@ async function submitAuth(form: FormData) {
     state.token = result.token
     state.user = readUserFromToken(result.token)
     localStorage.setItem(TOKEN_KEY, result.token)
-    state.view = 'scenarios'
     setNotice('success', 'Đăng nhập thành công.')
-    await loadScenarios(false)
+    if (state.user?.role === 'Admin') {
+      await openAdminDashboard()
+    } else if (state.user?.role === 'Lecturer') {
+      await openReviewDashboard()
+    } else {
+      state.view = 'scenarios'
+      await loadScenarios(false)
+    }
   })
 }
 

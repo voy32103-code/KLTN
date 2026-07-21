@@ -59,7 +59,7 @@ function renderTopbar(state: AppState) {
     auth: 'Cổng truy cập',
     scenarios: 'Lựa chọn kịch bản',
     chat: state.evaluation ? 'Báo cáo đánh giá' : 'Phỏng vấn trực tiếp',
-    review: 'Bảng điều khiển review',
+    review: 'Bảng Review Giảng viên',
     admin: 'Quản trị hệ thống (Admin)'
   }
   const canReview = isPrivilegedRole(state.user?.role)
@@ -79,9 +79,9 @@ function renderTopbar(state: AppState) {
       <div class="topbar-actions">
         <span class="view-pill">${escapeHtml(viewLabels[state.view])}</span>
         ${state.user?.email ? `<span class="user-pill">${escapeHtml(state.user.email)} (${escapeHtml(state.user.role ?? 'Student')})</span>` : ''}
-        ${canReview && state.view !== 'review' ? `<button class="ghost-button" data-action="open-review" type="button" ${state.busy ? 'disabled' : ''}>Bảng điều khiển</button>` : ''}
-        ${canReview && state.view === 'review' ? `<button class="ghost-button" data-action="open-student-lab" type="button" ${state.busy ? 'disabled' : ''}>Phòng thực hành</button>` : ''}
-        ${isAdmin && state.view !== 'admin' ? `<button class="ghost-button" data-action="open-admin" type="button" ${state.busy ? 'disabled' : ''} style="border-color: var(--color-primary); color: #38bdf8;">Admin Console</button>` : ''}
+        ${state.token && state.view !== 'scenarios' ? `<button class="ghost-button" data-action="open-student-lab" type="button" ${state.busy ? 'disabled' : ''}>Phòng thực hành</button>` : ''}
+        ${canReview && state.view !== 'review' ? `<button class="ghost-button" data-action="open-review" type="button" ${state.busy ? 'disabled' : ''}>Review Giảng viên</button>` : ''}
+        ${isAdmin && state.view !== 'admin' ? `<button class="ghost-button" data-action="open-admin" type="button" ${state.busy ? 'disabled' : ''} style="border-color: #38bdf8; color: #38bdf8;">Admin Console</button>` : ''}
         ${state.token ? `<button class="ghost-button" data-action="logout" type="button" ${state.busy ? 'disabled' : ''}>Đăng xuất</button>` : ''}
       </div>
     </header>
