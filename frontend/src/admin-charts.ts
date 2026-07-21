@@ -25,15 +25,16 @@ export function renderCoverageDistributionChart(
   canvas: HTMLCanvasElement,
   bins: CoverageDistributionBin[]
 ) {
+  const safeBins: CoverageDistributionBin[] = Array.isArray(bins) ? bins : (Array.isArray((bins as any)?.bins) ? (bins as any).bins : [])
   destroyChart('coverage-dist')
   activeCharts['coverage-dist'] = new Chart(canvas, {
     type: 'bar',
     data: {
-      labels: bins.map(b => b.label),
+      labels: safeBins.map(b => b.label),
       datasets: [
         {
           label: 'Số phiên phỏng vấn',
-          data: bins.map(b => b.count),
+          data: safeBins.map(b => b.count),
           backgroundColor: [
             'rgba(239, 68, 68, 0.7)',
             'rgba(245, 158, 11, 0.7)',
@@ -77,15 +78,17 @@ export function renderSessionsOverTimeChart(
   canvas: HTMLCanvasElement,
   data: SessionsOverTimeData
 ) {
+  const labels = data?.labels ?? []
+  const counts = data?.counts ?? []
   destroyChart('sessions-time')
   activeCharts['sessions-time'] = new Chart(canvas, {
     type: 'line',
     data: {
-      labels: data.labels,
+      labels,
       datasets: [
         {
           label: 'Số phiên',
-          data: data.counts,
+          data: counts,
           borderColor: '#38bdf8',
           backgroundColor: 'rgba(56, 189, 248, 0.15)',
           fill: true,
@@ -119,21 +122,22 @@ export function renderScenarioStatsChart(
   canvas: HTMLCanvasElement,
   scenarios: ScenarioStatItem[]
 ) {
+  const safeScenarios = Array.isArray(scenarios) ? scenarios : []
   destroyChart('scenario-stats')
   activeCharts['scenario-stats'] = new Chart(canvas, {
     type: 'bar',
     data: {
-      labels: scenarios.map(s => s.scenarioTitle.length > 20 ? s.scenarioTitle.slice(0, 18) + '...' : s.scenarioTitle),
+      labels: safeScenarios.map(s => s.scenarioTitle.length > 20 ? s.scenarioTitle.slice(0, 18) + '...' : s.scenarioTitle),
       datasets: [
         {
           label: 'Coverage TB (%)',
-          data: scenarios.map(s => s.averageCoverage),
+          data: safeScenarios.map(s => s.averageCoverage),
           backgroundColor: 'rgba(99, 102, 241, 0.8)',
           borderRadius: 4
         },
         {
           label: 'Số lượt hội thoại TB',
-          data: scenarios.map(s => s.averageTurns),
+          data: safeScenarios.map(s => s.averageTurns),
           backgroundColor: 'rgba(236, 72, 153, 0.8)',
           borderRadius: 4
         }
@@ -163,6 +167,10 @@ export function renderMatchTypeBreakdownChart(
   canvas: HTMLCanvasElement,
   data: MatchTypeBreakdownData
 ) {
+  const exact = data?.exact ?? 0
+  const semantic = data?.semantic ?? 0
+  const partial = data?.partial ?? 0
+  const missed = data?.missed ?? 0
   destroyChart('match-breakdown')
   activeCharts['match-breakdown'] = new Chart(canvas, {
     type: 'doughnut',
@@ -170,7 +178,7 @@ export function renderMatchTypeBreakdownChart(
       labels: ['Exact Match', 'Semantic Match', 'Partial Match', 'Missed'],
       datasets: [
         {
-          data: [data.exact, data.semantic, data.partial, data.missed],
+          data: [exact, semantic, partial, missed],
           backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#ef4444'],
           borderColor: '#0f172a',
           borderWidth: 2

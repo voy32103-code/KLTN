@@ -522,9 +522,9 @@ async function openAdminDashboard() {
     clearNotice()
 
     // Fetch Overview metrics & charts in parallel
-    const [ov, dist, time, scen, top, breakdown, userList] = await Promise.all([
+    const [ov, distResp, time, scen, top, breakdown, userList] = await Promise.all([
       api.request<AdminOverview>('/api/Admin/stats/overview'),
-      api.request<CoverageDistributionBin[]>('/api/Admin/stats/coverage-distribution'),
+      api.request<{ bins: CoverageDistributionBin[] } | CoverageDistributionBin[]>('/api/Admin/stats/coverage-distribution'),
       api.request<SessionsOverTimeData>('/api/Admin/stats/sessions-over-time'),
       api.request<ScenarioStatItem[]>('/api/Admin/stats/by-scenario'),
       api.request<TopStudentItem[]>('/api/Admin/stats/top-students'),
@@ -533,12 +533,12 @@ async function openAdminDashboard() {
     ])
 
     state.adminState.overview = ov
-    state.adminState.coverageDistribution = dist
+    state.adminState.coverageDistribution = Array.isArray(distResp) ? distResp : distResp?.bins ?? []
     state.adminState.sessionsOverTime = time
-    state.adminState.scenarioStats = scen
-    state.adminState.topStudents = top
+    state.adminState.scenarioStats = Array.isArray(scen) ? scen : []
+    state.adminState.topStudents = Array.isArray(top) ? top : []
     state.adminState.matchTypeBreakdown = breakdown
-    state.adminState.users = userList
+    state.adminState.users = Array.isArray(userList) ? userList : []
   })
 }
 
