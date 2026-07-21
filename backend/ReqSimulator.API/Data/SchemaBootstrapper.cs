@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using ReqSimulator.API.Models;
 
 namespace ReqSimulator.API.Data;
 
@@ -146,6 +147,49 @@ public static class SchemaBootstrapper
         await db.Database.ExecuteSqlRawAsync(CleanAndEnforceUniqueSql);
         await db.Database.ExecuteSqlRawAsync(LecturerOverrideSchemaSql);
 
-        logger.LogInformation("Ensured operational schema, unique constraint, and lecturer override tables.");
+        await SeedDefaultUsersAsync(db, logger);
+
+        logger.LogInformation("Ensured operational schema, unique constraint, lecturer override tables, and default Lecturer/Admin accounts.");
+    }
+
+    private static async Task SeedDefaultUsersAsync(AppDbContext db, ILogger logger)
+    {
+        var defaultAccounts = new[]
+        {
+            new { Email = "lecturer@reqsim.edu.vn", Name = "Giảng Viên (Lecturer)", Password = "Password123!", Role = UserRole.Lecturer },
+            new { Email = "lecturer@example.com", Name = "Giảng Viên Demo", Password = "Password123!", Role = UserRole.Lecturer },
+            new { Email = "admin@reqsim.edu.vn", Name = "Quản Trị Viên (Admin)", Password = "Password123!", Role = UserRole.Admin },
+            new { Email = "admin@example.com", Name = "Quản Trị Viên Demo", Password = "Password123!", Role = UserRole.Admin }
+        };
+
+        bool hasChanges = false;
+        foreach (var acc in defaultAccounts)
+        {
+            var user = await db.Users.FirstOrDefaultAsync(u => u.Email == acc.Email);
+            if (user == null)
+            {
+                db.Users.Add(new User
+                {
+                    Name = acc.Name,
+                    Email = acc.Email,
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword(acc.Password),
+                    Role = acc.Role,
+                    CreatedAt = DateTime.UtcNow
+                });
+                hasChanges = true;
+                logger.LogInformation("Seeded default {Role} account: {Email}", acc.Role, acc.Email);
+            }
+            else if (user.Role != acc.Role)
+            {
+                user.Role = acc.Role;
+                hasChanges = true;
+                logger.LogInformation("Updated role of {Email} to {Role}", acc.Email, acc.Role);
+            }
+        }
+
+        if (hasChanges)
+        {
+            await db.SaveChangesAsync();
+        }
     }
 }
