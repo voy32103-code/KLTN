@@ -410,31 +410,39 @@ label {
 input,
 textarea {
   width: 100%;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  background: var(--surface);
-  color: var(--text);
+  border: 1px solid var(--line-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  color: var(--text-primary);
   outline: none;
-  font-family: var(--font-sans);
+  font-family: var(--font-body);
   font-size: 14px;
-  transition: border-color 0.2s var(--transition-smooth);
+  transition: all 0.2s var(--transition-smooth);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--text-secondary);
+  opacity: 0.75;
 }
 
 input {
-  height: 40px;
-  padding: 0 12px;
+  height: 44px;
+  padding: 0 16px;
 }
 
 textarea {
   resize: vertical;
   min-height: 84px;
   max-height: 200px;
-  padding: 12px;
+  padding: 14px 16px;
 }
 
 input:focus,
 textarea:focus {
-  border-color: var(--text);
+  border-color: var(--accent-indigo);
+  box-shadow: 0 0 0 3px var(--accent-indigo-glow);
+  background: var(--surface);
 }
 
 /* High-Agency Primary & Ghost Buttons */
@@ -966,9 +974,9 @@ dd {
 
 .message.stakeholder p {
   font-family: var(--font-serif);
-  font-size: 18px;
-  line-height: 1.5;
-  color: #2F3437;
+  font-size: 17px;
+  line-height: 1.6;
+  color: #F3F4F6;
 }
 
 .message.pending {
