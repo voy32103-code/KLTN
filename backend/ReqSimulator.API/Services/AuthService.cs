@@ -11,7 +11,7 @@ namespace ReqSimulator.API.Services;
 /// <summary>
 /// Xử lý Register + Login.
 /// - Register: hash password bằng BCrypt, lưu vào DB.
-/// - Login: verify password → tạo JWT token.
+/// - Login: verify password (BCrypt / SHA256 fallback) → tạo JWT token.
 /// </summary>
 public class AuthService
 {
@@ -46,10 +46,34 @@ public class AuthService
         var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == email)
             ?? throw new UnauthorizedAccessException("Thông tin đăng nhập không chính xác");
 
-        if (!BCrypt.Net.BCrypt.Verify(password, user.PasswordHash))
+        bool isValidPassword = false;
+
+        // 1. Kiểm tra bằng BCrypt chuẩn
+        if (BCrypt.Net.BCrypt.Verify(password, user.PasswordHash))
+        {
+            isValidPassword = true;
+        }
+        // 2. Tương thích ngược: Nếu hash cũ dùng SHA-256 (chuỗi hex 64 ký tự)
+        else if (user.PasswordHash.Length == 64 && IsSha256Match(password, user.PasswordHash))
+        {
+            isValidPassword = true;
+            // Tự động nâng cấp mật khẩu sang BCrypt
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(password);
+            await _db.SaveChangesAsync();
+        }
+
+        if (!isValidPassword)
             throw new UnauthorizedAccessException("Thông tin đăng nhập không chính xác");
 
         return GenerateToken(user);
+    }
+
+    private static bool IsSha256Match(string password, string storedHash)
+    {
+        using var sha256 = System.Security.Cryptography.SHA256.Create();
+        var bytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(password));
+        var hash = Convert.ToHexString(bytes).ToLowerInvariant();
+        return string.Equals(hash, storedHash, StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>Tạo JWT chứa userId, email, role — hết hạn theo config</summary>

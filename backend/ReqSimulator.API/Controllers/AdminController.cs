@@ -5,8 +5,6 @@ using ReqSimulator.API.Data;
 using ReqSimulator.API.Models;
 using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
-using System.Security.Cryptography;
-using System.Text;
 
 namespace ReqSimulator.API.Controllers;
 
@@ -24,7 +22,7 @@ public class AdminController : ControllerBase
 
     // ==================== 1. ANALYTICS & STATS ENDPOINTS ====================
 
-    /// <summary>Thống kê tổng quan cho Admin Dashboard</summary>
+    /// <summary>Thống kê tổng quan cho Admin Dashboard (SQL aggregated)</summary>
     [HttpGet("stats/overview")]
     public async Task<IActionResult> GetOverviewStats()
     {
@@ -32,10 +30,10 @@ public class AdminController : ControllerBase
         var totalStudents = await _db.Users.CountAsync(u => u.Role == UserRole.Student);
         var totalScenarios = await _db.Scenarios.CountAsync(s => s.IsActive);
 
-        var evaluations = await _db.EvaluationResults.AsNoTracking().ToListAsync();
-        var averageCoverage = evaluations.Count > 0
-            ? Math.Round(evaluations.Average(e => (double)(e.OverriddenCoverageScore ?? e.CoverageScore ?? 0m)), 1)
-            : 0.0;
+        var avgScoreRaw = await _db.EvaluationResults
+            .AsNoTracking()
+            .AverageAsync(e => (double?)(e.OverriddenCoverageScore ?? e.CoverageScore)) ?? 0.0;
+        var averageCoverage = Math.Round(avgScoreRaw, 1);
 
         var completedSessions = await _db.SimulationSessions
             .CountAsync(s => s.FinalizationStatus == SessionFinalizationStatus.Completed);
@@ -53,22 +51,17 @@ public class AdminController : ControllerBase
         });
     }
 
-    /// <summary>Phân bổ Coverage Score theo 5 khoảng (histogram)</summary>
+    /// <summary>Phân bổ Coverage Score theo 5 khoảng (histogram, SQL aggregated)</summary>
     [HttpGet("stats/coverage-distribution")]
     public async Task<IActionResult> GetCoverageDistribution()
     {
-        var evaluations = await _db.EvaluationResults.AsNoTracking().ToListAsync();
+        var evaluations = _db.EvaluationResults.AsNoTracking();
 
-        int bin1 = 0, bin2 = 0, bin3 = 0, bin4 = 0, bin5 = 0;
-        foreach (var e in evaluations)
-        {
-            var score = (double)(e.OverriddenCoverageScore ?? e.CoverageScore ?? 0m);
-            if (score <= 20) bin1++;
-            else if (score <= 40) bin2++;
-            else if (score <= 60) bin3++;
-            else if (score <= 80) bin4++;
-            else bin5++;
-        }
+        var bin1 = await evaluations.CountAsync(e => (e.OverriddenCoverageScore ?? e.CoverageScore ?? 0m) <= 20m);
+        var bin2 = await evaluations.CountAsync(e => (e.OverriddenCoverageScore ?? e.CoverageScore ?? 0m) > 20m && (e.OverriddenCoverageScore ?? e.CoverageScore ?? 0m) <= 40m);
+        var bin3 = await evaluations.CountAsync(e => (e.OverriddenCoverageScore ?? e.CoverageScore ?? 0m) > 40m && (e.OverriddenCoverageScore ?? e.CoverageScore ?? 0m) <= 60m);
+        var bin4 = await evaluations.CountAsync(e => (e.OverriddenCoverageScore ?? e.CoverageScore ?? 0m) > 60m && (e.OverriddenCoverageScore ?? e.CoverageScore ?? 0m) <= 80m);
+        var bin5 = await evaluations.CountAsync(e => (e.OverriddenCoverageScore ?? e.CoverageScore ?? 0m) > 80m);
 
         var bins = new[]
         {
@@ -112,109 +105,97 @@ public class AdminController : ControllerBase
         return Ok(new { labels, counts });
     }
 
-    /// <summary>Thống kê hiệu suất theo kịch bản (Scenario)</summary>
+    /// <summary>Thống kê hiệu suất theo kịch bản (Scenario, SQL grouped)</summary>
     [HttpGet("stats/by-scenario")]
     public async Task<IActionResult> GetScenarioStats()
     {
         var scenarios = await _db.Scenarios.AsNoTracking().Where(s => s.IsActive).ToListAsync();
-        var sessions = await _db.SimulationSessions
+
+        var sessionStats = await _db.SimulationSessions
             .AsNoTracking()
-            .Include(s => s.EvaluationResult)
-            .Include(s => s.Messages)
+            .GroupBy(s => s.ScenarioId)
+            .Select(g => new
+            {
+                scenarioId = g.Key,
+                sessionCount = g.Count(),
+                averageCoverage = g.Where(s => s.EvaluationResult != null)
+                    .Average(s => (double?)(s.EvaluationResult!.OverriddenCoverageScore ?? s.EvaluationResult!.CoverageScore)) ?? 0.0,
+                averageTurns = g.Count() > 0
+                    ? g.SelectMany(s => s.Messages).Count(m => m.Sender == SenderType.Student) / (double)g.Count()
+                    : 0.0
+            })
             .ToListAsync();
 
-        var scenarioGroups = sessions.GroupBy(s => s.ScenarioId).ToDictionary(g => g.Key, g => g.ToList());
+        var statsDict = sessionStats.ToDictionary(s => s.scenarioId);
 
         var result = scenarios.Select(s =>
         {
-            var scenarioSessions = scenarioGroups.TryGetValue(s.Id, out var list) ? list : new List<SimulationSession>();
-            var evaluations = scenarioSessions
-                .Where(x => x.EvaluationResult != null)
-                .Select(x => x.EvaluationResult!)
-                .ToList();
-
-            var avgCoverage = evaluations.Count > 0
-                ? Math.Round(evaluations.Average(e => (double)(e.OverriddenCoverageScore ?? e.CoverageScore ?? 0m)), 1)
-                : 0.0;
-
-            var avgTurns = scenarioSessions.Count > 0
-                ? Math.Round(scenarioSessions.Average(x => x.Messages.Count(m => m.Sender == SenderType.Student)), 1)
-                : 0.0;
-
+            var stat = statsDict.TryGetValue(s.Id, out var v) ? v : null;
             return new
             {
                 scenarioId = s.Id,
                 scenarioTitle = s.Title,
-                sessionCount = scenarioSessions.Count,
-                averageCoverage = avgCoverage,
-                averageTurns = avgTurns
+                sessionCount = stat?.sessionCount ?? 0,
+                averageCoverage = Math.Round(stat?.averageCoverage ?? 0.0, 1),
+                averageTurns = Math.Round(stat?.averageTurns ?? 0.0, 1)
             };
         }).OrderByDescending(x => x.sessionCount).ToList();
 
         return Ok(result);
     }
 
-    /// <summary>Bảng xếp hạng sinh viên (Top Students)</summary>
+    /// <summary>Bảng xếp hạng sinh viên (Top Students, SQL projected)</summary>
     [HttpGet("stats/top-students")]
     public async Task<IActionResult> GetTopStudents([FromQuery] int limit = 10)
     {
         limit = Math.Clamp(limit, 5, 50);
 
-        var students = await _db.Users
+        var studentsQuery = await _db.Users
             .AsNoTracking()
-            .Where(u => u.Role == UserRole.Student)
-            .Include(u => u.Sessions)
-                .ThenInclude(s => s.EvaluationResult)
-            .ToListAsync();
-
-        var result = students
-            .Where(u => u.Sessions.Any(s => s.EvaluationResult != null))
-            .Select(u =>
+            .Where(u => u.Role == UserRole.Student && u.Sessions.Any(s => s.EvaluationResult != null))
+            .Select(u => new
             {
-                var evals = u.Sessions
+                studentId = u.Id,
+                studentName = u.Name,
+                studentEmail = u.Email,
+                sessionCount = u.Sessions.Count,
+                completedCount = u.Sessions.Count(s => s.EvaluationResult != null),
+                bestCoverage = (double)(u.Sessions
                     .Where(s => s.EvaluationResult != null)
-                    .Select(s => s.EvaluationResult!)
-                    .ToList();
-
-                var scores = evals.Select(e => (double)(e.OverriddenCoverageScore ?? e.CoverageScore ?? 0m)).ToList();
-
-                return new
-                {
-                    studentId = u.Id,
-                    studentName = u.Name,
-                    studentEmail = u.Email,
-                    sessionCount = u.Sessions.Count,
-                    completedCount = evals.Count,
-                    bestCoverage = Math.Round(scores.Max(), 1),
-                    averageCoverage = Math.Round(scores.Average(), 1)
-                };
+                    .Max(s => s.EvaluationResult!.OverriddenCoverageScore ?? s.EvaluationResult!.CoverageScore) ?? 0m),
+                averageCoverage = (double)(u.Sessions
+                    .Where(s => s.EvaluationResult != null)
+                    .Average(s => s.EvaluationResult!.OverriddenCoverageScore ?? s.EvaluationResult!.CoverageScore) ?? 0m)
             })
             .OrderByDescending(x => x.averageCoverage)
             .ThenByDescending(x => x.completedCount)
             .Take(limit)
-            .ToList();
+            .ToListAsync();
+
+        var result = studentsQuery.Select(x => new
+        {
+            x.studentId,
+            x.studentName,
+            x.studentEmail,
+            x.sessionCount,
+            x.completedCount,
+            bestCoverage = Math.Round(x.bestCoverage, 1),
+            averageCoverage = Math.Round(x.averageCoverage, 1)
+        }).ToList();
 
         return Ok(result);
     }
 
-    /// <summary>Phân bổ các loại MatchType tổng thể</summary>
+    /// <summary>Phân bổ các loại MatchType tổng thể (SQL aggregated)</summary>
     [HttpGet("stats/match-type-breakdown")]
     public async Task<IActionResult> GetMatchTypeBreakdown()
     {
-        var matches = await _db.RequirementMatches.AsNoTracking().ToListAsync();
+        var matches = _db.RequirementMatches.AsNoTracking();
 
-        int exact = 0, semantic = 0, partial = 0, missed = 0;
-        foreach (var m in matches)
-        {
-            var effectiveType = m.OverriddenMatchType ?? m.MatchType;
-            switch (effectiveType)
-            {
-                case Models.MatchType.Exact: exact++; break;
-                case Models.MatchType.Semantic: semantic++; break;
-                case Models.MatchType.Partial: partial++; break;
-                case Models.MatchType.Missed: default: missed++; break;
-            }
-        }
+        var exact = await matches.CountAsync(m => (m.OverriddenMatchType ?? m.MatchType) == Models.MatchType.Exact);
+        var semantic = await matches.CountAsync(m => (m.OverriddenMatchType ?? m.MatchType) == Models.MatchType.Semantic);
+        var partial = await matches.CountAsync(m => (m.OverriddenMatchType ?? m.MatchType) == Models.MatchType.Partial);
+        var missed = await matches.CountAsync(m => (m.OverriddenMatchType ?? m.MatchType) == Models.MatchType.Missed);
 
         return Ok(new { exact, semantic, partial, missed });
     }
@@ -278,7 +259,7 @@ public class AdminController : ControllerBase
             Id = Guid.NewGuid(),
             Name = dto.Name.Trim(),
             Email = dto.Email.Trim().ToLowerInvariant(),
-            PasswordHash = HashPassword(dto.Password),
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
             Role = role,
             CreatedAt = DateTime.UtcNow
         };
@@ -328,7 +309,7 @@ public class AdminController : ControllerBase
 
         if (!string.IsNullOrWhiteSpace(dto.NewPassword) && dto.NewPassword.Length >= 6)
         {
-            user.PasswordHash = HashPassword(dto.NewPassword);
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
         }
 
         await _db.SaveChangesAsync();
@@ -343,7 +324,7 @@ public class AdminController : ControllerBase
         });
     }
 
-    /// <summary>Xóa người dùng</summary>
+    /// <summary>Xóa người dùng có kiểm tra ràng buộc phụ thuộc dữ liệu</summary>
     [HttpDelete("users/{id:guid}")]
     public async Task<IActionResult> DeleteUser(Guid id)
     {
@@ -353,23 +334,32 @@ public class AdminController : ControllerBase
             return NotFound(new { message = "Không tìm thấy người dùng." });
         }
 
-        // Không cho phép tự xóa tài khoản của chính mình
-        var currentUserIdClaim = User.FindFirstValue(System.Security.Claims.ClaimTypes.NameIdentifier);
+        // 1. Không cho phép tự xóa tài khoản của chính mình
+        var currentUserIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (Guid.TryParse(currentUserIdClaim, out var currentId) && currentId == id)
         {
             return BadRequest(new { message = "Không thể tự xóa tài khoản Admin đang đăng nhập." });
         }
 
-        _db.Users.Remove(user);
-        await _db.SaveChangesAsync();
+        // 2. Kiểm tra ràng buộc dữ liệu liên quan (SimulationSessions, EvaluationResults, LecturerOverrides)
+        var hasSessions = await _db.SimulationSessions.AnyAsync(s => s.StudentId == id);
+        var hasOverrides = await _db.LecturerOverrides.AnyAsync(o => o.LecturerId == id);
+        var hasEvaluations = await _db.EvaluationResults.AnyAsync(e => e.OverriddenByLecturerId == id);
 
-        return Ok(new { message = "Đã xóa người dùng thành công." });
-    }
+        if (hasSessions || hasOverrides || hasEvaluations)
+        {
+            return BadRequest(new { message = "Không thể xóa người dùng này vì đã có dữ liệu phiên phỏng vấn hoặc đánh giá liên quan trong hệ thống. Bạn có thể thay đổi thông tin/vai trò thay vì xóa." });
+        }
 
-    private static string HashPassword(string password)
-    {
-        using var sha256 = SHA256.Create();
-        var bytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(password));
-        return Convert.ToHexString(bytes).ToLowerInvariant();
+        try
+        {
+            _db.Users.Remove(user);
+            await _db.SaveChangesAsync();
+            return Ok(new { message = "Đã xóa người dùng thành công." });
+        }
+        catch (DbUpdateException)
+        {
+            return BadRequest(new { message = "Không thể xóa người dùng do có ràng buộc dữ liệu liên quan khác." });
+        }
     }
 }
