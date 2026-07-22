@@ -437,14 +437,15 @@ textarea:focus {
   border-color: var(--text);
 }
 
-/* Buttons */
+/* High-Agency Primary & Ghost Buttons */
 .primary-button,
 .ghost-button,
 .danger-button {
-  min-height: 40px;
-  border-radius: var(--radius-sm);
+  min-height: 42px;
+  border-radius: var(--radius-md);
   border: 1px solid transparent;
-  padding: 0 16px;
+  padding: 0 20px;
+  font-family: var(--font-body);
   font-weight: 600;
   font-size: 14px;
   display: inline-flex;
@@ -452,17 +453,21 @@ textarea:focus {
   justify-content: center;
   gap: 8px;
   white-space: nowrap;
-  transition: all 0.2s var(--transition-smooth);
+  transition: all 0.25s var(--transition-smooth);
   cursor: pointer;
+  outline: none;
 }
 
 .primary-button {
-  color: var(--surface);
-  background: var(--text);
+  color: #FFFFFF;
+  background: linear-gradient(135deg, var(--accent-indigo), #4F46E5);
+  box-shadow: 0 4px 16px var(--accent-indigo-glow);
 }
 
 .primary-button:hover:not(:disabled) {
-  background: #333333;
+  background: linear-gradient(135deg, #4F46E5, #4338CA);
+  box-shadow: 0 6px 24px rgba(99, 102, 241, 0.4);
+  transform: translateY(-1px);
 }
 
 .primary-button:active:not(:disabled) {
@@ -470,14 +475,17 @@ textarea:focus {
 }
 
 .ghost-button {
-  color: var(--text);
-  background: transparent;
-  border: 1px solid var(--line);
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--line-subtle);
+  backdrop-filter: blur(8px);
 }
 
 .ghost-button:hover:not(:disabled) {
-  background: var(--surface-muted);
+  background: rgba(255, 255, 255, 0.08);
   border-color: var(--line-strong);
+  color: #FFF;
+  transform: translateY(-1px);
 }
 
 .ghost-button:active:not(:disabled) {
@@ -486,33 +494,35 @@ textarea:focus {
 
 .danger-button {
   width: 100%;
-  color: var(--pastel-red-text);
-  background: var(--pastel-red-bg);
-  border: 1px solid #F5C6CB;
+  color: var(--accent-rose);
+  background: rgba(244, 63, 94, 0.12);
+  border: 1px solid rgba(244, 63, 94, 0.3);
 }
 
 .danger-button:hover:not(:disabled) {
-  background: #F5C6CB;
+  background: rgba(244, 63, 94, 0.22);
+  border-color: var(--accent-rose);
+  transform: translateY(-1px);
 }
 
 .danger-button:active:not(:disabled) {
   transform: scale(0.98);
 }
 
-/* Bento Box Grids */
+/* Bento Box Grids & Layout Panels */
 .section-head {
   display: flex;
   justify-content: space-between;
   gap: 16px;
   align-items: flex-end;
-  margin-bottom: 24px;
+  margin-bottom: 28px;
 }
 
 .picker-layout,
 .chat-layout,
 .review-layout {
   display: grid;
-  grid-template-columns: 340px minmax(0, 1fr);
+  grid-template-columns: 360px minmax(0, 1fr);
   gap: 24px;
   align-items: start;
 }
@@ -523,7 +533,11 @@ textarea:focus {
 .chat-panel,
 .review-list,
 .review-detail {
-  min-height: 600px;
+  min-height: 620px;
+  background: var(--surface);
+  border: 1px solid var(--line-subtle);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-subtle);
 }
 
 .scenario-list,
@@ -534,43 +548,45 @@ textarea:focus {
 }
 
 .panel-heading {
-  padding: 20px;
-  border-bottom: 1px solid var(--line);
+  padding: 24px;
+  border-bottom: 1px solid var(--line-subtle);
 }
 
 .list-stack {
-  padding: 16px;
+  padding: 20px;
   display: grid;
-  gap: 12px;
+  gap: 14px;
 }
 
-/* Asymmetrical & Flat Cards */
+/* Taste-Skill High-Agency Asymmetric Cards */
 .scenario-item,
 .review-session-item {
   width: 100%;
   text-align: left;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--surface);
-  padding: 16px;
+  border: 1px solid var(--line-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface-raised);
+  padding: 18px;
   display: grid;
   gap: 12px;
-  color: var(--text);
+  color: var(--text-primary);
   cursor: pointer;
-  transition: all 0.2s var(--transition-smooth);
+  transition: all 0.25s var(--transition-smooth);
 }
 
 .scenario-item:hover,
 .review-session-item:hover {
-  border-color: var(--line-strong);
-  background: var(--surface-muted);
+  border-color: var(--accent-indigo);
+  background: rgba(99, 102, 241, 0.05);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-glow);
 }
 
 .scenario-item.active,
 .review-session-item.active {
-  border-color: var(--text);
-  background: var(--surface);
-  box-shadow: var(--shadow-subtle);
+  border-color: var(--accent-indigo);
+  background: rgba(99, 102, 241, 0.12);
+  box-shadow: var(--shadow-glow);
 }
 
 .scenario-title-block {
