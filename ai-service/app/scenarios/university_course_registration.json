@@ -91,7 +91,7 @@
   "requirements": [
     {
       "id": "R1",
-      "text": "Students must be able to register for courses online.",
+      "text": "Sinh viên phải có khả năng đăng ký các học phần trực tuyến.",
       "gate": 0,
       "keywords": [
         "system",
@@ -101,18 +101,22 @@
         "overall",
         "process",
         "registration",
-        "online"
+        "online",
+        "đăng ký",
+        "học phần",
+        "trực tuyến",
+        "mục tiêu"
       ],
       "question_types": [
         "OpenEnded",
         "Closed"
       ],
-      "reveal_condition": "General question about system purpose or current registration workflow.",
+      "reveal_condition": "Có thể mở khóa khi sinh viên hỏi về mục tiêu hệ thống hoặc quy trình đăng ký hiện tại.",
       "reveal_difficulty": "Easy"
     },
     {
       "id": "R2",
-      "text": "The system must enforce prerequisite checking before allowing registration.",
+      "text": "Hệ thống phải bắt buộc kiểm tra điều kiện tiên quyết trước khi cho phép đăng ký.",
       "gate": 1,
       "keywords": [
         "prerequisite",
@@ -121,7 +125,10 @@
         "condition",
         "conditions",
         "allowed",
-        "register"
+        "register",
+        "tiên quyết",
+        "điều kiện",
+        "cho phép"
       ],
       "question_types": [
         "OpenEnded",
@@ -130,12 +137,12 @@
         "ConstraintOriented",
         "Closed"
       ],
-      "reveal_condition": "Question about registration rules, student eligibility, or prerequisite checks.",
+      "reveal_condition": "Mở khóa khi sinh viên hỏi về các quy tắc điều kiện, môn tiên quyết hoặc đối tượng được phép đăng ký.",
       "reveal_difficulty": "Medium"
     },
     {
       "id": "R3",
-      "text": "Registration must close two weeks before the semester starts.",
+      "text": "Đăng ký học phần phải đóng lại trước khi học kỳ bắt đầu hai tuần.",
       "gate": 1,
       "keywords": [
         "deadline",
@@ -143,7 +150,11 @@
         "closing",
         "calendar",
         "schedule",
-        "when"
+        "when",
+        "hạn chót",
+        "đóng",
+        "học kỳ",
+        "hai tuần"
       ],
       "question_types": [
         "OpenEnded",
@@ -151,50 +162,59 @@
         "Closed",
         "ConstraintOriented"
       ],
-      "reveal_condition": "Question about the registration timeline or deadline.",
+      "reveal_condition": "Mở khóa khi sinh viên hỏi về hạn chót, lịch trình đăng ký hoặc các quy tắc về thời gian.",
       "reveal_difficulty": "Medium"
     },
     {
       "id": "R4",
-      "text": "The system must support at least 500 concurrent users during peak registration.",
+      "text": "Hệ thống phải hỗ trợ ít nhất 500 người dùng truy cập đồng thời trong thời gian cao điểm đăng ký.",
       "gate": 4,
       "keywords": [
         "performance",
         "load",
         "concurrent",
         "peak",
-        "traffic"
+        "traffic",
+        "hiệu năng",
+        "tải",
+        "đồng thời",
+        "cao điểm",
+        "500"
       ],
       "question_types": [
         "OpenEnded",
         "Clarifying",
         "Probing"
       ],
-      "reveal_condition": "Direct question about load, performance, or peak-time behavior.",
+      "reveal_condition": "Chỉ mở khóa khi sinh viên hỏi trực tiếp về tải hệ thống, hiệu năng hoặc giai đoạn cao điểm.",
       "reveal_difficulty": "Hard"
     },
     {
       "id": "R5",
-      "text": "Professors can override prerequisites for specific students in approved cases.",
+      "text": "Giảng viên có quyền miễn trừ môn tiên quyết cho sinh viên cụ thể trong các trường hợp được phê duyệt.",
       "gate": 3,
       "keywords": [
         "override",
         "exception",
         "special case",
         "special cases",
-        "approved case"
+        "approved case",
+        "giảng viên",
+        "miễn trừ",
+        "ngoại lệ",
+        "phê duyệt"
       ],
       "question_types": [
         "ExceptionOriented",
         "Probing",
         "Clarifying"
       ],
-      "reveal_condition": "Question about exceptions or approved manual overrides.",
+      "reveal_condition": "Mở khóa khi sinh viên hỏi về các ngoại lệ, trường hợp đặc biệt hoặc thẩm quyền phê duyệt thủ công.",
       "reveal_difficulty": "Hard"
     },
     {
       "id": "R6",
-      "text": "The system must integrate with the existing financial system to calculate registration-related fees.",
+      "text": "Hệ thống phải tích hợp với hệ thống tài chính hiện có để tính toán các khoản phí liên quan đến đăng ký.",
       "gate": 2,
       "keywords": [
         "fee",
@@ -204,7 +224,11 @@
         "finance",
         "payment",
         "integrate",
-        "integration"
+        "integration",
+        "học phí",
+        "tài chính",
+        "tích hợp",
+        "thanh toán"
       ],
       "question_types": [
         "OpenEnded",
@@ -212,31 +236,34 @@
         "Probing",
         "ConstraintOriented"
       ],
-      "reveal_condition": "Question about tuition, payment dependencies, or existing systems.",
+      "reveal_condition": "Mở khóa khi sinh viên hỏi về học phí, phụ thuộc thanh toán hoặc các hệ thống hiện có.",
       "reveal_difficulty": "Medium"
     },
     {
       "id": "R7",
-      "text": "The system must provide a wait-list when a course section is full.",
+      "text": "Hệ thống phải cung cấp danh sách chờ (wait-list) khi một lớp học phần đã đầy sinh viên.",
       "gate": 1,
       "keywords": [
         "full",
         "capacity",
         "waitlist",
         "wait-list",
-        "slot"
+        "slot",
+        "đầy",
+        "danh sách chờ",
+        "lớp học phần"
       ],
       "question_types": [
         "OpenEnded",
         "Clarifying",
         "Probing"
       ],
-      "reveal_condition": "Question about what happens when a class is already full.",
+      "reveal_condition": "Mở khóa khi sinh viên hỏi về trường hợp lớp học phần bị đầy.",
       "reveal_difficulty": "Medium"
     },
     {
       "id": "R8",
-      "text": "Students with unpaid fees must be blocked from registration until the outstanding balance is cleared.",
+      "text": "Sinh viên chưa hoàn tất học phí phải bị chặn đăng ký cho đến khi thanh toán xong dư nợ.",
       "gate": 2,
       "keywords": [
         "unpaid",
@@ -246,7 +273,11 @@
         "hold",
         "balance",
         "owe",
-        "owed"
+        "owed",
+        "chưa hoàn tất",
+        "nợ",
+        "chặn",
+        "tạm khóa"
       ],
       "question_types": [
         "ConstraintOriented",
@@ -254,15 +285,15 @@
         "Probing",
         "Closed"
       ],
-      "reveal_condition": "Question about blocked registration or financial holds after the fee topic has surfaced.",
+      "reveal_condition": "Mở khóa khi sinh viên hỏi về việc bị chặn đăng ký hoặc tạm khóa tài chính sau khi nhắc tới chủ đề học phí.",
       "reveal_difficulty": "Hard",
       "requires": [
-        "The system must integrate with the existing financial system to calculate registration-related fees."
+        "Hệ thống phải tích hợp với hệ thống tài chính hiện có để tính toán các khoản phí liên quan đến đăng ký."
       ]
     },
     {
       "id": "R9",
-      "text": "The system should meet WCAG 2.1 AA accessibility expectations for students with disabilities.",
+      "text": "Hệ thống nên đáp ứng tiêu chuẩn hỗ trợ truy cập WCAG 2.1 AA cho sinh viên khuyết tật.",
       "gate": 4,
       "keywords": [
         "accessibility",
@@ -270,26 +301,32 @@
         "wcag",
         "disabled",
         "disability",
-        "screen reader"
+        "screen reader",
+        "khuyết tật",
+        "truy cập",
+        "wcag 2.1"
       ],
       "question_types": [
         "OpenEnded",
         "Clarifying",
         "Probing"
       ],
-      "reveal_condition": "Question about accessibility or support for students with disabilities.",
+      "reveal_condition": "Chỉ mở khóa khi sinh viên hỏi về khả năng truy cập hoặc hỗ trợ cho sinh viên khuyết tật.",
       "reveal_difficulty": "Hard"
     },
     {
       "id": "R10",
-      "text": "Students on academic probation must obtain advisor approval before registering.",
+      "text": "Sinh viên trong diện cảnh báo học tập phải có sự đồng ý của cố vấn học tập trước khi đăng ký.",
       "gate": 3,
       "keywords": [
         "probation",
         "advisor",
         "approval",
         "special case",
-        "special cases"
+        "special cases",
+        "cảnh báo học tập",
+        "cố vấn",
+        "đồng ý"
       ],
       "question_types": [
         "ExceptionOriented",
@@ -297,7 +334,7 @@
         "Probing",
         "Closed"
       ],
-      "reveal_condition": "Question about special student status or approval flow.",
+      "reveal_condition": "Mở khóa khi sinh viên hỏi về trạng thái sinh viên đặc biệt, cảnh báo học tập hoặc quy trình duyệt của cố vấn.",
       "reveal_difficulty": "Hard"
     }
   ]

@@ -75,7 +75,7 @@ class GatingSelectionTests(unittest.TestCase):
         )
 
         self.assertEqual(previous, [])
-        self.assertEqual(newly, ["Students must be able to register for courses online."])
+        self.assertEqual(newly, ["Sinh viên phải có khả năng đăng ký các học phần trực tuyến."])
         self.assertEqual(allowed, newly)
 
     def test_one_turn_reveals_at_most_one_new_requirement(self):
@@ -131,7 +131,7 @@ class ConsistencyCheckerTests(unittest.TestCase):
         config = get_scenario_config("University Course Registration System", [])
         check = check_response_consistency(
             "The system should check prerequisites and enforce prerequisite rules before registration.",
-            allowed_requirements=["Students must be able to register for courses online."],
+            allowed_requirements=["Sinh viên phải có khả năng đăng ký các học phần trực tuyến."],
             config=config,
         )
 
@@ -139,7 +139,7 @@ class ConsistencyCheckerTests(unittest.TestCase):
         self.assertEqual(check.violations[0].code, "out_of_gate_disclosure")
 
     def test_checker_allows_allowed_requirement(self):
-        allowed = ["The system must enforce prerequisite checking before allowing registration."]
+        allowed = ["Hệ thống phải bắt buộc kiểm tra điều kiện tiên quyết trước khi cho phép đăng ký."]
         config = get_scenario_config("University Course Registration System", allowed)
         check = check_response_consistency(
             "Yes, prerequisite checking is needed before registration.",
@@ -162,12 +162,12 @@ class ConsistencyCheckerTests(unittest.TestCase):
         )
 
         self.assertNotIn(
-            "Students with unpaid fees must be blocked from registration until the outstanding balance is cleared.",
+            "Sinh viên chưa hoàn tất học phí phải bị chặn đăng ký cho đến khi thanh toán xong dư nợ.",
             newly,
         )
         self.assertEqual(
             newly,
-            ["The system must integrate with the existing financial system to calculate registration-related fees."],
+            ["Hệ thống phải tích hợp với hệ thống tài chính hiện có để tính toán các khoản phí liên quan đến đăng ký."],
         )
 
     def test_financial_hold_can_reveal_after_dependency_is_revealed(self):
@@ -177,7 +177,7 @@ class ConsistencyCheckerTests(unittest.TestCase):
           "patience": 0.62,
           "turn_count": 2,
           "revealed_requirements": [
-            "The system must integrate with the existing financial system to calculate registration-related fees."
+            "Hệ thống phải tích hợp với hệ thống tài chính hiện có để tính toán các khoản phí liên quan đến đăng ký."
           ]
         }
         """
@@ -194,11 +194,11 @@ class ConsistencyCheckerTests(unittest.TestCase):
 
         self.assertEqual(
             previous,
-            ["The system must integrate with the existing financial system to calculate registration-related fees."],
+            ["Hệ thống phải tích hợp với hệ thống tài chính hiện có để tính toán các khoản phí liên quan đến đăng ký."],
         )
         self.assertEqual(
             newly,
-            ["Students with unpaid fees must be blocked from registration until the outstanding balance is cleared."],
+            ["Sinh viên chưa hoàn tất học phí phải bị chặn đăng ký cho đến khi thanh toán xong dư nợ."],
         )
 
     def test_low_patience_blocks_new_gate_four_quality_requirement(self):
@@ -231,7 +231,7 @@ class ConsistencyCheckerTests(unittest.TestCase):
           "patience": 0.60,
           "turn_count": 1,
           "revealed_requirements": [
-            "Students must be able to register for courses online."
+            "Sinh viên phải có khả năng đăng ký các học phần trực tuyến."
           ]
         }
         """
@@ -246,8 +246,8 @@ class ConsistencyCheckerTests(unittest.TestCase):
             config,
         )
 
-        self.assertEqual(previous, ["Students must be able to register for courses online."])
-        self.assertIn("Students must be able to register for courses online.", allowed)
+        self.assertEqual(previous, ["Sinh viên phải có khả năng đăng ký các học phần trực tuyến."])
+        self.assertIn("Sinh viên phải có khả năng đăng ký các học phần trực tuyến.", allowed)
         self.assertLessEqual(len(newly), 1)
 
 
