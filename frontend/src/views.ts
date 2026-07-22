@@ -66,23 +66,23 @@ function renderTopbar(state: AppState) {
   const isAdmin = state.user?.role === 'Admin'
 
   return `
-    <header class="topbar">
-      <div class="brand-block">
-        <span class="brand-mark" aria-hidden="true">R</span>
+    <header class="topbar" style="background: var(--surface-glass); backdrop-filter: blur(16px); border-bottom: 1px solid var(--line-subtle); padding: 14px 28px;">
+      <div class="brand-block" style="display: flex; align-items: center; gap: 12px;">
+        <span class="brand-mark font-heading" aria-hidden="true" style="background: linear-gradient(135deg, var(--accent-indigo), #8B5CF6); color: #FFF; width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 18px; box-shadow: 0 0 16px var(--accent-indigo-glow);">R</span>
         <div>
-          <p class="eyebrow">ReqSimulator</p>
-          <h1 style="font-size: 20px; font-family: var(--font-sans); font-weight: 700;">
-            Phòng thực hành Khai thác yêu cầu
+          <p class="eyebrow" style="letter-spacing: 0.08em; font-size: 10px; font-weight: 800; color: var(--accent-indigo); text-transform: uppercase; margin: 0;">ReqSimulator • PRO AI</p>
+          <h1 style="font-size: 17px; font-family: var(--font-heading); font-weight: 700; color: #FFF; margin: 0;">
+            Phòng Thực Hành Khai Thác Yêu Cầu
           </h1>
         </div>
       </div>
-      <div class="topbar-actions">
-        <span class="view-pill">${escapeHtml(viewLabels[state.view])}</span>
-        ${state.user?.email ? `<span class="user-pill">${escapeHtml(state.user.email)} (${escapeHtml(state.user.role ?? 'Student')})</span>` : ''}
+      <div class="topbar-actions" style="display: flex; align-items: center; gap: 12px;">
+        <span class="view-pill" style="background: var(--surface-raised); border: 1px solid var(--line-subtle); color: var(--accent-indigo); font-weight: 600; font-size: 12px; padding: 4px 12px; border-radius: 20px;">${escapeHtml(viewLabels[state.view])}</span>
+        ${state.user?.email ? `<span class="user-pill" style="background: var(--surface-raised); border: 1px solid var(--line-subtle); color: #FFF; font-size: 12px; font-weight: 500; padding: 4px 14px; border-radius: 20px;">${escapeHtml(state.user.email)} <span style="color: var(--accent-emerald); font-weight: 700; margin-left: 4px;">(${escapeHtml(state.user.role ?? 'Student')})</span></span>` : ''}
         ${state.token && state.view !== 'scenarios' ? `<button class="ghost-button" data-action="open-student-lab" type="button" ${state.busy ? 'disabled' : ''}>Phòng thực hành</button>` : ''}
         ${canReview && state.view !== 'review' ? `<button class="ghost-button" data-action="open-review" type="button" ${state.busy ? 'disabled' : ''}>Review Giảng viên</button>` : ''}
         ${isAdmin && state.view !== 'admin' ? `<button class="ghost-button" data-action="open-admin" type="button" ${state.busy ? 'disabled' : ''} style="border-color: #38bdf8; color: #38bdf8;">Admin Console</button>` : ''}
-        ${state.token ? `<button class="ghost-button" data-action="logout" type="button" ${state.busy ? 'disabled' : ''}>Đăng xuất</button>` : ''}
+        ${state.token ? `<button class="ghost-button" data-action="logout" type="button" ${state.busy ? 'disabled' : ''} style="color: var(--accent-rose); border-color: rgba(244,63,94,0.3);">Đăng xuất</button>` : ''}
       </div>
     </header>
   `

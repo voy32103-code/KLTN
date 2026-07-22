@@ -1,34 +1,55 @@
 :root {
+  /* Taste-Skill High-Agency Design System Tokens */
+  --font-heading: 'Outfit', 'Inter', -apple-system, sans-serif;
+  --font-body: 'Inter', -apple-system, sans-serif;
   --font-serif: 'Newsreader', Georgia, serif;
-  --font-sans: 'Geist', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --font-mono: 'Geist Mono', Menlo, Monaco, Consolas, monospace;
+  --font-mono: 'JetBrains Mono', 'Geist Mono', monospace;
+
   --transition-smooth: cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-fast: cubic-bezier(0.4, 0, 0.2, 1);
 
-  --bg: #FBFBFA; /* Warm bone off-white */
-  --surface: #FFFFFF;
-  --surface-muted: #F7F6F3;
-  --surface-raised: #FFFFFF;
+  /* Deep Obsidian Glassmorphic Base & Vibrant Semantic Accents */
+  --bg: #090A0F;
+  --surface: #12141C;
+  --surface-raised: #1A1D28;
+  --surface-glass: rgba(18, 20, 28, 0.75);
   
-  --text: #111111; /* Charcoal off-black */
-  --muted: #787774;
-  --muted-strong: #37352F;
-  --line: #EAEAEA;
-  --line-strong: #CCCCCC;
+  --text: #F3F4F6;
+  --text-primary: #F3F4F6;
+  --text-secondary: #9CA3AF;
+  --muted: #6B7280;
+  --muted-strong: #9CA3AF;
+  
+  --line: rgba(255, 255, 255, 0.08);
+  --line-subtle: rgba(255, 255, 255, 0.08);
+  --line-strong: rgba(255, 255, 255, 0.18);
 
-  /* Washed-out desaturated pastels for semantic alerts and badges */
-  --pastel-red-bg: #FDEBEC;
-  --pastel-red-text: #9F2F2D;
-  --pastel-blue-bg: #E1F3FE;
-  --pastel-blue-text: #1F6C9F;
-  --pastel-green-bg: #EDF3EC;
-  --pastel-green-text: #346538;
-  --pastel-yellow-bg: #FBF3DB;
-  --pastel-yellow-text: #956400;
+  /* Vibrant High-Agency Color Tokens */
+  --accent-indigo: #6366F1;
+  --accent-indigo-glow: rgba(99, 102, 241, 0.25);
+  --accent-emerald: #10B981;
+  --accent-emerald-glow: rgba(16, 185, 129, 0.25);
+  --accent-amber: #F59E0B;
+  --accent-amber-glow: rgba(245, 158, 11, 0.25);
+  --accent-rose: #F43F5E;
 
-  --radius: 8px;
+  --pastel-red-bg: rgba(244, 63, 94, 0.15);
+  --pastel-red-text: #F43F5E;
+  --pastel-blue-bg: rgba(99, 102, 241, 0.15);
+  --pastel-blue-text: #818CF8;
+  --pastel-green-bg: rgba(16, 185, 129, 0.15);
+  --pastel-green-text: #34D399;
+  --pastel-yellow-bg: rgba(245, 158, 11, 0.15);
+  --pastel-yellow-text: #FBBF24;
+
+  --radius: 12px;
+  --radius-xl: 16px;
+  --radius-lg: 12px;
+  --radius-md: 8px;
   --radius-sm: 4px;
   
-  --shadow-subtle: 0 2px 12px rgba(0, 0, 0, 0.02);
+  --shadow-subtle: 0 4px 20px rgba(0, 0, 0, 0.4);
+  --shadow-glow: 0 0 28px rgba(99, 102, 241, 0.2);
 }
 
 * {
