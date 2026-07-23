@@ -4,6 +4,7 @@ import logging
 import asyncio
 from typing import Any, List, Dict
 from google import genai
+from google.genai import types
 from google.genai.errors import APIError
 import httpx
 
@@ -144,18 +145,17 @@ class ApiClientManager:
                 logger.info(f"Calling Gemini API with model: {model} using key index {idx}")
                 
                 # Gọi đồng bộ trong thread pool để tránh block event loop
-                config_dict: Dict[str, Any] = {
-                    "temperature": temperature,
-                    "max_output_tokens": max_output_tokens,
-                }
-                if system_instruction:
-                    config_dict["system_instruction"] = system_instruction
+                gen_config = types.GenerateContentConfig(
+                    temperature=temperature,
+                    max_output_tokens=max_output_tokens,
+                    system_instruction=system_instruction,
+                )
 
                 response = await asyncio.to_thread(
                     client.models.generate_content,
                     model=model,
                     contents=contents,
-                    config=config_dict
+                    config=gen_config
                 )
                 return response
             except Exception as e:

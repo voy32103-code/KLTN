@@ -486,6 +486,7 @@ textarea:focus {
   color: var(--text-primary);
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid var(--line-subtle);
+  -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
 }
 
