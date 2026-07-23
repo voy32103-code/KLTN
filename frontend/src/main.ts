@@ -189,6 +189,13 @@ function bindEvents() {
     })
   })
 
+  document.querySelector('#end-session-modal-overlay')?.addEventListener('click', (event) => {
+    if (event.target === event.currentTarget) {
+      state.confirmEndSession = false
+      render()
+    }
+  })
+
   document.querySelector('#messages')?.scrollTo({ top: 999999 })
 
   document.querySelector('#ai-model-select')?.addEventListener('change', (event) => {
@@ -213,7 +220,17 @@ async function handleAction(action: string, options: { tab?: string; userId?: st
     case 'start-session':
       await startSession()
       break
+    case 'open-end-session-modal':
+      state.confirmEndSession = true
+      render()
+      break
+    case 'cancel-end-session':
+      state.confirmEndSession = false
+      render()
+      break
+    case 'confirm-end-session':
     case 'end-session':
+      state.confirmEndSession = false
       await endSession()
       break
     case 'back-to-scenarios':

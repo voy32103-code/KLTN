@@ -258,4 +258,5 @@ export type AppState = {
   adminState: AdminState | null
   busy: boolean
   notice: Notice | null
+  confirmEndSession?: boolean
 }

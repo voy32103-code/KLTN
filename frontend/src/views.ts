@@ -329,7 +329,7 @@ function renderChat(state: AppState) {
           <div><dt>Loại câu hỏi gần nhất</dt><dd>${escapeHtml(lastQuestionType ?? 'Chưa phát hiện')}</dd></div>
           <div><dt>Mã phiên phỏng vấn</dt><dd style="font-family: var(--font-mono); font-size: 12px;">${escapeHtml(shortId(state.session?.id ?? ''))}</dd></div>
         </dl>
-        <button class="danger-button" data-action="end-session" type="button" ${state.busy || Boolean(state.evaluation) ? 'disabled' : ''}>
+        <button class="danger-button" data-action="open-end-session-modal" type="button" ${state.busy || Boolean(state.evaluation) ? 'disabled' : ''}>
           ${state.busy ? 'Đang xử lý...' : state.evaluation ? 'Đã kết thúc phiên' : 'Kết thúc & Chấm điểm'}
         </button>
         ${state.evaluation ? renderEvaluation(state.evaluation) : ''}
@@ -359,6 +359,45 @@ function renderChat(state: AppState) {
         </form>
       </section>
     </section>
+    ${state.confirmEndSession ? renderEndSessionModal(state) : ''}
+  `
+}
+
+function renderEndSessionModal(state: AppState) {
+  const scenario = state.selectedScenario
+  const persona = scenario?.personas.find((item) => item.id === state.selectedPersonaId)
+  const studentMessageCount = state.messages.filter((message) => message.sender === 'Student').length
+
+  return `
+    <div class="modal-overlay" id="end-session-modal-overlay">
+      <div class="modal-card">
+        <div class="modal-header">
+          <div class="modal-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          </div>
+          <div>
+            <h3 style="margin:0; font-size:18px; font-weight:700; color:#FFF; font-family: var(--font-heading);">Xác nhận kết thúc phỏng vấn</h3>
+            <span style="font-size:12px; color:var(--accent-indigo); font-weight: 600;">${escapeHtml(scenario?.title ?? '')}</span>
+          </div>
+        </div>
+        <div class="modal-body">
+          <p>Bạn có chắc chắn muốn kết thúc phiên phỏng vấn với đối tác <strong style="color: #FFF;">${escapeHtml(persona?.name ?? 'Stakeholder')}</strong> không?</p>
+          <p style="margin-top: 8px; font-size: 13px;">Hệ thống AI sẽ tự động trích xuất các yêu cầu phần mềm đã trao đổi và tiến hành chấm điểm bài làm của bạn. Sau khi nộp bài, bạn không thể tiếp tục gửi câu hỏi trong phiên này.</p>
+        </div>
+        <div class="modal-stats">
+          <span style="font-size:13px; color:var(--text-secondary);">Số câu hỏi đã trao đổi:</span>
+          <span style="font-weight:700; color:var(--accent-emerald); font-size:14px; font-family: var(--font-mono);">${studentMessageCount} lượt hỏi</span>
+        </div>
+        <div class="modal-actions">
+          <button class="ghost-button" data-action="cancel-end-session" type="button" ${state.busy ? 'disabled' : ''}>
+            Tiếp tục phỏng vấn
+          </button>
+          <button class="danger-button" data-action="confirm-end-session" type="button" ${state.busy ? 'disabled' : ''}>
+            ${state.busy ? 'Đang xử lý...' : 'Xác nhận & Nộp bài'}
+          </button>
+        </div>
+      </div>
+    </div>
   `
 }
 
