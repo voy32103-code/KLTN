@@ -52,8 +52,8 @@ class ApiClientManager:
             return 0
         raise RuntimeError("No Gemini API keys are configured.")
 
-    def block_key(self, index: int, duration_seconds: int = 1800):
-        """Block API key tại index trong 30 phút (mặc định)."""
+    def block_key(self, index: int, duration_seconds: int = 120):
+        """Block API key tại index trong 2 phút (120s) khi dính Quota / Rate Limit."""
         until = time.time() + duration_seconds
         self.blocked_until[index] = until
         logger.warning(
@@ -161,8 +161,8 @@ class ApiClientManager:
             except Exception as e:
                 err_str = str(e).lower()
                 is_quota_error = any(
-                    word in err_str for word in ["429", "403", "quota", "rate limit", "exhausted", "limit exceeded"]
-                ) or isinstance(e, APIError)
+                    word in err_str for word in ["429", "403", "quota", "rate limit", "exhausted", "resource_exhausted", "limit exceeded"]
+                )
                 
                 if is_quota_error:
                     self.block_key(idx)
@@ -205,8 +205,8 @@ class ApiClientManager:
             except Exception as e:
                 err_str = str(e).lower()
                 is_quota_error = any(
-                    word in err_str for word in ["429", "403", "quota", "rate limit", "exhausted", "limit exceeded"]
-                ) or isinstance(e, APIError)
+                    word in err_str for word in ["429", "403", "quota", "rate limit", "exhausted", "resource_exhausted", "limit exceeded"]
+                )
                 
                 if is_quota_error:
                     self.block_key(idx)

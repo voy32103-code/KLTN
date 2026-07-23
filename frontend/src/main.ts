@@ -102,6 +102,16 @@ function render() {
       renderAdminCharts()
     })
   }
+
+  // Auto-scroll chat messages container to bottom when in chat view
+  if (state.view === 'chat') {
+    requestAnimationFrame(() => {
+      const messagesContainer = document.querySelector<HTMLDivElement>('#messages')
+      if (messagesContainer) {
+        messagesContainer.scrollTop = messagesContainer.scrollHeight
+      }
+    })
+  }
 }
 
 function renderAdminCharts() {

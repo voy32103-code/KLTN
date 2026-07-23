@@ -26,13 +26,17 @@ public class AuthService
 
     public async Task<User> Register(string name, string email, string password, UserRole role = UserRole.Student)
     {
-        if (await _db.Users.AnyAsync(u => u.Email == email))
-            throw new InvalidOperationException("Email đã tồn tại");
+        var normalizedEmail = email?.Trim().ToLowerInvariant() ?? "";
+        if (string.IsNullOrWhiteSpace(normalizedEmail))
+            throw new InvalidOperationException("Email không được để trống.");
+
+        if (await _db.Users.AnyAsync(u => u.Email.ToLower() == normalizedEmail))
+            throw new InvalidOperationException("Email đã tồn tại.");
 
         var user = new User
         {
-            Name = name,
-            Email = email,
+            Name = name?.Trim() ?? "",
+            Email = normalizedEmail,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(password),
             Role = role
         };
@@ -43,8 +47,9 @@ public class AuthService
 
     public async Task<string> Login(string email, string password)
     {
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == email)
-            ?? throw new UnauthorizedAccessException("Thông tin đăng nhập không chính xác");
+        var normalizedEmail = email?.Trim().ToLowerInvariant() ?? "";
+        var user = await _db.Users.FirstOrDefaultAsync(u => u.Email.ToLower() == normalizedEmail)
+            ?? throw new UnauthorizedAccessException("Thông tin đăng nhập không chính xác.");
 
         bool isValidPassword = false;
 

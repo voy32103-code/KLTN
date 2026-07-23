@@ -70,17 +70,17 @@ public class AiServiceClient
         catch (HttpRequestException ex)
         {
             _logger.LogError(ex, "AI Service /api/extract không phản hồi. SessionId={SessionId}", request.SessionId);
-            return new AiExtractResponse([new ExtractedReq(ExtractFallbackMessage, 0m)]);
+            return new AiExtractResponse([new ExtractedReq(ExtractFallbackMessage, 0m)], IsFallback: true);
         }
         catch (TaskCanceledException ex)
         {
             _logger.LogWarning(ex, "AI Service /api/extract bị timeout. SessionId={SessionId}", request.SessionId);
-            return new AiExtractResponse([new ExtractedReq(ExtractFallbackMessage, 0m)]);
+            return new AiExtractResponse([new ExtractedReq(ExtractFallbackMessage, 0m)], IsFallback: true);
         }
         catch (JsonException ex)
         {
             _logger.LogError(ex, "AI Service /api/extract trả về JSON không hợp lệ. SessionId={SessionId}", request.SessionId);
-            return new AiExtractResponse([new ExtractedReq(ExtractFallbackMessage, 0m)]);
+            return new AiExtractResponse([new ExtractedReq(ExtractFallbackMessage, 0m)], IsFallback: true);
         }
     }
 
@@ -116,7 +116,8 @@ public class AiServiceClient
     private static AiChatResponse CreateChatFallback() => new(
         StakeholderReply: ColdStartMessage,
         DetectedQuestionType: null,
-        StateUpdate: null
+        StateUpdate: null,
+        IsFallback: true
     );
 
     private static AiEvaluateResponse CreateEvaluateFallback(AiEvaluateRequest request) => new(
@@ -128,7 +129,8 @@ public class AiServiceClient
             Weaknesses: [EvaluateFallbackMessage],
             Suggestions: ["Vui lòng đợi AI Service khởi động xong rồi kết thúc session lại."],
             DesignSuggestions: null),
-        ScoringPolicy: null
+        ScoringPolicy: null,
+        IsFallback: true
     );
 }
 
@@ -148,11 +150,12 @@ public record AiChatRequest(
 public record AiChatResponse(
     string StakeholderReply,
     string? DetectedQuestionType,
-    PersonaStateUpdate? StateUpdate
+    PersonaStateUpdate? StateUpdate,
+    bool IsFallback = false
 );
 
 public record AiExtractRequest(string SessionId, List<ChatMessage> History, string? SelectedModel);
-public record AiExtractResponse(List<ExtractedReq> Requirements);
+public record AiExtractResponse(List<ExtractedReq> Requirements, bool IsFallback = false);
 
 public record AiEvaluateRequest(
     List<ExtractedReq> Extracted,
@@ -163,7 +166,8 @@ public record AiEvaluateResponse(
     decimal CoverageScore,
     List<ReqMatch> Matches,
     FeedbackData Feedback,
-    ScoringPolicyData? ScoringPolicy
+    ScoringPolicyData? ScoringPolicy,
+    bool IsFallback = false
 );
 
 // Sub-DTOs

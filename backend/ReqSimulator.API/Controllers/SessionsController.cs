@@ -637,6 +637,15 @@ public class SessionsController : ControllerBase
             SelectedModel: personaStateInit.SelectedModel
         ));
 
+        if (aiResponse.IsFallback)
+        {
+            return StatusCode(StatusCodes.Status503ServiceUnavailable, new
+            {
+                message = aiResponse.StakeholderReply,
+                isFallback = true
+            });
+        }
+
         // 3. Mở transaction cục bộ ngắn và khóa dòng FOR UPDATE để lưu kết quả nhanh
         await using var transaction = await _db.Database.BeginTransactionAsync();
 
@@ -775,6 +784,15 @@ public class SessionsController : ControllerBase
                     r.Category.ToString())).ToList(),
                 selectedModel
             ));
+
+            if (extractResult.IsFallback || evaluateResult.IsFallback)
+            {
+                await TryMarkFinalizationFailed(sessionId, lease);
+                return StatusCode(StatusCodes.Status503ServiceUnavailable, new
+                {
+                    message = "Máy chủ AI đang khởi động lạnh hoặc gặp sự cố tạm thời. Bài làm của bạn chưa bị khóa điểm. Vui lòng thử lại sau ít giây."
+                });
+            }
 
             var evaluation = new EvaluationResult
             {
@@ -939,12 +957,33 @@ public class SessionsController : ControllerBase
                 if (state is not null)
                 {
                     state.RevealedRequirements ??= [];
+                    if (string.IsNullOrWhiteSpace(state.Mood))
+                        state.Mood = persona.InitialMood;
+                    if (state.Patience <= 0m)
+                        state.Patience = persona.InitialPatience;
                     return state;
                 }
             }
             catch (JsonException)
             {
-                // Fall back to persona defaults.
+                // Soft fallback: khôi phục partial state từ JsonDocument nếu parse class thất bại
+                try
+                {
+                    using var doc = JsonDocument.Parse(stateJson);
+                    var root = doc.RootElement;
+                    var mood = root.TryGetProperty("mood", out var m) ? m.GetString() : null;
+                    var patience = root.TryGetProperty("patience", out var p) && p.TryGetDecimal(out var pVal) ? pVal : persona.InitialPatience;
+                    var turn = root.TryGetProperty("turn_count", out var tc) && tc.TryGetInt32(out var tVal) ? tVal : 0;
+
+                    return new PersonaStateSnapshot
+                    {
+                        Mood = string.IsNullOrWhiteSpace(mood) ? persona.InitialMood : mood,
+                        Patience = patience > 0m ? patience : persona.InitialPatience,
+                        RevealedRequirements = [],
+                        TurnCount = turn
+                    };
+                }
+                catch { }
             }
         }
 
