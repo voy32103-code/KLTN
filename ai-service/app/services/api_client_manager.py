@@ -35,9 +35,15 @@ class ApiClientManager:
         # 2. Đọc Groq key
         self.groq_api_key = os.getenv("GROQ_API_KEY")
         
+        # 3. Đọc DeepSeek và Mimo keys
+        self.deepseek_api_key = os.getenv("DEEPSEEK_API_KEY", "sk-ccaec8c7f4a14791bd7e1e37e4dd16fa")
+        self.mimo_api_key = os.getenv("MIMO_API_KEY", "sk-sqm3yr3owcfjjh50p29ojw1ovwq2yspu963e4lwjjq4ii6ua")
+
         logger.info(
             f"ApiClientManager initialized with {len(self.gemini_clients)} Gemini clients. "
-            f"Groq API Key configured: {bool(self.groq_api_key)}"
+            f"Groq API Key configured: {bool(self.groq_api_key)}. "
+            f"DeepSeek API Key configured: {bool(self.deepseek_api_key)}. "
+            f"Mimo API Key configured: {bool(self.mimo_api_key)}."
         )
 
     def _get_active_gemini_client_index(self) -> int:
@@ -122,6 +128,125 @@ class ApiClientManager:
                 logger.exception("Failed to query Groq API")
                 raise e
 
+    async def _call_openai_compatible(
+        self,
+        base_url: str,
+        api_key: str,
+        model: str,
+        contents: Any,
+        system_instruction: str | None,
+        temperature: float,
+        max_output_tokens: int,
+        response_format: dict | None = None
+    ) -> GroqResponseShim:
+        """Gọi OpenAI Compatible API (DeepSeek, Mimo) qua httpx."""
+        if not api_key:
+            raise RuntimeError(f"API Key for model {model} is not configured.")
+
+        messages = []
+        if system_instruction:
+            messages.append({"role": "system", "content": system_instruction})
+
+        if isinstance(contents, str):
+            messages.append({"role": "user", "content": contents})
+        elif isinstance(contents, list):
+            for item in contents:
+                role = "user" if item.get("role") == "user" else "assistant"
+                # Handle parts structure from Gemini
+                parts = item.get("parts", [])
+                text_content = ""
+                if parts and isinstance(parts, list):
+                    text_content = parts[0].get("text", "")
+                messages.append({"role": role, "content": text_content})
+
+        logger.info(f"Calling OpenAI-compatible API ({base_url}) with model: {model}, temperature: {temperature}")
+        
+        payload: Dict[str, Any] = {
+            "model": model,
+            "messages": messages,
+            "temperature": temperature,
+            "max_tokens": max_output_tokens
+        }
+        if response_format:
+            payload["response_format"] = response_format
+
+        async with httpx.AsyncClient(timeout=180.0) as http_client:
+            try:
+                response = await http_client.post(
+                    f"{base_url.rstrip('/')}/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {api_key}",
+                        "Content-Type": "application/json"
+                    },
+                    json=payload
+                )
+                if response.status_code != 200:
+                    logger.error(f"API Error {response.status_code}: {response.text}")
+                    raise RuntimeError(f"API returned error {response.status_code}: {response.text}")
+                
+                data = response.json()
+                text = data["choices"][0]["message"]["content"]
+                return GroqResponseShim(text=text.strip())
+            except Exception as e:
+                logger.exception(f"Failed to query model {model} at {base_url}")
+                raise e
+
+    async def _call_deepseek(
+        self,
+        model: str,
+        contents: Any,
+        system_instruction: str | None,
+        temperature: float,
+        max_output_tokens: int,
+        response_format: dict | None = None
+    ) -> GroqResponseShim:
+        # Chuẩn hóa tên model DeepSeek
+        m = model.lower().strip().replace(" ", "-")
+        if m == "deepseek-v4pro":
+            normalized_model = "deepseek-v4-pro"
+        elif m == "deepseek-v4flash":
+            normalized_model = "deepseek-v4-flash"
+        else:
+            normalized_model = m
+
+        return await self._call_openai_compatible(
+            base_url="https://api.deepseek.com",
+            api_key=self.deepseek_api_key,
+            model=normalized_model,
+            contents=contents,
+            system_instruction=system_instruction,
+            temperature=temperature,
+            max_output_tokens=max_output_tokens,
+            response_format=response_format
+        )
+
+    async def _call_mimo(
+        self,
+        model: str,
+        contents: Any,
+        system_instruction: str | None,
+        temperature: float,
+        max_output_tokens: int,
+        response_format: dict | None = None
+    ) -> GroqResponseShim:
+        # Chuẩn hóa tên model Mimo
+        m = model.lower().strip().replace(" ", "-")
+        if m == "mimo-v2.5pro":
+            normalized_model = "mimo-v2.5-pro"
+        else:
+            normalized_model = m
+
+        return await self._call_openai_compatible(
+            base_url="https://api.xiaomimimo.com/v1",
+            api_key=self.mimo_api_key,
+            model=normalized_model,
+            contents=contents,
+            system_instruction=system_instruction,
+            temperature=temperature,
+            max_output_tokens=max_output_tokens,
+            response_format=response_format
+        )
+
     async def generate_content(
         self,
         model: str,
@@ -132,13 +257,41 @@ class ApiClientManager:
         config: types.GenerateContentConfig | None = None
     ) -> Any:
         """
-        Sinh nội dung từ model được chọn (hỗ trợ cả Gemini và Groq).
+        Sinh nội dung từ model được chọn (hỗ trợ cả Gemini, Groq, DeepSeek và Mimo).
         """
         model_lower = model.lower() if model else ""
         
         # Nếu là model Llama -> Gọi Groq
         if model_lower.startswith("llama"):
             return await self._call_groq(model, contents, system_instruction, temperature, max_output_tokens)
+
+        # Nếu là DeepSeek -> Gọi DeepSeek
+        if model_lower.startswith("deepseek"):
+            response_format = None
+            if config and config.response_mime_type == "application/json":
+                response_format = {"type": "json_object"}
+            return await self._call_deepseek(
+                model=model,
+                contents=contents,
+                system_instruction=system_instruction or (config.system_instruction if config else None),
+                temperature=temperature if (config is None or config.temperature is None) else config.temperature,
+                max_output_tokens=max_output_tokens if (config is None or config.max_output_tokens is None) else config.max_output_tokens,
+                response_format=response_format
+            )
+
+        # Nếu là Mimo -> Gọi Mimo
+        if model_lower.startswith("mimo"):
+            response_format = None
+            if config and config.response_mime_type == "application/json":
+                response_format = {"type": "json_object"}
+            return await self._call_mimo(
+                model=model,
+                contents=contents,
+                system_instruction=system_instruction or (config.system_instruction if config else None),
+                temperature=temperature if (config is None or config.temperature is None) else config.temperature,
+                max_output_tokens=max_output_tokens if (config is None or config.max_output_tokens is None) else config.max_output_tokens,
+                response_format=response_format
+            )
 
         # Ngược lại -> Gọi Gemini với cơ chế xoay key và fallback sang Groq nếu tất cả key Gemini lỗi
         attempts = 0
