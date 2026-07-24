@@ -74,9 +74,7 @@ public static class SeedData
         foreach (var seed in HiddenRequirementSeeds)
         {
             var requirement = await db.HiddenRequirements
-                .FirstOrDefaultAsync(r =>
-                    r.ScenarioId == scenarioId &&
-                    r.RequirementText == seed.RequirementText);
+                .FirstOrDefaultAsync(r => r.Id == seed.Id);
 
             if (requirement is null)
             {
@@ -176,9 +174,7 @@ public static class SeedData
         foreach (var seed in requirements)
         {
             var requirement = await db.HiddenRequirements
-                .FirstOrDefaultAsync(r =>
-                    r.ScenarioId == scenario.Id &&
-                    r.RequirementText == seed.RequirementText);
+                .FirstOrDefaultAsync(r => r.Id == seed.Id);
 
             if (requirement is null)
             {

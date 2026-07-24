@@ -67,7 +67,8 @@ class ApiClientManager:
         contents: Any,
         system_instruction: str | None,
         temperature: float,
-        max_output_tokens: int
+        max_output_tokens: int,
+        response_format: dict | None = None
     ) -> GroqResponseShim:
         """Gọi Groq Chat Completion API qua httpx."""
         if not self.groq_api_key:
@@ -91,6 +92,15 @@ class ApiClientManager:
 
         logger.info(f"Calling Groq API with model: {model}, temperature: {temperature}")
         
+        payload = {
+            "model": model,
+            "messages": messages,
+            "temperature": temperature,
+            "max_tokens": max_output_tokens
+        }
+        if response_format:
+            payload["response_format"] = response_format
+
         async with httpx.AsyncClient(timeout=60.0) as http_client:
             try:
                 response = await http_client.post(
@@ -99,12 +109,7 @@ class ApiClientManager:
                         "Authorization": f"Bearer {self.groq_api_key}",
                         "Content-Type": "application/json"
                     },
-                    json={
-                        "model": model,
-                        "messages": messages,
-                        "temperature": temperature,
-                        "max_tokens": max_output_tokens
-                    }
+                    json=payload
                 )
                 if response.status_code != 200:
                     logger.error(f"Groq API Error {response.status_code}: {response.text}")
@@ -123,7 +128,8 @@ class ApiClientManager:
         contents: Any,
         system_instruction: str | None = None,
         temperature: float = 0.65,
-        max_output_tokens: int = 350
+        max_output_tokens: int = 350,
+        config: types.GenerateContentConfig | None = None
     ) -> Any:
         """
         Sinh nội dung từ model được chọn (hỗ trợ cả Gemini và Groq).
@@ -145,11 +151,21 @@ class ApiClientManager:
                 logger.info(f"Calling Gemini API with model: {model} using key index {idx}")
                 
                 # Gọi đồng bộ trong thread pool để tránh block event loop
-                gen_config = types.GenerateContentConfig(
-                    temperature=temperature,
-                    max_output_tokens=max_output_tokens,
-                    system_instruction=system_instruction,
-                )
+                gen_config = config
+                if gen_config is None:
+                    gen_config = types.GenerateContentConfig(
+                        temperature=temperature,
+                        max_output_tokens=max_output_tokens,
+                        system_instruction=system_instruction,
+                    )
+                else:
+                    # Đảm bảo các tham số mặc định được áp dụng nếu config không định nghĩa
+                    if gen_config.temperature is None:
+                        gen_config.temperature = temperature
+                    if gen_config.max_output_tokens is None:
+                        gen_config.max_output_tokens = max_output_tokens
+                    if gen_config.system_instruction is None and system_instruction is not None:
+                        gen_config.system_instruction = system_instruction
 
                 response = await asyncio.to_thread(
                     client.models.generate_content,

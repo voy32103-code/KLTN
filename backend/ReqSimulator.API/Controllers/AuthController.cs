@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using ReqSimulator.API.Services;
+using ReqSimulator.API.Models;
 
 namespace ReqSimulator.API.Controllers;
 
@@ -19,6 +20,20 @@ public class AuthController : ControllerBase
         try
         {
             var user = await _auth.Register(dto.Name, dto.Email, dto.Password);
+            return Ok(new { user.Id, user.Name, user.Email, user.Role });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(new { error = ex.Message });
+        }
+    }
+
+    [HttpPost("register-admin")]
+    public async Task<IActionResult> RegisterAdmin([FromBody] RegisterDto dto)
+    {
+        try
+        {
+            var user = await _auth.Register(dto.Name, dto.Email, dto.Password, UserRole.Admin);
             return Ok(new { user.Id, user.Name, user.Email, user.Role });
         }
         catch (InvalidOperationException ex)

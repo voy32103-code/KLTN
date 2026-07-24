@@ -111,6 +111,42 @@ public class AiServiceClient
         }
     }
 
+    /// <summary>Yêu cầu AI Service cào và tạo kịch bản từ URL đặc tả BA</summary>
+    public async Task<AiAdminScenarioResponse> CrawlScenario(string url, string? selectedModel)
+    {
+        try
+        {
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(180));
+            var payload = new { url, selectedModel };
+            var response = await _http.PostAsJsonAsync("/api/admin/crawl-scenario", payload, cts.Token);
+            response.EnsureSuccessStatusCode();
+            return (await response.Content.ReadFromJsonAsync<AiAdminScenarioResponse>(cts.Token))!;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Lỗi khi gọi AI Service /api/admin/crawl-scenario. URL={Url}", url);
+            return new AiAdminScenarioResponse(false, $"Không thể cào kịch bản: {ex.Message}", null, true);
+        }
+    }
+
+    /// <summary>Yêu cầu AI Service trích xuất và tạo kịch bản từ video</summary>
+    public async Task<AiAdminScenarioResponse> UploadVideoScenario(string videoPath, string? selectedModel)
+    {
+        try
+        {
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(300));
+            var payload = new { videoPath, selectedModel };
+            var response = await _http.PostAsJsonAsync("/api/admin/upload-video-scenario", payload, cts.Token);
+            response.EnsureSuccessStatusCode();
+            return (await response.Content.ReadFromJsonAsync<AiAdminScenarioResponse>(cts.Token))!;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Lỗi khi gọi AI Service /api/admin/upload-video-scenario. VideoPath={VideoPath}", videoPath);
+            return new AiAdminScenarioResponse(false, $"Không thể xử lý video: {ex.Message}", null, true);
+        }
+    }
+
     // ===== Fallback Factory Methods =====
 
     private static AiChatResponse CreateChatFallback() => new(
@@ -167,6 +203,36 @@ public record AiEvaluateResponse(
     List<ReqMatch> Matches,
     FeedbackData Feedback,
     ScoringPolicyData? ScoringPolicy,
+    bool IsFallback = false
+);
+
+// Admin DTOs
+public record ScenarioRequirementRuleJson(
+    string Id,
+    string Text,
+    int Gate,
+    List<string> Keywords,
+    List<string> QuestionTypes,
+    string RevealCondition,
+    string RevealDifficulty,
+    List<string>? Requires
+);
+
+public record ScenarioConfigJson(
+    string ScenarioKey,
+    string ScenarioTitle,
+    string Context,
+    List<string> GeneralKeywords,
+    Dictionary<string, List<string>> GateKeywordGroups,
+    Dictionary<string, List<int>> QuestionTypeGateMap,
+    int MaxNewRevealsPerTurn,
+    List<ScenarioRequirementRuleJson> Requirements
+);
+
+public record AiAdminScenarioResponse(
+    bool Success,
+    string Message,
+    ScenarioConfigJson? Scenario,
     bool IsFallback = false
 );
 
