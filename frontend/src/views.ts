@@ -845,12 +845,12 @@ export function renderAdminDashboard(state: AppState) {
 
       ${isOverviewTab ? renderAdminOverviewSection(admin) : 
         isUsersTab ? renderAdminUserManagementSection(admin) : 
-        renderAdminScenarioSection(state, admin)}
+        renderAdminScenarioSection(state)}
     </section>
   `
 }
 
-function renderAdminScenarioSection(state: AppState, admin: AdminState) {
+function renderAdminScenarioSection(state: AppState) {
   return `
     <div class="admin-scenarios-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px;">
       

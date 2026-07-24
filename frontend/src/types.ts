@@ -216,7 +216,7 @@ export type AdminUserItem = {
 }
 
 export type AdminState = {
-  activeTab: 'overview' | 'users'
+  activeTab: 'overview' | 'users' | 'scenarios'
   overview: AdminOverview | null
   coverageDistribution: CoverageDistributionBin[] | null
   sessionsOverTime: SessionsOverTimeData | null
