@@ -27,21 +27,6 @@ class AdminScenarioResponse(BaseModel):
     message: str
     scenario: ScenarioConfigSchema
 
-@router.get("/test-spec")
-async def get_test_spec():
-    return """# Đặc tả hệ thống Đặt xe trực tuyến (Online Taxi Booking)
-Bối cảnh: Hệ thống cho phép khách hàng đặt xe qua ứng dụng di động một cách nhanh chóng và an toàn.
-Yêu cầu chức năng:
-1. Khách hàng phải có khả năng tạo tài khoản và đặt chuyến đi trực tuyến.
-2. Hệ thống phải tự động tính toán chi phí chuyến đi dựa trên khoảng cách GPS trước khi xác nhận.
-3. Khách hàng có thể hủy chuyến đi miễn phí trong vòng 5 phút đầu tiên sau khi tài xế nhận chuyến.
-Yêu cầu phi chức năng:
-4. Hệ thống phải xử lý được 1000 lượt đặt xe đồng thời trong giờ cao điểm.
-5. Giao diện ứng dụng phải dễ sử dụng cho mọi đối tượng khách hàng.
-Quy tắc nghiệp vụ ngoại lệ:
-6. Nếu không tìm thấy tài x tài xế sau 10 phút, hệ thống phải gửi thông báo xin lỗi kèm mã giảm giá 10% cho chuyến đi tiếp theo.
-"""
-
 @router.post("/admin/crawl-scenario", response_model=AdminScenarioResponse)
 async def crawl_scenario(req: CrawlScenarioRequest):
     try:
