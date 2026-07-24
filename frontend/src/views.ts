@@ -45,6 +45,70 @@ function getFriendlyModelName(modelId?: string): string {
   }
 }
 
+function getProviderClass(modelId: string): string {
+  if (!modelId) return 'provider-generic';
+  if (modelId.startsWith('gemini')) return 'provider-gemini';
+  if (modelId.startsWith('deepseek')) return 'provider-deepseek';
+  if (modelId.startsWith('llama')) return 'provider-llama';
+  if (modelId.startsWith('mimo')) return 'provider-mimo';
+  if (modelId.startsWith('openrouter')) return 'provider-openrouter';
+  return 'provider-generic';
+}
+
+function renderModelGroups(state: AppState) {
+  const models = [
+    { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', provider: 'gemini', desc: 'Khuyên dùng - Cổng bảo mật & Structured Output' },
+    { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', provider: 'gemini', desc: 'Mô hình Pro - Phân tích nghiệp vụ sâu hơn' },
+    { id: 'deepseek-chat', name: 'DeepSeek Chat', provider: 'deepseek', desc: 'Mô hình DeepSeek V3 - Cực tốt cho nghiệp vụ' },
+    { id: 'deepseek-v4flash', name: 'DeepSeek v4 Flash', provider: 'deepseek', desc: 'Deepseek Flash - Tốc độ cao' },
+    { id: 'deepseek-v4pro', name: 'DeepSeek v4 Pro', provider: 'deepseek', desc: 'Deepseek Pro - Thông minh vượt trội' },
+    { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B (Groq)', provider: 'llama', desc: 'Mô hình mã nguồn mở tốt nhất qua Groq' },
+    { id: 'llama-3.1-8b-instant', name: 'Llama 3.1 8B (Groq)', provider: 'llama', desc: 'Groq Cloud - Tốc độ phản hồi tức thì' },
+    { id: 'mimo-v2.5pro', name: 'Mimo v2.5 Pro', provider: 'mimo', desc: 'Mimo Cloud - Tương thích ngược tốt' },
+    { id: 'openrouter/meta-llama/llama-3.3-70b-instruct', name: 'Llama 3.3 70B (OR)', provider: 'openrouter', desc: 'Llama 3.3 Instruct qua OpenRouter' },
+    { id: 'openrouter/deepseek/deepseek-chat', name: 'DeepSeek Chat (OR)', provider: 'openrouter', desc: 'DeepSeek Chat qua OpenRouter' },
+    { id: 'openrouter/google/gemini-2.5-flash', name: 'Gemini 2.5 Flash (OR)', provider: 'openrouter', desc: 'Gemini 2.5 Flash qua OpenRouter' }
+  ];
+
+  const providers: Record<string, { label: string; color: string }> = {
+    gemini: { label: 'Google Gemini', color: '#38bdf8' },
+    deepseek: { label: 'DeepSeek', color: '#10b981' },
+    llama: { label: 'Meta Llama (Groq)', color: '#a855f7' },
+    mimo: { label: 'Mimo Cloud', color: '#f59e0b' },
+    openrouter: { label: 'OpenRouter', color: '#ec4899' }
+  };
+
+  const grouped: Record<string, typeof models> = {};
+  models.forEach(m => {
+    if (!grouped[m.provider]) grouped[m.provider] = [];
+    grouped[m.provider].push(m);
+  });
+
+  return Object.entries(grouped).map(([prov, items]) => {
+    const info = providers[prov];
+    return `
+      <div style="border-bottom: 1px solid rgba(255,255,255,0.03); padding-bottom: 6px; margin-bottom: 6px; display: flex; flex-direction: column; gap: 2px;">
+        <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; font-weight: 700; padding: 4px 8px; display: flex; align-items: center; gap: 6px;">
+          <span style="width: 5px; height: 5px; border-radius: 50%; background: ${info.color}; display: inline-block;"></span>
+          ${info.label}
+        </div>
+        ${items.map(m => {
+          const active = state.selectedModel === m.id;
+          return `
+            <button class="dropdown-item-btn ${active ? 'active' : ''}" data-action="select-model" data-model="${m.id}" type="button">
+              <span style="font-weight: 600; display: flex; align-items: center; gap: 6px; justify-content: space-between; width: 100%;">
+                ${m.name}
+                ${active ? '<span style="font-size: 11px; color: #38bdf8;">✓</span>' : ''}
+              </span>
+              <span style="font-size: 10px; color: #64748b; font-weight: normal;">${m.desc}</span>
+            </button>
+          `;
+        }).join('')}
+      </div>
+    `;
+  }).join('');
+}
+
 export function renderApp(state: AppState) {
   return `
     <div class="shell">
@@ -257,20 +321,23 @@ function renderScenarioDetail(scenario: ScenarioDetail, state: AppState) {
         <strong>${selectedPersona ? escapeHtml(selectedPersona.roleTitle ?? 'Đối tác') : 'Chưa chọn đối tác'}</strong>
         <span>${selectedPersona ? 'Phiên mô phỏng phỏng vấn phác thảo sẽ bắt đầu với nhân vật này.' : 'Vui lòng lựa chọn một đối tác phỏng vấn để bắt đầu.'}</span>
       </div>
-      <div style="display: flex; gap: var(--spacing-sm); align-items: center; flex-wrap: wrap;">
-        <select id="ai-model-select" class="liquid-glass" style="padding: 0.625rem 1rem; border-radius: var(--radius-md); border: 1px solid var(--glass-border); background: var(--glass-bg); color: var(--text-primary); font-size: 0.875rem; cursor: pointer; outline: none; font-weight: 500;">
-          <option value="gemini-2.5-flash" ${state.selectedModel === 'gemini-2.5-flash' ? 'selected' : ''}>Gemini 2.5 Flash</option>
-          <option value="gemini-2.5-pro" ${state.selectedModel === 'gemini-2.5-pro' ? 'selected' : ''}>Gemini 2.5 Pro</option>
-          <option value="llama-3.3-70b-versatile" ${state.selectedModel === 'llama-3.3-70b-versatile' ? 'selected' : ''}>Llama 3.3 70B (Groq)</option>
-          <option value="llama-3.1-8b-instant" ${state.selectedModel === 'llama-3.1-8b-instant' ? 'selected' : ''}>Llama 3.1 8B (Groq)</option>
-          <option value="deepseek-chat" ${state.selectedModel === 'deepseek-chat' ? 'selected' : ''}>DeepSeek Chat</option>
-          <option value="deepseek-v4flash" ${state.selectedModel === 'deepseek-v4flash' ? 'selected' : ''}>DeepSeek v4 Flash</option>
-          <option value="deepseek-v4pro" ${state.selectedModel === 'deepseek-v4pro' ? 'selected' : ''}>DeepSeek v4 Pro</option>
-          <option value="mimo-v2.5pro" ${state.selectedModel === 'mimo-v2.5pro' ? 'selected' : ''}>Mimo v2.5 Pro</option>
-          <option value="openrouter/meta-llama/llama-3.3-70b-instruct" ${state.selectedModel === 'openrouter/meta-llama/llama-3.3-70b-instruct' ? 'selected' : ''}>Llama 3.3 70B (OpenRouter)</option>
-          <option value="openrouter/deepseek/deepseek-chat" ${state.selectedModel === 'openrouter/deepseek/deepseek-chat' ? 'selected' : ''}>DeepSeek Chat (OpenRouter)</option>
-          <option value="openrouter/google/gemini-2.5-flash" ${state.selectedModel === 'openrouter/google/gemini-2.5-flash' ? 'selected' : ''}>Gemini 2.5 Flash (OpenRouter)</option>
-        </select>
+      <div style="display: flex; gap: var(--spacing-sm); align-items: center; flex-wrap: wrap; position: relative;">
+        <!-- Custom Dropdown Container -->
+        <div class="custom-dropdown">
+          <button class="liquid-glass" data-action="toggle-model-dropdown" type="button" style="display: flex; align-items: center; gap: 8px; padding: 0.625rem 1rem; border-radius: var(--radius-md); border: 1px solid var(--glass-border); background: var(--glass-bg); color: var(--text-primary); font-size: 0.875rem; cursor: pointer; outline: none; font-weight: 500;">
+            <span class="model-provider-badge ${getProviderClass(state.selectedModel)}"></span>
+            <span>${getFriendlyModelName(state.selectedModel)}</span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-left: 4px; transform: ${state.modelDropdownOpen ? 'rotate(180deg)' : 'rotate(0)'}; transition: transform 0.2s;"><polyline points="6 9 12 15 18 9"></polyline></svg>
+          </button>
+          
+          <!-- Dropdown menu -->
+          ${state.modelDropdownOpen ? `
+            <div class="dropdown-menu glass-panel" style="position: absolute; bottom: 100%; right: 0; margin-bottom: 8px; width: 340px; max-height: 380px; overflow-y: auto; border: 1px solid var(--glass-border); background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(16px); border-radius: var(--radius-lg); box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5); z-index: 1000; padding: 8px; display: flex; flex-direction: column; gap: 4px;">
+              ${renderModelGroups(state)}
+            </div>
+          ` : ''}
+        </div>
+
         <button class="primary-button" data-action="start-session" type="button" ${!state.selectedPersonaId || state.busy ? 'disabled' : ''}>
           ${state.busy ? 'Đang khởi tạo...' : 'Bắt đầu phỏng vấn'}
         </button>

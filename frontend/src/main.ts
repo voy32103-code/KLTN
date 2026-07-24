@@ -57,6 +57,7 @@ const state: AppState = {
   adminState: null,
   busy: false,
   notice: null,
+  modelDropdownOpen: false,
 }
 
 const api = createApiClient({
@@ -181,11 +182,16 @@ function bindEvents() {
   })
 
   document.querySelectorAll<HTMLButtonElement>('[data-action]').forEach((button) => {
-    button.addEventListener('click', () => {
+    button.addEventListener('click', (event) => {
+      // Ngăn chặn sự kiện click lan truyền lên document khi click vào dropdown-trigger
+      if (button.dataset.action === 'toggle-model-dropdown') {
+        event.stopPropagation()
+      }
       const action = button.dataset.action ?? ''
       const tab = button.dataset.tab ?? ''
       const userId = button.dataset.userId ?? ''
-      void handleAction(action, { tab, userId })
+      const model = button.dataset.model ?? ''
+      void handleAction(action, { tab, userId, model })
     })
   })
 
@@ -198,21 +204,36 @@ function bindEvents() {
 
   document.querySelector('#messages')?.scrollTo({ top: 999999 })
 
-  document.querySelector('#ai-model-select')?.addEventListener('change', (event) => {
-    const select = event.currentTarget as HTMLSelectElement
-    state.selectedModel = select.value
-    localStorage.setItem(MODEL_KEY, select.value)
-    render()
-  })
+  // Đóng dropdown khi bấm ra ngoài vùng dropdown container
+  if (!(window as any).hasDropdownCloseListener) {
+    (window as any).hasDropdownCloseListener = true
+    document.addEventListener('click', (event) => {
+      const target = event.target as HTMLElement
+      if (state.modelDropdownOpen && !target.closest('.custom-dropdown')) {
+        state.modelDropdownOpen = false
+        render()
+      }
+    })
+  }
 }
 
-
-
-async function handleAction(action: string, options: { tab?: string; userId?: string } = {}) {
+async function handleAction(action: string, options: { tab?: string; userId?: string; model?: string } = {}) {
   if (state.busy) return
   switch (action) {
     case 'logout':
       logout()
+      break
+    case 'toggle-model-dropdown':
+      state.modelDropdownOpen = !state.modelDropdownOpen
+      render()
+      break
+    case 'select-model':
+      if (options.model) {
+        state.selectedModel = options.model
+        localStorage.setItem(MODEL_KEY, options.model)
+        state.modelDropdownOpen = false
+        render()
+      }
       break
     case 'refresh-scenarios':
       await loadScenarios()
