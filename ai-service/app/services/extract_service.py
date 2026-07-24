@@ -60,6 +60,18 @@ REQUIREMENT_CUES = (
     "report",
     "sync",
     "offline",
+    # Tiếng Việt cues
+    "phải",
+    "cần",
+    "yêu cầu",
+    "cho phép",
+    "hỗ trợ",
+    "tích hợp",
+    "cảnh báo",
+    "báo cáo",
+    "đồng bộ",
+    "ngoại tuyến",
+    "bảo mật",
 )
 
 
@@ -160,7 +172,8 @@ def _split_sentences(text: str) -> list[str]:
 
 
 def _normalize_candidate(text: str) -> str:
-    return re.sub(r"[^a-z0-9]+", " ", text.lower()).strip()
+    # Giữ lại các ký tự chữ cái Unicode (bao gồm tiếng Việt có dấu) và chữ số
+    return re.sub(r"[^\w0-9]+", " ", text.lower()).strip()
 
 
 def _to_requirement_text(sentence: str, role: str) -> str:
