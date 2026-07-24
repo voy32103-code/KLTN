@@ -259,4 +259,5 @@ export type AppState = {
   busy: boolean
   notice: Notice | null
   confirmEndSession?: boolean
+  modelDropdownOpen?: boolean
 }
