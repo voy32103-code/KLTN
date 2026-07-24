@@ -826,22 +826,102 @@ export function renderAdminDashboard(state: AppState) {
   }
 
   const isOverviewTab = admin.activeTab === 'overview'
+  const isUsersTab = admin.activeTab === 'users'
+  const isScenariosTab = admin.activeTab === 'scenarios'
 
   return `
     <section class="admin-dashboard" data-animate="fade-up">
       <div class="admin-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
         <div>
           <p class="section-kicker">Bảng điều khiển Admin</p>
-          <h2 style="font-size: 24px; font-weight: 700;">Thống kê Hệ thống & Quản lý Người dùng</h2>
+          <h2 style="font-size: 24px; font-weight: 700;">Quản trị Hệ thống & Nạp Tri thức AI</h2>
         </div>
         <div class="admin-nav-tabs" style="display: flex; gap: 8px; background: #0f172a; padding: 4px; border-radius: 8px; border: 1px solid #334155;">
           <button class="ghost-button ${isOverviewTab ? 'active' : ''}" data-action="set-admin-tab" data-tab="overview" type="button" style="${isOverviewTab ? 'background: var(--color-primary); color: #fff;' : ''}">Thống kê Analytics</button>
-          <button class="ghost-button ${!isOverviewTab ? 'active' : ''}" data-action="set-admin-tab" data-tab="users" type="button" style="${!isOverviewTab ? 'background: var(--color-primary); color: #fff;' : ''}">Quản lý Người dùng (CRUD)</button>
+          <button class="ghost-button ${isUsersTab ? 'active' : ''}" data-action="set-admin-tab" data-tab="users" type="button" style="${isUsersTab ? 'background: var(--color-primary); color: #fff;' : ''}">Quản lý Người dùng (CRUD)</button>
+          <button class="ghost-button ${isScenariosTab ? 'active' : ''}" data-action="set-admin-tab" data-tab="scenarios" type="button" style="${isScenariosTab ? 'background: var(--color-primary); color: #fff;' : ''}">Cào/Nạp Kịch Bản (AI)</button>
         </div>
       </div>
 
-      ${isOverviewTab ? renderAdminOverviewSection(admin) : renderAdminUserManagementSection(admin)}
+      ${isOverviewTab ? renderAdminOverviewSection(admin) : 
+        isUsersTab ? renderAdminUserManagementSection(admin) : 
+        renderAdminScenarioSection(state, admin)}
     </section>
+  `
+}
+
+function renderAdminScenarioSection(state: AppState, admin: AdminState) {
+  return `
+    <div class="admin-scenarios-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px;">
+      
+      <!-- Card 1: Crawl BA Document -->
+      <div class="card glass-panel" style="padding: 24px; display: flex; flex-direction: column; gap: 16px; border: 1px solid var(--glass-border); background: var(--glass-bg); border-radius: var(--radius-lg);">
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+          <div style="background: rgba(56, 189, 248, 0.1); padding: 8px; border-radius: 8px; color: #38bdf8;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+          </div>
+          <div>
+            <h3 style="font-size: 18px; font-weight: 600; color: #f8fafc; margin: 0;">Cào & Trích xuất Tài liệu BA</h3>
+            <p style="font-size: 13px; color: #94a3b8; margin: 4px 0 0 0;">Tự động phân tích PRD/SRS từ URL thành kịch bản phỏng vấn</p>
+          </div>
+        </div>
+        
+        <div class="form-group" style="display: flex; flex-direction: column; gap: 8px;">
+          <label style="font-size: 13px; color: #cbd5e1; font-weight: 500;">Đường dẫn URL chứa tài liệu:</label>
+          <input id="admin-crawl-url-input" type="text" placeholder="https://example.com/spec.html hoặc URL raw text..." style="background: #0f172a; color: #f8fafc; border: 1px solid #475569; border-radius: 6px; padding: 10px 12px; font-size: 13px; outline: none; width: 100%;" />
+        </div>
+
+        <div class="form-group" style="display: flex; flex-direction: column; gap: 8px;">
+          <label style="font-size: 13px; color: #cbd5e1; font-weight: 500;">Mô hình AI xử lý:</label>
+          <select id="admin-crawl-model-select" style="background: #0f172a; color: #f8fafc; border: 1px solid #475569; border-radius: 6px; padding: 10px 12px; font-size: 13px; cursor: pointer; outline: none; width: 100%;">
+            <option value="gemini-2.5-flash">Gemini 2.5 Flash (Khuyên dùng - Structured Output)</option>
+            <option value="gemini-2.5-pro">Gemini 2.5 Pro (Thông minh hơn - Tốc độ chậm hơn)</option>
+            <option value="llama-3.3-70b-versatile">Llama 3.3 70B (Groq Fallback - JSON mode)</option>
+            <option value="llama-3.1-8b-instant">Llama 3.1 8B (Groq Fallback - Nhanh)</option>
+          </select>
+        </div>
+
+        <button class="primary-button" data-action="admin-crawl" type="button" ${state.busy ? 'disabled' : ''} style="margin-top: 12px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+          ${state.busy ? '<span class="spinner-mini"></span> Đang xử lý...' : 'Bắt đầu Cào & Trích xuất'}
+        </button>
+      </div>
+
+      <!-- Card 2: Video Knowledge Upload -->
+      <div class="card glass-panel" style="padding: 24px; display: flex; flex-direction: column; gap: 16px; border: 1px solid var(--glass-border); background: var(--glass-bg); border-radius: var(--radius-lg);">
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+          <div style="background: rgba(168, 85, 247, 0.1); padding: 8px; border-radius: 8px; color: #a855f7;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>
+          </div>
+          <div>
+            <h3 style="font-size: 18px; font-weight: 600; color: #f8fafc; margin: 0;">Nạp Tri thức Nghiệp vụ từ Video</h3>
+            <p style="font-size: 13px; color: #94a3b8; margin: 4px 0 0 0;">Sử dụng Multimodal AI để trích xuất kịch bản từ video/audio cuộc họp</p>
+          </div>
+        </div>
+
+        <div class="form-group" style="display: flex; flex-direction: column; gap: 8px;">
+          <label style="font-size: 13px; color: #cbd5e1; font-weight: 500;">Đường dẫn tệp video tuyệt đối (Local Path):</label>
+          <input id="admin-video-path-input" type="text" placeholder="Ví dụ: d:\\KLTN\\tools\\meeting_recording.mp4" style="background: #0f172a; color: #f8fafc; border: 1px solid #475569; border-radius: 6px; padding: 10px 12px; font-size: 13px; outline: none; width: 100%;" />
+        </div>
+
+        <div class="form-group" style="display: flex; flex-direction: column; gap: 8px;">
+          <label style="font-size: 13px; color: #cbd5e1; font-weight: 500;">Mô hình AI xử lý:</label>
+          <select id="admin-video-model-select" style="background: #0f172a; color: #f8fafc; border: 1px solid #475569; border-radius: 6px; padding: 10px 12px; font-size: 13px; cursor: pointer; outline: none; width: 100%;">
+            <option value="gemini-2.5-flash">Gemini 2.5 Flash (Khuyên dùng - Multimodal)</option>
+            <option value="gemini-2.5-pro">Gemini 2.5 Pro (Multimodal Pro)</option>
+          </select>
+        </div>
+
+        <div style="background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.2); border-radius: 6px; padding: 10px 12px; display: flex; gap: 8px; align-items: flex-start;">
+          <span style="color: #f59e0b; font-weight: bold; font-size: 14px;">⚠️</span>
+          <span style="font-size: 11px; color: #cbd5e1; line-height: 1.4;">Hệ thống sẽ tự động sử dụng <strong>FFmpeg</strong> cục bộ để tối ưu dung lượng (tách âm thanh mp3) trước khi gửi lên Gemini File API xử lý đa phương tiện.</span>
+        </div>
+
+        <button class="primary-button" data-action="admin-video" type="button" ${state.busy ? 'disabled' : ''} style="margin-top: 4px; background: linear-gradient(135deg, #a855f7, #7c3aed); border: none; display: flex; align-items: center; justify-content: center; gap: 8px;">
+          ${state.busy ? '<span class="spinner-mini"></span> Đang xử lý...' : 'Bắt đầu Nạp từ Video'}
+        </button>
+      </div>
+
+    </div>
   `
 }
 

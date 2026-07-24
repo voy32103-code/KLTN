@@ -28,19 +28,7 @@ public class AuthController : ControllerBase
         }
     }
 
-    [HttpPost("register-admin")]
-    public async Task<IActionResult> RegisterAdmin([FromBody] RegisterDto dto)
-    {
-        try
-        {
-            var user = await _auth.Register(dto.Name, dto.Email, dto.Password, UserRole.Admin);
-            return Ok(new { user.Id, user.Name, user.Email, user.Role });
-        }
-        catch (InvalidOperationException ex)
-        {
-            return Conflict(new { error = ex.Message });
-        }
-    }
+
 
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginDto dto)

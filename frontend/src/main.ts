@@ -261,10 +261,16 @@ async function handleAction(action: string, options: { tab?: string; userId?: st
       await openAdminDashboard()
       break
     case 'set-admin-tab':
-      if (state.adminState && (options.tab === 'overview' || options.tab === 'users')) {
-        state.adminState.activeTab = options.tab
+      if (state.adminState && (options.tab === 'overview' || options.tab === 'users' || options.tab === 'scenarios')) {
+        state.adminState.activeTab = options.tab as any
         render()
       }
+      break
+    case 'admin-crawl':
+      await runAdminCrawl()
+      break
+    case 'admin-video':
+      await runAdminVideo()
       break
     case 'submit-override':
       await submitLecturerOverride()
@@ -700,6 +706,48 @@ function exportReviewCsv() {
   link.remove()
   URL.revokeObjectURL(url)
   setNotice('success', 'Đã xuất dữ liệu phiên phỏng vấn dưới dạng CSV.')
+}
+
+async function runAdminCrawl() {
+  const urlInput = document.querySelector('#admin-crawl-url-input') as HTMLInputElement | null
+  const modelSelect = document.querySelector('#admin-crawl-model-select') as HTMLSelectElement | null
+  if (!urlInput || !urlInput.value.trim()) {
+    setNotice('error', 'Vui lòng nhập đường dẫn URL tài liệu!')
+    return
+  }
+  const url = urlInput.value.trim()
+  const selectedModel = modelSelect?.value || 'gemini-2.5-flash'
+
+  await withBusy(async () => {
+    clearNotice()
+    const result = await api.request<{ message: string }>('/api/AdminScenarios/crawl', {
+      method: 'POST',
+      body: { url, selectedModel }
+    })
+    setNotice('success', result.message || 'Cào dữ liệu và tạo kịch bản thành công!')
+    if (urlInput) urlInput.value = ''
+  })
+}
+
+async function runAdminVideo() {
+  const videoPathInput = document.querySelector('#admin-video-path-input') as HTMLInputElement | null
+  const modelSelect = document.querySelector('#admin-video-model-select') as HTMLSelectElement | null
+  if (!videoPathInput || !videoPathInput.value.trim()) {
+    setNotice('error', 'Vui lòng nhập đường dẫn tệp video tuyệt đối!')
+    return
+  }
+  const videoPath = videoPathInput.value.trim()
+  const selectedModel = modelSelect?.value || 'gemini-2.5-flash'
+
+  await withBusy(async () => {
+    clearNotice()
+    const result = await api.request<{ message: string }>('/api/AdminScenarios/upload-video', {
+      method: 'POST',
+      body: { videoPath, selectedModel }
+    })
+    setNotice('success', result.message || 'Xử lý video và tạo kịch bản thành công!')
+    if (videoPathInput) videoPathInput.value = ''
+  })
 }
 
 async function withBusy(task: () => Promise<void>) {
