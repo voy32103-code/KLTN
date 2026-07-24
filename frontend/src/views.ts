@@ -34,6 +34,13 @@ function getFriendlyModelName(modelId?: string): string {
     case 'gemini-2.5-pro': return 'Gemini 2.5 Pro'
     case 'llama-3.3-70b-versatile': return 'Llama 3.3 70B (Groq)'
     case 'llama-3.1-8b-instant': return 'Llama 3.1 8B (Groq)'
+    case 'deepseek-chat': return 'DeepSeek Chat'
+    case 'deepseek-v4pro': return 'DeepSeek v4 Pro'
+    case 'deepseek-v4flash': return 'DeepSeek v4 Flash'
+    case 'mimo-v2.5pro': return 'Mimo v2.5 Pro'
+    case 'openrouter/meta-llama/llama-3.3-70b-instruct': return 'Llama 3.3 70B (OpenRouter)'
+    case 'openrouter/deepseek/deepseek-chat': return 'DeepSeek Chat (OpenRouter)'
+    case 'openrouter/google/gemini-2.5-flash': return 'Gemini 2.5 Flash (OpenRouter)'
     default: return modelId
   }
 }
@@ -256,6 +263,13 @@ function renderScenarioDetail(scenario: ScenarioDetail, state: AppState) {
           <option value="gemini-2.5-pro" ${state.selectedModel === 'gemini-2.5-pro' ? 'selected' : ''}>Gemini 2.5 Pro</option>
           <option value="llama-3.3-70b-versatile" ${state.selectedModel === 'llama-3.3-70b-versatile' ? 'selected' : ''}>Llama 3.3 70B (Groq)</option>
           <option value="llama-3.1-8b-instant" ${state.selectedModel === 'llama-3.1-8b-instant' ? 'selected' : ''}>Llama 3.1 8B (Groq)</option>
+          <option value="deepseek-chat" ${state.selectedModel === 'deepseek-chat' ? 'selected' : ''}>DeepSeek Chat</option>
+          <option value="deepseek-v4flash" ${state.selectedModel === 'deepseek-v4flash' ? 'selected' : ''}>DeepSeek v4 Flash</option>
+          <option value="deepseek-v4pro" ${state.selectedModel === 'deepseek-v4pro' ? 'selected' : ''}>DeepSeek v4 Pro</option>
+          <option value="mimo-v2.5pro" ${state.selectedModel === 'mimo-v2.5pro' ? 'selected' : ''}>Mimo v2.5 Pro</option>
+          <option value="openrouter/meta-llama/llama-3.3-70b-instruct" ${state.selectedModel === 'openrouter/meta-llama/llama-3.3-70b-instruct' ? 'selected' : ''}>Llama 3.3 70B (OpenRouter)</option>
+          <option value="openrouter/deepseek/deepseek-chat" ${state.selectedModel === 'openrouter/deepseek/deepseek-chat' ? 'selected' : ''}>DeepSeek Chat (OpenRouter)</option>
+          <option value="openrouter/google/gemini-2.5-flash" ${state.selectedModel === 'openrouter/google/gemini-2.5-flash' ? 'selected' : ''}>Gemini 2.5 Flash (OpenRouter)</option>
         </select>
         <button class="primary-button" data-action="start-session" type="button" ${!state.selectedPersonaId || state.busy ? 'disabled' : ''}>
           ${state.busy ? 'Đang khởi tạo...' : 'Bắt đầu phỏng vấn'}
@@ -878,6 +892,13 @@ function renderAdminScenarioSection(state: AppState) {
             <option value="gemini-2.5-pro">Gemini 2.5 Pro (Thông minh hơn - Tốc độ chậm hơn)</option>
             <option value="llama-3.3-70b-versatile">Llama 3.3 70B (Groq Fallback - JSON mode)</option>
             <option value="llama-3.1-8b-instant">Llama 3.1 8B (Groq Fallback - Nhanh)</option>
+            <option value="deepseek-chat">DeepSeek Chat</option>
+            <option value="deepseek-v4flash">DeepSeek v4 Flash</option>
+            <option value="deepseek-v4pro">DeepSeek v4 Pro</option>
+            <option value="mimo-v2.5pro">Mimo v2.5 Pro</option>
+            <option value="openrouter/meta-llama/llama-3.3-70b-instruct">Llama 3.3 70B (OpenRouter)</option>
+            <option value="openrouter/deepseek/deepseek-chat">DeepSeek Chat (OpenRouter)</option>
+            <option value="openrouter/google/gemini-2.5-flash">Gemini 2.5 Flash (OpenRouter)</option>
           </select>
         </div>
 
