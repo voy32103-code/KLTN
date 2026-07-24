@@ -92,7 +92,7 @@ class ApiClientManager:
 
         logger.info(f"Calling Groq API with model: {model}, temperature: {temperature}")
         
-        payload = {
+        payload: Dict[str, Any] = {
             "model": model,
             "messages": messages,
             "temperature": temperature,

@@ -1,3 +1,4 @@
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSAvoidUsingPlainTextForPassword", "")]
 param(
     [string]$ApiBaseUrl = "http://localhost:5206",
     [string]$Email = "admin-smoke@example.com",

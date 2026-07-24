@@ -143,7 +143,7 @@ Yêu cầu chi tiết:
 
     finally:
         # 5. Dọn dẹp tệp tin trên đám mây Gemini để tiết kiệm không gian
-        if uploaded_file is not None:
+        if uploaded_file is not None and uploaded_file.name is not None:
             try:
                 logger.info(f"Đang xóa tệp {uploaded_file.name} trên đám mây Gemini...")
                 await asyncio.to_thread(
