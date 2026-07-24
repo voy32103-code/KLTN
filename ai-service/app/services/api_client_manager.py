@@ -38,12 +38,16 @@ class ApiClientManager:
         # 3. Đọc DeepSeek và Mimo keys
         self.deepseek_api_key = os.getenv("DEEPSEEK_API_KEY", "sk-ccaec8c7f4a14791bd7e1e37e4dd16fa")
         self.mimo_api_key = os.getenv("MIMO_API_KEY", "sk-sqm3yr3owcfjjh50p29ojw1ovwq2yspu963e4lwjjq4ii6ua")
+        
+        # 4. Đọc OpenRouter key
+        self.openrouter_api_key = os.getenv("OPENROUTER_API_KEY", "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")
 
         logger.info(
             f"ApiClientManager initialized with {len(self.gemini_clients)} Gemini clients. "
             f"Groq API Key configured: {bool(self.groq_api_key)}. "
             f"DeepSeek API Key configured: {bool(self.deepseek_api_key)}. "
-            f"Mimo API Key configured: {bool(self.mimo_api_key)}."
+            f"Mimo API Key configured: {bool(self.mimo_api_key)}. "
+            f"OpenRouter API Key configured: {bool(self.openrouter_api_key)}."
         )
 
     def _get_active_gemini_client_index(self) -> int:
@@ -247,6 +251,33 @@ class ApiClientManager:
             response_format=response_format
         )
 
+    async def _call_openrouter(
+        self,
+        model: str,
+        contents: Any,
+        system_instruction: str | None,
+        temperature: float,
+        max_output_tokens: int,
+        response_format: dict | None = None
+    ) -> GroqResponseShim:
+        # Chuẩn hóa tên model OpenRouter
+        # Nếu bắt đầu bằng openrouter/, ta bỏ tiền tố đi
+        if model.lower().startswith("openrouter/"):
+            model_name = model[11:]
+        else:
+            model_name = model
+
+        return await self._call_openai_compatible(
+            base_url="https://openrouter.ai/api/v1",
+            api_key=self.openrouter_api_key,
+            model=model_name,
+            contents=contents,
+            system_instruction=system_instruction,
+            temperature=temperature,
+            max_output_tokens=max_output_tokens,
+            response_format=response_format
+        )
+
     async def generate_content(
         self,
         model: str,
@@ -257,7 +288,7 @@ class ApiClientManager:
         config: types.GenerateContentConfig | None = None
     ) -> Any:
         """
-        Sinh nội dung từ model được chọn (hỗ trợ cả Gemini, Groq, DeepSeek và Mimo).
+        Sinh nội dung từ model được chọn (hỗ trợ cả Gemini, Groq, DeepSeek, Mimo và OpenRouter).
         """
         model_lower = model.lower() if model else ""
         
@@ -285,6 +316,20 @@ class ApiClientManager:
             if config and config.response_mime_type == "application/json":
                 response_format = {"type": "json_object"}
             return await self._call_mimo(
+                model=model,
+                contents=contents,
+                system_instruction=system_instruction or (config.system_instruction if config else None),
+                temperature=temperature if (config is None or config.temperature is None) else config.temperature,
+                max_output_tokens=max_output_tokens if (config is None or config.max_output_tokens is None) else config.max_output_tokens,
+                response_format=response_format
+            )
+
+        # Nếu là OpenRouter -> Gọi OpenRouter
+        if model_lower.startswith("openrouter") or "/" in model_lower:
+            response_format = None
+            if config and config.response_mime_type == "application/json":
+                response_format = {"type": "json_object"}
+            return await self._call_openrouter(
                 model=model,
                 contents=contents,
                 system_instruction=system_instruction or (config.system_instruction if config else None),
