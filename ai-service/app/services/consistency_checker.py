@@ -19,6 +19,15 @@ IMPLEMENTATION_KEYWORDS = (
     "frontend",
     "backend",
     "microservice",
+    # Từ khóa kỹ thuật tiếng Việt
+    "cơ sở dữ liệu",
+    "csdl",
+    "bảng dữ liệu",
+    "giao diện",
+    "máy chủ",
+    "đường dẫn api",
+    "phân quyền",
+    "đăng nhập",
 )
 
 DEFAULT_CONSISTENCY_FALLBACK = (
@@ -55,7 +64,7 @@ def check_response_consistency(
 
             distinctive_keywords = [
                 keyword for keyword in rule.keywords
-                if len(keyword) >= 5 and keyword in normalized_reply
+                if len(keyword) >= 2 and keyword in normalized_reply
             ]
             if len(distinctive_keywords) >= 2:
                 violations.append(ConsistencyViolation(

@@ -17,9 +17,9 @@ def is_ffmpeg_available() -> bool:
     """Kiểm tra xem ffmpeg có sẵn trong hệ thống không."""
     return shutil.which("ffmpeg") is not None
 
-def extract_audio_from_video(video_path: Path) -> Path:
+async def extract_audio_from_video(video_path: Path) -> Path:
     """
-    Sử dụng FFmpeg để trích xuất âm thanh từ video sang tệp mp3.
+    Sử dụng FFmpeg để trích xuất âm thanh từ video sang tệp mp3 bất đồng bộ.
     Giúp giảm dung lượng truyền tải đi 90%.
     """
     if not video_path.exists():
@@ -44,15 +44,20 @@ def extract_audio_from_video(video_path: Path) -> Path:
     ]
     
     logger.info(f"Đang trích xuất âm thanh từ video bằng câu lệnh: {' '.join(cmd)}")
-    result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    process = await asyncio.create_subprocess_exec(
+        *cmd,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE
+    )
+    stdout, stderr = await process.communicate()
     
-    if result.returncode != 0:
-        logger.error(f"FFmpeg trích xuất âm thanh thất bại: {result.stderr}")
+    if process.returncode != 0:
+        logger.error(f"FFmpeg trích xuất âm thanh thất bại: {stderr.decode('utf-8', errors='ignore')}")
         raise RuntimeError("FFmpeg trích xuất âm thanh thất bại.")
         
     logger.info(f"Trích xuất âm thanh thành công tại: {output_audio_path}")
     return output_audio_path
-
+ 
 async def generate_scenario_from_video(
     video_file_path: str,
     selected_model: Optional[str] = None
@@ -64,14 +69,14 @@ async def generate_scenario_from_video(
     video_path = Path(video_file_path)
     if not video_path.exists():
         raise FileNotFoundError(f"Không tìm thấy tệp video tại {video_file_path}")
-
+ 
     # 1. Trích xuất âm thanh bằng FFmpeg nếu có thể
     media_path = video_path
     temp_audio_created = False
     
     if is_ffmpeg_available():
         try:
-            media_path = extract_audio_from_video(video_path)
+            media_path = await extract_audio_from_video(video_path)
             temp_audio_created = True
         except Exception as ex:
             logger.warning(f"Không thể trích xuất audio bằng FFmpeg, sử dụng file video gốc làm fallback: {ex}")

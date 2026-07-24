@@ -847,9 +847,10 @@ public class SessionsController : ControllerBase
                     if (!Guid.TryParse(match.HiddenId, out var hiddenRequirementId))
                         continue;
 
+                    var normalizedExtractedText = NormalizeRequirementText(match.ExtractedText);
                     var extracted = match.ExtractedText is null
                         ? null
-                        : extractedEntities.FirstOrDefault(r => string.Equals(r.RequirementText?.Trim(), match.ExtractedText?.Trim(), StringComparison.OrdinalIgnoreCase));
+                        : extractedEntities.FirstOrDefault(r => string.Equals(NormalizeRequirementText(r.RequirementText), normalizedExtractedText, StringComparison.Ordinal));
 
                     _db.RequirementMatches.Add(new RequirementMatch
                     {
@@ -1083,4 +1084,13 @@ public class SessionsController : ControllerBase
             Matches = matches ?? [],
             ScoringPolicy = scoringPolicy
         };
+
+    private static string NormalizeRequirementText(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return string.Empty;
+        var normalized = text.Trim().ToLowerInvariant();
+        normalized = System.Text.RegularExpressions.Regex.Replace(normalized, @"\s+", " ");
+        normalized = normalized.TrimEnd('.', '?', '!', ',', ';');
+        return normalized;
+    }
 }

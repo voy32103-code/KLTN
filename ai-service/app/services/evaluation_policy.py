@@ -44,16 +44,20 @@ STOPWORDS = {
     "the",
     "to",
     "with",
+    # Vietnamese stopwords
+    "là", "và", "có", "để", "đã", "sẽ", "thì", "mà", "ở", "cho", 
+    "của", "một", "các", "những", "này", "được", "bởi", "với", 
+    "trong", "ra", "vào", "lên", "xuống", "như", "nhưng", "hoặc"
 }
 
 SYNONYM_GROUPS = (
-    {"accessibility", "accessible", "wcag"},
-    {"advisor", "approval", "approve"},
-    {"eligibility", "eligible", "prerequisite", "prerequisites"},
-    {"fee", "fees", "financial", "payment", "tuition"},
-    {"offline", "outage", "outages", "sync"},
-    {"stock", "inventory", "product", "products"},
-    {"waitlist", "wait-list", "waiting"},
+    {"accessibility", "accessible", "wcag", "tiện-ích"},
+    {"advisor", "approval", "approve", "duyệt", "phê-duyệt"},
+    {"eligibility", "eligible", "prerequisite", "prerequisites", "điều-kiện", "tiên-quyết"},
+    {"fee", "fees", "financial", "payment", "tuition", "phí", "học-phí", "tiền", "thanh-toán"},
+    {"offline", "outage", "outages", "sync", "đồng-bộ", "ngoại-tuyến"},
+    {"stock", "inventory", "product", "products", "kho", "tồn-kho", "sản-phẩm", "hàng"},
+    {"waitlist", "wait-list", "waiting", "chờ", "đợi", "danh-sách-chờ"},
 )
 
 
@@ -152,10 +156,11 @@ def rubric_partial_match(
 
 
 def _semantic_terms(text: str) -> set[str]:
+    # Hỗ trợ đầy đủ ký tự Unicode và Tiếng Việt có dấu, độ dài từ >= 2 kí tự
     tokens = {
         token
-        for token in re.findall(r"[a-z0-9-]+", text.lower())
-        if len(token) > 2 and token not in STOPWORDS
+        for token in re.findall(r"[a-z0-9àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễđòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹ-]+", text.lower())
+        if len(token) >= 2 and token not in STOPWORDS
     }
 
     expanded = set(tokens)
