@@ -75,6 +75,25 @@ def map_gemini_to_standard_config(gemini_config: ScenarioConfigGeminiSchema) -> 
 
 # ===== Crawler & Structuring Logic =====
 
+def extract_json_string(text: str) -> str:
+    """Trích xuất khối JSON sạch từ chuỗi phản hồi có chứa lời thoại của AI hoặc mã markdown."""
+    text = text.strip()
+    if text.startswith("{") and text.endswith("}"):
+        return text
+        
+    # Tìm khối ```json ... ``` hoặc ``` ... ```
+    code_block_match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", text, re.DOTALL)
+    if code_block_match:
+        return code_block_match.group(1).strip()
+        
+    # Tìm vị trí ngoặc nhọn đầu tiên và cuối cùng
+    first_brace = text.find("{")
+    last_brace = text.rfind("}")
+    if first_brace != -1 and last_brace != -1 and last_brace > first_brace:
+        return text[first_brace:last_brace+1].strip()
+        
+    return text
+
 def clean_html(html: str) -> str:
     """Loại bỏ các thẻ HTML và scripts để giữ lại text sạch."""
     # Loại bỏ script và style
@@ -145,13 +164,12 @@ Yêu cầu chi tiết:
 
     # Đọc kết quả dạng JSON
     raw_response_text = getattr(response, "text", "") or ""
-    # Nếu kết quả bị bọc trong markdown code block, làm sạch nó
-    raw_response_text = raw_response_text.strip()
-    if raw_response_text.startswith("```"):
-        raw_response_text = raw_response_text.split("\n", 1)[1].rsplit("```", 1)[0].strip()
+    
+    # Sử dụng hàm bổ trợ để trích xuất JSON sạch
+    cleaned_json_text = extract_json_string(raw_response_text)
         
     try:
-        gemini_config = ScenarioConfigGeminiSchema.model_validate_json(raw_response_text)
+        gemini_config = ScenarioConfigGeminiSchema.model_validate_json(cleaned_json_text)
     except Exception as e:
         logger.error(f"Pydantic validation failed for ScenarioConfigGeminiSchema. Error: {e}. Raw response (truncated): {raw_response_text[:3000]}")
         raise e

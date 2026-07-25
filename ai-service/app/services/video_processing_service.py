@@ -8,7 +8,7 @@ from typing import Optional
 from google.genai import types
 
 from app.services.api_client_manager import client_manager
-from app.services.admin_crawler_service import ScenarioConfigSchema, ScenarioConfigGeminiSchema, map_gemini_to_standard_config
+from app.services.admin_crawler_service import ScenarioConfigSchema, ScenarioConfigGeminiSchema, map_gemini_to_standard_config, extract_json_string
 
 logger = logging.getLogger(__name__)
 MODEL = os.getenv("MODEL_NAME", "gemini-2.5-flash")
@@ -143,12 +143,12 @@ Yêu cầu chi tiết:
         )
 
         raw_response_text = getattr(response, "text", "") or ""
-        raw_response_text = raw_response_text.strip()
-        if raw_response_text.startswith("```"):
-            raw_response_text = raw_response_text.split("\n", 1)[1].rsplit("```", 1)[0].strip()
+        
+        # Sử dụng hàm bổ trợ để trích xuất JSON sạch
+        cleaned_json_text = extract_json_string(raw_response_text)
 
         try:
-            gemini_config = ScenarioConfigGeminiSchema.model_validate_json(raw_response_text)
+            gemini_config = ScenarioConfigGeminiSchema.model_validate_json(cleaned_json_text)
         except Exception as e:
             logger.error(f"Pydantic validation failed for ScenarioConfigGeminiSchema (video). Error: {e}. Raw response (truncated): {raw_response_text[:3000]}")
             raise e

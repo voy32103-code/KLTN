@@ -392,7 +392,17 @@ class ApiClientManager:
         if self.groq_api_key:
             fallback_model = "llama-3.3-70b-versatile" if "pro" in model_lower else "llama-3.1-8b-instant"
             logger.info(f"All Gemini keys failed. Falling back to Groq: {fallback_model}")
-            return await self._call_groq(fallback_model, contents, system_instruction, temperature, max_output_tokens)
+            response_format = None
+            if config and config.response_mime_type == "application/json":
+                response_format = {"type": "json_object"}
+            return await self._call_groq(
+                model=fallback_model,
+                contents=contents,
+                system_instruction=system_instruction,
+                temperature=temperature,
+                max_output_tokens=max_output_tokens,
+                response_format=response_format
+            )
             
         raise RuntimeError("All Gemini API keys failed and Groq fallback is unavailable.")
 
