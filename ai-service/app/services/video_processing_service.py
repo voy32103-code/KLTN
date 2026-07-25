@@ -109,6 +109,7 @@ Yêu cầu chi tiết:
 1. Xác định tên kịch bản (scenario_title) và mã kịch bản (scenario_key).
 2. Viết bối cảnh nghiệp vụ (context) rõ ràng để Stakeholder ảo hiểu vai diễn.
 3. Trích xuất danh sách các yêu cầu ẩn (requirements) từ nội dung thảo luận:
+   - CHỈ TRÍCH XUẤT TỐI ĐA 12 YÊU CẦU QUAN TRỌNG VÀ CỐT LÕI NHẤT để tránh kịch bản quá dài và tránh lỗi vượt quá giới hạn đầu ra (MAX_TOKENS). Không tạo các yêu cầu quá nhỏ nhặt hoặc lặp lại.
    - Phân loại độ khó (reveal_difficulty): Dựa trên việc yêu cầu đó dễ phát hiện hay cần hỏi sâu.
    - Phân bổ Cổng (gate): 
      - Gate 0: Yêu cầu tổng quan, mục tiêu hệ thống.
@@ -143,7 +144,11 @@ Yêu cầu chi tiết:
         if raw_response_text.startswith("```"):
             raw_response_text = raw_response_text.split("\n", 1)[1].rsplit("```", 1)[0].strip()
 
-        gemini_config = ScenarioConfigGeminiSchema.model_validate_json(raw_response_text)
+        try:
+            gemini_config = ScenarioConfigGeminiSchema.model_validate_json(raw_response_text)
+        except Exception as e:
+            logger.error(f"Pydantic validation failed for ScenarioConfigGeminiSchema (video). Error: {e}. Raw response (truncated): {raw_response_text[:3000]}")
+            raise e
         return map_gemini_to_standard_config(gemini_config)
 
     finally:

@@ -88,7 +88,9 @@ public class AdminScenariosController : ControllerBase
         }
 
         scenario.Title = config.ScenarioTitle;
-        scenario.Description = config.Context.Length > 500 ? config.Context.Substring(0, 500) : config.Context;
+        scenario.Description = string.IsNullOrEmpty(config.Context) 
+            ? "General scenario context." 
+            : (config.Context.Length > 500 ? config.Context.Substring(0, 500) : config.Context);
         scenario.Domain = "General"; // Có thể mở rộng để AI tự động phân loại
         scenario.Difficulty = PersonaDifficulty.Medium;
         scenario.Version = 1;

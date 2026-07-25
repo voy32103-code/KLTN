@@ -14,6 +14,7 @@ export function extractApiError(data: unknown): string | null {
   const value = data as Record<string, unknown>
   if (typeof value.error === 'string') return value.error
   if (typeof value.detail === 'string') return value.detail
+  if (typeof value.message === 'string') return value.message
   if (Array.isArray(value.errors)) return value.errors.join(', ')
   if (value.errors && typeof value.errors === 'object') {
     return Object.values(value.errors as Record<string, unknown>).flat().join(', ')
