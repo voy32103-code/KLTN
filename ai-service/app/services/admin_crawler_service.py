@@ -108,19 +108,22 @@ Trích xuất tất cả các thông tin cần thiết và cấu trúc hóa chú
 
 Yêu cầu chi tiết:
 1. Xác định tên kịch bản (scenario_title) và mã kịch bản (scenario_key).
-2. Viết bối cảnh nghiệp vụ (context) rõ ràng để Stakeholder ảo hiểu vai diễn.
+2. Viết bối cảnh nghiệp vụ (context) ngắn gọn, súc tích (dưới 400 ký tự) để Stakeholder ảo hiểu vai diễn.
 3. Trích xuất danh sách các yêu cầu ẩn (requirements) từ tài liệu:
-   - CHỈ TRÍCH XUẤT TỐI ĐA 12 YÊU CẦU QUAN TRỌNG VÀ CỐT LÕI NHẤT để tránh kịch bản quá dài và tránh lỗi vượt quá giới hạn đầu ra (MAX_TOKENS). Không tạo các yêu cầu quá nhỏ nhặt hoặc lặp lại.
-   - Phân loại độ khó (reveal_difficulty): Dựa trên việc yêu cầu đó dễ phát hiện hay cần hỏi sâu.
+   - CHỈ TRÍCH XUẤT TỐI ĐA 12 YÊU CẦU QUAN TRỌNG VÀ CỐT LÕI NHẤT để kịch bản ngắn gọn và tránh lỗi vượt quá giới hạn đầu ra (MAX_TOKENS). Không tạo các yêu cầu quá nhỏ nhặt hoặc trùng lặp.
+   - Mỗi yêu cầu ẩn phải có mô tả ngắn gọn (trường 'text' dưới 100 ký tự).
+   - Chỉ lấy từ 3-5 từ khóa đặc trưng nhất (trường 'keywords'). Không tạo quá nhiều từ khóa chung chung.
+   - Chỉ lấy từ 1-2 loại câu hỏi phù hợp nhất (trường 'question_types').
+   - Mô tả điều kiện tiết lộ cực kỳ ngắn gọn (trường 'reveal_condition' dưới 80 ký tự).
+   - Phân loại độ khó (reveal_difficulty): Dựa trên việc yêu cầu đó dễ phát hiện hay cần hỏi sâu ('Easy', 'Medium', 'Hard').
    - Phân bổ Cổng (gate): 
      - Gate 0: Yêu cầu tổng quan, mục tiêu hệ thống.
      - Gate 1: Yêu cầu chức năng cơ bản cốt lõi.
      - Gate 2: Yêu cầu nâng cao, bảo mật, tích hợp hoặc các quy tắc tài chính.
      - Gate 3: Các quy tắc xử lý ngoại lệ, duyệt thủ công.
      - Gate 4: Yêu cầu phi chức năng (tải hệ thống, hiệu năng, chuẩn WCAG).
-   - Thiết lập từ khóa kích hoạt (keywords) tiếng Việt/tiếng Anh tương ứng với mỗi yêu cầu.
    - Thiết lập mối quan hệ phụ thuộc (requires): Nếu yêu cầu B chỉ được nói sau khi sinh viên đã biết yêu cầu A, hãy đưa nội dung văn bản của yêu cầu A vào danh sách 'requires' của yêu cầu B.
-4. Xây dựng bản đồ gom nhóm từ khóa cho mỗi Gate (gate_keyword_groups) và bản đồ map câu hỏi (question_type_gate_map).
+4. Xây dựng bản đồ gom nhóm từ khóa cho mỗi Gate (gate_keyword_groups) và bản đồ map câu hỏi (question_type_gate_map) thật tinh gọn, súc tích.
 
 --- TÀI LIỆU NGHIỆP VỤ ---
 {raw_text}
@@ -131,7 +134,7 @@ Yêu cầu chi tiết:
         response_mime_type="application/json",
         response_schema=ScenarioConfigGeminiSchema,
         temperature=0.2,
-        max_output_tokens=6000
+        max_output_tokens=20000
     )
 
     response = await client_manager.generate_content(
