@@ -119,13 +119,28 @@ public class AiServiceClient
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(180));
             var payload = new { url, selectedModel };
             var response = await _http.PostAsJsonAsync("/api/admin/crawl-scenario", payload, cts.Token);
-            response.EnsureSuccessStatusCode();
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorText = await response.Content.ReadAsStringAsync(cts.Token);
+                string errMsg = $"AI Service trả về mã lỗi {(int)response.StatusCode}";
+                try
+                {
+                    using var doc = JsonDocument.Parse(errorText);
+                    if (doc.RootElement.TryGetProperty("detail", out var detailProp))
+                    {
+                        errMsg = detailProp.GetString() ?? errMsg;
+                    }
+                }
+                catch { }
+                _logger.LogError("Lỗi từ AI Service /api/admin/crawl-scenario: {Msg}. Body={Body}", errMsg, errorText);
+                return new AiAdminScenarioResponse(false, errMsg, null, true);
+            }
             return (await response.Content.ReadFromJsonAsync<AiAdminScenarioResponse>(cts.Token))!;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi khi gọi AI Service /api/admin/crawl-scenario. URL={Url}", url);
-            return new AiAdminScenarioResponse(false, $"Không thể cào kịch bản: {ex.Message}", null, true);
+            return new AiAdminScenarioResponse(false, $"Không thể kết nối đến dịch vụ AI: {ex.Message}", null, true);
         }
     }
 
@@ -137,13 +152,28 @@ public class AiServiceClient
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(300));
             var payload = new { videoPath, selectedModel };
             var response = await _http.PostAsJsonAsync("/api/admin/upload-video-scenario", payload, cts.Token);
-            response.EnsureSuccessStatusCode();
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorText = await response.Content.ReadAsStringAsync(cts.Token);
+                string errMsg = $"AI Service trả về mã lỗi {(int)response.StatusCode}";
+                try
+                {
+                    using var doc = JsonDocument.Parse(errorText);
+                    if (doc.RootElement.TryGetProperty("detail", out var detailProp))
+                    {
+                        errMsg = detailProp.GetString() ?? errMsg;
+                    }
+                }
+                catch { }
+                _logger.LogError("Lỗi từ AI Service /api/admin/upload-video-scenario: {Msg}. Body={Body}", errMsg, errorText);
+                return new AiAdminScenarioResponse(false, errMsg, null, true);
+            }
             return (await response.Content.ReadFromJsonAsync<AiAdminScenarioResponse>(cts.Token))!;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi khi gọi AI Service /api/admin/upload-video-scenario. VideoPath={VideoPath}", videoPath);
-            return new AiAdminScenarioResponse(false, $"Không thể xử lý video: {ex.Message}", null, true);
+            return new AiAdminScenarioResponse(false, $"Không thể kết nối đến dịch vụ AI: {ex.Message}", null, true);
         }
     }
 
