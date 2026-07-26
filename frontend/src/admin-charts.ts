@@ -67,8 +67,8 @@ export function renderCoverageDistributionChart(
         }
       },
       scales: {
-        x: { ticks: { color: '#64748b' }, grid: { color: 'rgba(99, 102, 241, 0.06)' } },
-        y: { ticks: { color: '#64748b', stepSize: 1 }, grid: { color: 'rgba(99, 102, 241, 0.06)' }, beginAtZero: true }
+        x: { ticks: { color: '#64748b' }, grid: { color: 'rgba(217, 119, 87, 0.06)' } },
+        y: { ticks: { color: '#64748b', stepSize: 1 }, grid: { color: 'rgba(217, 119, 87, 0.06)' }, beginAtZero: true }
       }
     }
   })
@@ -111,8 +111,8 @@ export function renderSessionsOverTimeChart(
         }
       },
       scales: {
-        x: { ticks: { color: '#64748b', maxRotation: 45 }, grid: { color: 'rgba(99, 102, 241, 0.06)' } },
-        y: { ticks: { color: '#64748b', stepSize: 1 }, grid: { color: 'rgba(99, 102, 241, 0.06)' }, beginAtZero: true }
+        x: { ticks: { color: '#64748b', maxRotation: 45 }, grid: { color: 'rgba(217, 119, 87, 0.06)' } },
+        y: { ticks: { color: '#64748b', stepSize: 1 }, grid: { color: 'rgba(217, 119, 87, 0.06)' }, beginAtZero: true }
       }
     }
   })
@@ -132,13 +132,13 @@ export function renderScenarioStatsChart(
         {
           label: 'Coverage TB (%)',
           data: safeScenarios.map(s => s.averageCoverage),
-          backgroundColor: 'rgba(99, 102, 241, 0.8)',
+          backgroundColor: 'rgba(217, 119, 87, 0.8)',
           borderRadius: 4
         },
         {
           label: 'Số lượt hội thoại TB',
           data: safeScenarios.map(s => s.averageTurns),
-          backgroundColor: 'rgba(236, 72, 153, 0.8)',
+          backgroundColor: 'rgba(100, 116, 139, 0.8)',
           borderRadius: 4
         }
       ]
@@ -156,8 +156,8 @@ export function renderScenarioStatsChart(
         }
       },
       scales: {
-        x: { ticks: { color: '#64748b' }, grid: { color: 'rgba(99, 102, 241, 0.06)' } },
-        y: { ticks: { color: '#64748b' }, grid: { color: 'rgba(99, 102, 241, 0.06)' }, beginAtZero: true }
+        x: { ticks: { color: '#64748b' }, grid: { color: 'rgba(217, 119, 87, 0.06)' } },
+        y: { ticks: { color: '#64748b' }, grid: { color: 'rgba(217, 119, 87, 0.06)' }, beginAtZero: true }
       }
     }
   })
