@@ -210,7 +210,8 @@ public record AiChatRequest(
     PersonaProfile Persona,
     string? PersonaStateJson,
     List<string> AvailableRequirements,  // chat_service sẽ gate trước khi đưa vào prompt
-    string? SelectedModel
+    string? SelectedModel,
+    ScenarioConfigJson? ScenarioConfig = null
 );
 
 public record AiChatResponse(

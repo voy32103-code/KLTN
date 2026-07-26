@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -38,14 +39,22 @@ public class AdminScenariosController : ControllerBase
             return BadRequest(new { message = response.Message });
         }
 
-        var scenario = await SyncScenarioToDb(response.Scenario);
-        return Ok(new
+        try
         {
-            message = "Cào dữ liệu và tạo kịch bản thành công.",
-            scenarioId = scenario.Id,
-            title = scenario.Title,
-            requirementsCount = scenario.HiddenRequirements.Count
-        });
+            var scenario = await SyncScenarioToDb(response.Scenario);
+            return Ok(new
+            {
+                message = "Cào dữ liệu và tạo kịch bản thành công.",
+                scenarioId = scenario.Id,
+                title = scenario.Title,
+                requirementsCount = scenario.HiddenRequirements.Count
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Lỗi khi đồng bộ kịch bản từ URL vào cơ sở dữ liệu. URL={Url}", dto.Url);
+            return BadRequest(new { message = "Lỗi đồng bộ kịch bản vào cơ sở dữ liệu: " + ex.Message });
+        }
     }
 
     [HttpPost("upload-video")]
@@ -59,14 +68,22 @@ public class AdminScenariosController : ControllerBase
             return BadRequest(new { message = response.Message });
         }
 
-        var scenario = await SyncScenarioToDb(response.Scenario);
-        return Ok(new
+        try
         {
-            message = "Xử lý video và tạo kịch bản thành công.",
-            scenarioId = scenario.Id,
-            title = scenario.Title,
-            requirementsCount = scenario.HiddenRequirements.Count
-        });
+            var scenario = await SyncScenarioToDb(response.Scenario);
+            return Ok(new
+            {
+                message = "Xử lý video và tạo kịch bản thành công.",
+                scenarioId = scenario.Id,
+                title = scenario.Title,
+                requirementsCount = scenario.HiddenRequirements.Count
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Lỗi khi đồng bộ kịch bản từ video vào cơ sở dữ liệu. VideoPath={VideoPath}", dto.VideoPath);
+            return BadRequest(new { message = "Lỗi đồng bộ kịch bản vào cơ sở dữ liệu: " + ex.Message });
+        }
     }
 
     private async Task<Scenario> SyncScenarioToDb(ScenarioConfigJson config)
@@ -95,6 +112,7 @@ public class AdminScenariosController : ControllerBase
         scenario.Difficulty = PersonaDifficulty.Medium;
         scenario.Version = 1;
         scenario.IsActive = true;
+        scenario.SerializedConfig = JsonSerializer.Serialize(config);
 
         // 2. Tạo hoặc Cập nhật default Persona
         var persona = scenario.Personas.FirstOrDefault();
@@ -131,8 +149,8 @@ public class AdminScenariosController : ControllerBase
             {
                 Id = Guid.NewGuid(),
                 ScenarioId = scenario.Id,
-                RequirementText = rule.Text,
-                Category = MapCategory(rule.Gate, rule.Text),
+                RequirementText = rule.Text ?? "",
+                Category = MapCategory(rule.Gate, rule.Text ?? ""),
                 RevealDifficulty = MapDifficulty(rule.RevealDifficulty),
                 RevealCondition = rule.RevealCondition,
                 GateOrder = rule.Gate,
@@ -149,6 +167,8 @@ public class AdminScenariosController : ControllerBase
     {
         if (gate == 4) return RequirementCategory.NonFunctional;
         if (gate == 3) return RequirementCategory.BusinessRule;
+        
+        if (string.IsNullOrEmpty(text)) return RequirementCategory.Functional;
         
         string lower = text.ToLower();
         if (gate == 2 && (lower.Contains("chặn") || lower.Contains("bảo mật") || lower.Contains("phân quyền") || lower.Contains("quyền")))

@@ -911,7 +911,7 @@ internal static class Program
                 HttpMethod.Post,
                 $"/api/Sessions/{sessionId}/messages",
                 HttpStatusCode.BadRequest,
-                "Session already ended",
+                "Phiên phỏng vấn này đã kết thúc.",
                 "HTTP send after session end should return bad request",
                 bearerToken: ownerToken,
                 payload: new
@@ -1154,7 +1154,7 @@ internal static class Program
                 "login with wrong password");
             Assert(string.Equals(
                     unauthorizedJson.RootElement.GetProperty("error").GetString(),
-                    "Invalid email or password",
+                    "Email hoặc mật khẩu không chính xác.",
                     StringComparison.Ordinal),
                 "login with wrong password should return the expected error payload");
         }
@@ -1174,7 +1174,7 @@ internal static class Program
                 "register duplicate email");
             Assert(string.Equals(
                     conflictJson.RootElement.GetProperty("error").GetString(),
-                    "Email already exists",
+                    "Email đã tồn tại.",
                     StringComparison.Ordinal),
                 "duplicate register should return the expected conflict error");
 
@@ -1234,7 +1234,7 @@ internal static class Program
             AssertBadRequestWithMessage(
                 await RunSendMessageAsync(session.Id, "Can I continue chatting after closing the session?", principal, aiClient),
                 "send message after session ended",
-                "Session already ended");
+                "Phiên phỏng vấn này đã kết thúc.");
 
             Assert(aiHandler.ChatCalls == 0, $"send-after-end should not call AI chat, got {aiHandler.ChatCalls}");
             Assert(aiHandler.ExtractCalls == 1, $"setup end-session should call extract once, got {aiHandler.ExtractCalls}");
@@ -1452,7 +1452,7 @@ internal static class Program
                 ControllerContext = CreateAuthorizedControllerContext(principal)
             };
 
-            return await controller.Create(new SessionsController.CreateSessionDto(scenarioId, personaId));
+            return await controller.Create(new SessionsController.CreateSessionDto(scenarioId, personaId, null));
         }
 
         private async Task<IActionResult> RunSendMessageAsync(
@@ -1477,7 +1477,9 @@ internal static class Program
             {
                 BaseAddress = new Uri("http://fake-ai.local")
             };
-            return new AiServiceClient(httpClient);
+            var loggerFactory = LoggerFactory.Create(builder => { });
+            var logger = loggerFactory.CreateLogger<AiServiceClient>();
+            return new AiServiceClient(httpClient, logger);
         }
 
         private async Task<IActionResult> RunEndSessionAsync(Guid sessionId, Guid userId, AiServiceClient aiClient)
@@ -1894,7 +1896,8 @@ internal static class Program
                 var hiddenId = hiddenRequirement.GetProperty("id").GetString()!;
                 var hiddenText = hiddenRequirement.GetProperty("text").GetString()!;
 
-                if (hiddenText.Contains("register for courses online", StringComparison.OrdinalIgnoreCase))
+                if (hiddenText.Contains("register for courses online", StringComparison.OrdinalIgnoreCase) ||
+                    hiddenText.Contains("đăng ký các học phần trực tuyến", StringComparison.OrdinalIgnoreCase))
                 {
                     matchedCount++;
                     matches.Add(new
@@ -1909,7 +1912,8 @@ internal static class Program
                     continue;
                 }
 
-                if (hiddenText.Contains("prerequisite", StringComparison.OrdinalIgnoreCase))
+                if (hiddenText.Contains("prerequisite", StringComparison.OrdinalIgnoreCase) ||
+                    hiddenText.Contains("điều kiện tiên quyết", StringComparison.OrdinalIgnoreCase))
                 {
                     matchedCount++;
                     matches.Add(new

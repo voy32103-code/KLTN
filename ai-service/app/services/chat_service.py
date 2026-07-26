@@ -144,7 +144,17 @@ async def chat(req: ChatRequest):
     try:
         question_type = detect_question_type(req.studentMessage)
         state = load_persona_state(req)
-        config = get_scenario_config(req.scenarioTitle, req.availableRequirements)
+        
+        config = None
+        if req.scenarioConfig:
+            try:
+                from app.services.scenario_config_service import parse_config_from_dict
+                config = parse_config_from_dict(req.scenarioConfig)
+            except Exception as ex_parse:
+                logger.error("Failed to parse scenarioConfig from request: %s", str(ex_parse))
+        if config is None:
+            config = get_scenario_config(req.scenarioTitle, req.availableRequirements)
+
         allowed_requirements, previously_revealed, newly_revealed = select_gated_requirements(
             req,
             state,
@@ -198,7 +208,17 @@ async def chat(req: ChatRequest):
         try:
             question_type = detect_question_type(req.studentMessage)
             state = load_persona_state(req)
-            config = get_scenario_config(req.scenarioTitle, req.availableRequirements)
+            
+            config = None
+            if req.scenarioConfig:
+                try:
+                    from app.services.scenario_config_service import parse_config_from_dict
+                    config = parse_config_from_dict(req.scenarioConfig)
+                except Exception as ex_parse:
+                    logger.error("Failed to parse scenarioConfig from request fallback: %s", str(ex_parse))
+            if config is None:
+                config = get_scenario_config(req.scenarioTitle, req.availableRequirements)
+
             allowed_requirements, previously_revealed, newly_revealed = select_gated_requirements(
                 req,
                 state,

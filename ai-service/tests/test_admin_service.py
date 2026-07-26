@@ -52,5 +52,93 @@ class AdminServiceTests(unittest.TestCase):
         self.assertEqual(schema.scenario_key, "test_scenario")
         self.assertEqual(schema.requirements[0].id, "R1")
 
+    def test_convert_keys_to_snake(self):
+        from app.services.scenario_config_service import convert_keys_to_snake
+        camel_data = {
+            "scenarioKey": "test_scenario",
+            "gateKeywordGroups": {
+                "1": ["yêu", "cầu"]
+            },
+            "requirements": [
+                {
+                    "id": "R1",
+                    "revealCondition": "Hỏi về yêu cầu",
+                    "questionTypes": ["OpenEnded"]
+                }
+            ]
+        }
+        snake_data = convert_keys_to_snake(camel_data)
+        self.assertEqual(snake_data["scenario_key"], "test_scenario")
+        self.assertEqual(snake_data["gate_keyword_groups"]["1"], ["yêu", "cầu"])
+        self.assertEqual(snake_data["requirements"][0]["reveal_condition"], "Hỏi về yêu cầu")
+        self.assertEqual(snake_data["requirements"][0]["question_types"], ["OpenEnded"])
+
+    def test_parse_config_from_dict_success(self):
+        from app.services.scenario_config_service import parse_config_from_dict
+        camel_data = {
+            "scenarioKey": "test_scenario",
+            "scenarioTitle": "Test Scenario System",
+            "context": "Mô tả bối cảnh",
+            "generalKeywords": ["hệ", "thống"],
+            "gateKeywordGroups": {
+                "1": ["yêu", "cầu"]
+            },
+            "questionTypeGateMap": {
+                "ConstraintOriented": [1]
+            },
+            "maxNewRevealsPerTurn": 1,
+            "requirements": [
+                {
+                    "id": "R1",
+                    "text": "Yêu cầu 1",
+                    "gate": 1,
+                    "keywords": ["yêu", "cầu"],
+                    "questionTypes": ["OpenEnded"],
+                    "revealCondition": "Hỏi về yêu cầu",
+                    "revealDifficulty": "Easy",
+                    "requires": []
+                }
+            ]
+        }
+        config = parse_config_from_dict(camel_data)
+        self.assertEqual(config.scenario_key, "test_scenario")
+        self.assertEqual(config.scenario_title, "Test Scenario System")
+        self.assertEqual(config.requirements[0].requirement_id, "R1")
+        self.assertEqual(config.requirements[0].text, "Yêu cầu 1")
+        self.assertEqual(config.requirements[0].reveal_condition, "Hỏi về yêu cầu")
+
+    def test_parse_config_from_dict_with_nulls(self):
+        from app.services.scenario_config_service import parse_config_from_dict
+        camel_data = {
+            "scenarioKey": "test_scenario",
+            "scenarioTitle": "Test Scenario System",
+            "context": "Mô tả bối cảnh",
+            "generalKeywords": ["hệ", "thống"],
+            "gateKeywordGroups": {
+                "1": ["yêu", "cầu"]
+            },
+            "questionTypeGateMap": {
+                "ConstraintOriented": [1]
+            },
+            "maxNewRevealsPerTurn": 1,
+            "requirements": [
+                {
+                    "id": "R1",
+                    "text": "Yêu cầu 1",
+                    "gate": 1,
+                    "keywords": None,
+                    "questionTypes": None,
+                    "revealCondition": "Hỏi về yêu cầu",
+                    "revealDifficulty": "Easy",
+                    "requires": None
+                }
+            ]
+        }
+        config = parse_config_from_dict(camel_data)
+        self.assertEqual(config.scenario_key, "test_scenario")
+        self.assertEqual(config.requirements[0].keywords, ())
+        self.assertEqual(config.requirements[0].question_types, ())
+        self.assertEqual(config.requirements[0].requires, ())
+
 if __name__ == "__main__":
     unittest.main()

@@ -2,6 +2,8 @@
 Scenario configuration loading and lookup for prompt gating.
 """
 import json
+import re
+from typing import Any
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
@@ -85,16 +87,21 @@ def _parse_requirement(raw: dict, file_path: Path) -> ScenarioRequirementRule:
             f"Scenario config {file_path.name} requirement missing fields: {', '.join(missing)}"
         )
 
-    requires = raw.get("requires", [])
-    if isinstance(requires, str):
+    requires = raw.get("requires")
+    if requires is None:
+        requires = []
+    elif isinstance(requires, str):
         requires = [requires]
+
+    keywords = raw.get("keywords") or []
+    question_types = raw.get("question_types") or []
 
     return ScenarioRequirementRule(
         requirement_id=str(raw["id"]),
         text=str(raw["text"]),
         gate=int(raw["gate"]),
-        keywords=_as_tuple(raw["keywords"]),
-        question_types=_as_tuple(raw["question_types"]),
+        keywords=_as_tuple(keywords),
+        question_types=_as_tuple(question_types),
         reveal_condition=str(raw["reveal_condition"]),
         reveal_difficulty=str(raw["reveal_difficulty"]),
         requires=_as_tuple(requires),
@@ -161,3 +168,50 @@ def get_scenario_config(scenario_title: str | None, available_requirements: list
             best_match = config
 
     return best_match if best_score > 0 else None
+
+
+def camel_to_snake(name: str) -> str:
+    s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
+    return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
+
+
+def convert_keys_to_snake(data: Any) -> Any:
+    if isinstance(data, dict):
+        new_dict = {}
+        for k, v in data.items():
+            new_key = camel_to_snake(k)
+            new_dict[new_key] = convert_keys_to_snake(v)
+        return new_dict
+    elif isinstance(data, list):
+        return [convert_keys_to_snake(item) for item in data]
+    else:
+        return data
+
+
+def parse_config_from_dict(raw: dict) -> ScenarioConfig:
+    raw_snake = convert_keys_to_snake(raw)
+    
+    # Use dummy file_path for validation
+    dummy_path = Path("dict_input")
+    _validate_top_level(raw_snake, dummy_path)
+
+    gate_keyword_groups = {
+        int(gate): _as_tuple(keywords)
+        for gate, keywords in raw_snake["gate_keyword_groups"].items()
+    }
+    question_type_gate_map = {
+        str(question_type): tuple(int(gate) for gate in gates)
+        for question_type, gates in raw_snake["question_type_gate_map"].items()
+    }
+    requirements = tuple(_parse_requirement(item, dummy_path) for item in raw_snake["requirements"])
+
+    return ScenarioConfig(
+        scenario_key=str(raw_snake["scenario_key"]),
+        scenario_title=str(raw_snake["scenario_title"]),
+        context=str(raw_snake["context"]),
+        general_keywords=_as_tuple(raw_snake["general_keywords"]),
+        gate_keyword_groups=gate_keyword_groups,
+        question_type_gate_map=question_type_gate_map,
+        max_new_reveals_per_turn=int(raw_snake.get("max_new_reveals_per_turn", 1)),
+        requirements=requirements,
+    )

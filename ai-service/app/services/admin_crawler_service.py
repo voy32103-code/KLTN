@@ -25,7 +25,7 @@ class ScenarioRequirementRuleSchema(BaseModel):
     question_types: List[str] = Field(description="Các loại câu hỏi có thể kích hoạt yêu cầu này (ví dụ: OpenEnded, Clarifying, Probing, ConstraintOriented, ExceptionOriented, Closed)")
     reveal_condition: str = Field(description="Mô tả bằng tiếng Việt điều kiện để Stakeholder ảo tiết lộ thông tin này")
     reveal_difficulty: str = Field(description="Mức độ khó khi khai thác yêu cầu này ('Easy', 'Medium', hoặc 'Hard')")
-    requires: Optional[List[str]] = Field(default=[], description="Nội dung văn bản (trường text) của các yêu cầu tiên quyết cần mở khóa trước yêu cầu này (nếu có)")
+    requires: Optional[List[str]] = Field(default=[], description="Danh sách các mã yêu cầu (trường id, ví dụ: ['R1']) tiên quyết cần mở khóa trước yêu cầu này (nếu có)")
 
 class ScenarioConfigSchema(BaseModel):
     scenario_key: str = Field(description="Mã kịch bản (snake_case, ví dụ: hospital_booking, inventory_control)")
@@ -141,7 +141,7 @@ Yêu cầu chi tiết:
      - Gate 2: Yêu cầu nâng cao, bảo mật, tích hợp hoặc các quy tắc tài chính.
      - Gate 3: Các quy tắc xử lý ngoại lệ, duyệt thủ công.
      - Gate 4: Yêu cầu phi chức năng (tải hệ thống, hiệu năng, chuẩn WCAG).
-   - Thiết lập mối quan hệ phụ thuộc (requires): Nếu yêu cầu B chỉ được nói sau khi sinh viên đã biết yêu cầu A, hãy đưa nội dung văn bản của yêu cầu A vào danh sách 'requires' của yêu cầu B.
+    - Thiết lập mối quan hệ phụ thuộc (requires): Nếu yêu cầu B chỉ được nói sau khi sinh viên đã biết yêu cầu A, hãy đưa mã định danh duy nhất (trường 'id', ví dụ: 'R1') của yêu cầu A vào danh sách 'requires' của yêu cầu B.
 4. Xây dựng bản đồ gom nhóm từ khóa cho mỗi Gate (gate_keyword_groups) và bản đồ map câu hỏi (question_type_gate_map) thật tinh gọn, súc tích.
 
 --- TÀI LIỆU NGHIỆP VỤ ---

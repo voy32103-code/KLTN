@@ -38,6 +38,7 @@ class ChatRequest(BaseModel):
     personaStateJson: str | None = None
     availableRequirements: list[str]
     selectedModel: str | None = None
+    scenarioConfig: dict | None = None
 
 
 class ChatResponse(BaseModel):

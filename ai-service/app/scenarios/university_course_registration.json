@@ -288,7 +288,7 @@
       "reveal_condition": "Mở khóa khi sinh viên hỏi về việc bị chặn đăng ký hoặc tạm khóa tài chính sau khi nhắc tới chủ đề học phí.",
       "reveal_difficulty": "Hard",
       "requires": [
-        "Hệ thống phải tích hợp với hệ thống tài chính hiện có để tính toán các khoản phí liên quan đến đăng ký."
+        "R6"
       ]
     },
     {

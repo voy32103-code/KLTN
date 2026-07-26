@@ -619,6 +619,21 @@ public class SessionsController : ControllerBase
             .Where(r => r.ScenarioId == sessionInit.ScenarioId)
             .ToListAsync();
 
+        ScenarioConfigJson? scenarioConfig = null;
+        if (!string.IsNullOrEmpty(sessionInit.Scenario.SerializedConfig))
+        {
+            try
+            {
+                scenarioConfig = JsonSerializer.Deserialize<ScenarioConfigJson>(
+                    sessionInit.Scenario.SerializedConfig
+                );
+            }
+            catch
+            {
+                // Ignore deserialization error, will fallback to local file config in AI Service
+            }
+        }
+
         // 2. Thực hiện cuộc gọi HTTP API ngoại mạng (được chạy bên ngoài transaction)
         var aiResponse = await _ai.Chat(new AiChatRequest(
             SessionId: sessionId.ToString(),
@@ -634,7 +649,8 @@ public class SessionsController : ControllerBase
                 personaStateInit.Patience),
             PersonaStateJson: sessionInit.PersonaState,
             AvailableRequirements: hiddenRequirements.Select(r => r.RequirementText).ToList(),
-            SelectedModel: personaStateInit.SelectedModel
+            SelectedModel: personaStateInit.SelectedModel,
+            ScenarioConfig: scenarioConfig
         ));
 
         if (aiResponse.IsFallback)

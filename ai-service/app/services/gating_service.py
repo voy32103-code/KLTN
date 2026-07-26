@@ -170,6 +170,14 @@ def select_gated_requirements(
     if not known_requirements:
         return allowed_previous, allowed_previous, []
 
+    # Build set of revealed IDs (case-insensitive) for prerequisite checking
+    revealed_ids = set()
+    for item in revealed_before:
+        normalized_item = normalize_text(item)
+        rule_item = rule_map.get(normalized_item)
+        if rule_item is not None:
+            revealed_ids.add(rule_item.requirement_id.strip().lower())
+
     triggered_gates = detect_triggered_gates(req.studentMessage, question_type, config)
     allowed_previous = filter_previously_revealed(known_requirements, revealed_norm)
 
@@ -186,9 +194,17 @@ def select_gated_requirements(
         elif rule.gate not in triggered_gates:
             continue
 
-        required_requirements = {normalize_text(item) for item in rule.requires}
-        if required_requirements and not required_requirements.issubset(revealed_norm):
-            continue
+        # Check prerequisites (by ID or normalized text for backward compatibility)
+        if rule.requires:
+            met = True
+            for req_dep in rule.requires:
+                dep_norm = normalize_text(req_dep)
+                dep_id_lower = req_dep.strip().lower()
+                if dep_id_lower not in revealed_ids and dep_norm not in revealed_norm:
+                    met = False
+                    break
+            if not met:
+                continue
 
         if rule.gate == 4 and float(state["patience"]) <= 0.40:
             continue
