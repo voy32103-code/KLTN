@@ -1705,18 +1705,18 @@ kbd {
 }
 
 .dropdown-item-btn:hover {
-  background: rgba(255, 255, 255, 0.06) !important;
-  color: #fff !important;
+  background: rgba(217, 119, 87, 0.08) !important;
+  color: var(--accent-indigo) !important;
   transform: translateX(2px);
 }
 
 .dropdown-item-btn.active {
-  background: rgba(56, 189, 248, 0.12) !important;
-  color: #38bdf8 !important;
+  background: rgba(217, 119, 87, 0.12) !important;
+  color: var(--accent-indigo) !important;
 }
 
 .dropdown-item-btn.active:hover {
-  background: rgba(56, 189, 248, 0.18) !important;
+  background: rgba(217, 119, 87, 0.18) !important;
 }
 
 .dropdown-menu {

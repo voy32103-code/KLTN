@@ -324,7 +324,7 @@ function renderScenarioDetail(scenario: ScenarioDetail, state: AppState) {
       <div style="display: flex; gap: var(--spacing-sm); align-items: center; flex-wrap: wrap; position: relative;">
         <!-- Custom Dropdown Container -->
         <div class="custom-dropdown">
-          <button class="liquid-glass" data-action="toggle-model-dropdown" type="button" style="display: flex; align-items: center; gap: 8px; padding: 0.625rem 1rem; border-radius: var(--radius-md); border: 1px solid var(--glass-border); background: var(--glass-bg); color: var(--text-primary); font-size: 0.875rem; cursor: pointer; outline: none; font-weight: 500;">
+          <button class="liquid-glass" data-action="toggle-model-dropdown" type="button" style="display: flex; align-items: center; gap: 8px; padding: 0.625rem 1rem; border-radius: var(--radius-md); border: 1px solid var(--line); background: var(--surface); color: var(--text-primary); font-size: 0.875rem; cursor: pointer; outline: none; font-weight: 500;">
             <span class="model-provider-badge ${getProviderClass(state.selectedModel)}"></span>
             <span>${getFriendlyModelName(state.selectedModel)}</span>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-left: 4px; transform: ${state.modelDropdownOpen ? 'rotate(180deg)' : 'rotate(0)'}; transition: transform 0.2s;"><polyline points="6 9 12 15 18 9"></polyline></svg>
@@ -332,7 +332,7 @@ function renderScenarioDetail(scenario: ScenarioDetail, state: AppState) {
           
           <!-- Dropdown menu -->
           ${state.modelDropdownOpen ? `
-            <div class="dropdown-menu glass-panel" style="position: absolute; bottom: 100%; right: 0; margin-bottom: 8px; width: 340px; max-height: 380px; overflow-y: auto; border: 1px solid var(--glass-border); background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(16px); border-radius: var(--radius-lg); box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5); z-index: 1000; padding: 8px; display: flex; flex-direction: column; gap: 4px;">
+            <div class="dropdown-menu glass-panel" style="position: absolute; bottom: 100%; right: 0; margin-bottom: 8px; width: 340px; max-height: 380px; overflow-y: auto; border: 1px solid var(--line); background: var(--surface); backdrop-filter: blur(20px); border-radius: var(--radius-lg); box-shadow: var(--shadow-subtle); z-index: 1000; padding: 8px; display: flex; flex-direction: column; gap: 4px;">
               ${renderModelGroups(state)}
             </div>
           ` : ''}
