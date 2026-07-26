@@ -8,40 +8,40 @@
   --transition-smooth: cubic-bezier(0.16, 1, 0.3, 1);
   --transition-fast: cubic-bezier(0.4, 0, 0.2, 1);
 
-  /* Light Glassmorphic Base & Clear Semantic Accents */
-  --bg: #F4F7FB;
-  --surface: rgba(255, 255, 255, 0.85);
+  /* Claude-inspired Warm Glassmorphic Base & Terracotta Accents */
+  --bg: #FBF9F6;
+  --surface: rgba(244, 240, 234, 0.85);
   --surface-raised: rgba(255, 255, 255, 0.95);
-  --surface-muted: rgba(99, 102, 241, 0.03);
-  --surface-glass: rgba(255, 255, 255, 0.65);
+  --surface-muted: rgba(217, 119, 87, 0.03);
+  --surface-glass: rgba(244, 240, 234, 0.65);
   
-  --text: #1E293B;
-  --text-primary: #0F172A;
-  --text-secondary: #475569;
-  --muted: #64748B;
-  --muted-strong: #334155;
+  --text: #383530;
+  --text-primary: #191816;
+  --text-secondary: #5C5850;
+  --muted: #858076;
+  --muted-strong: #4A4742;
   
-  --line: rgba(99, 102, 241, 0.1);
-  --line-subtle: rgba(99, 102, 241, 0.06);
-  --line-strong: rgba(99, 102, 241, 0.18);
+  --line: rgba(217, 119, 87, 0.1);
+  --line-subtle: rgba(217, 119, 87, 0.06);
+  --line-strong: rgba(217, 119, 87, 0.18);
 
-  /* Vibrant High-Agency Color Tokens */
-  --accent-indigo: #4F46E5;
-  --accent-indigo-glow: rgba(99, 102, 241, 0.15);
-  --accent-emerald: #059669;
-  --accent-emerald-glow: rgba(16, 185, 129, 0.15);
-  --accent-amber: #D97706;
-  --accent-amber-glow: rgba(245, 158, 11, 0.15);
-  --accent-rose: #E11D48;
+  /* Claude Terracotta Accent & Muted Semantic Colors */
+  --accent-indigo: #D97757;
+  --accent-indigo-glow: rgba(217, 119, 87, 0.15);
+  --accent-emerald: #3E8E7E;
+  --accent-emerald-glow: rgba(62, 142, 126, 0.15);
+  --accent-amber: #D99857;
+  --accent-amber-glow: rgba(217, 152, 87, 0.15);
+  --accent-rose: #C95A64;
 
-  --pastel-red-bg: rgba(225, 29, 72, 0.08);
-  --pastel-red-text: #E11D48;
-  --pastel-blue-bg: rgba(79, 70, 229, 0.08);
-  --pastel-blue-text: #4F46E5;
-  --pastel-green-bg: rgba(5, 150, 105, 0.08);
-  --pastel-green-text: #059669;
-  --pastel-yellow-bg: rgba(217, 119, 6, 0.08);
-  --pastel-yellow-text: #D97706;
+  --pastel-red-bg: rgba(201, 90, 100, 0.08);
+  --pastel-red-text: #C95A64;
+  --pastel-blue-bg: rgba(217, 119, 87, 0.08);
+  --pastel-blue-text: #D97757;
+  --pastel-green-bg: rgba(62, 142, 126, 0.08);
+  --pastel-green-text: #3E8E7E;
+  --pastel-yellow-bg: rgba(217, 152, 87, 0.08);
+  --pastel-yellow-text: #D99857;
 
   --radius: 12px;
   --radius-xl: 16px;
@@ -49,8 +49,8 @@
   --radius-md: 8px;
   --radius-sm: 4px;
   
-  --shadow-subtle: 0 8px 30px rgba(99, 102, 241, 0.06), 0 1px 2px rgba(99, 102, 241, 0.04);
-  --shadow-glow: 0 0 28px rgba(99, 102, 241, 0.12);
+  --shadow-subtle: 0 8px 30px rgba(217, 119, 87, 0.04), 0 1px 2px rgba(217, 119, 87, 0.02);
+  --shadow-glow: 0 0 28px rgba(217, 119, 87, 0.12);
 }
 
 * {
@@ -58,7 +58,7 @@
 }
 
 html {
-  background: radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.08) 0px, transparent 50%), radial-gradient(at 50% 0%, rgba(5, 150, 105, 0.04) 0px, transparent 50%), radial-gradient(at 100% 0%, rgba(217, 119, 6, 0.04) 0px, transparent 50%), var(--bg);
+  background: radial-gradient(at 0% 0%, rgba(217, 119, 87, 0.08) 0px, transparent 50%), radial-gradient(at 50% 0%, rgba(62, 142, 126, 0.04) 0px, transparent 50%), radial-gradient(at 100% 0%, rgba(217, 152, 87, 0.04) 0px, transparent 50%), var(--bg);
   color: var(--text);
   font-family: var(--font-sans);
   font-size: 16px;
