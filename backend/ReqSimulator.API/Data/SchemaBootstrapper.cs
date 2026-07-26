@@ -17,6 +17,9 @@ public static class SchemaBootstrapper
 
         ALTER TABLE simulation_sessions
         ADD COLUMN IF NOT EXISTS finalization_expires_at timestamp with time zone NULL;
+
+        ALTER TABLE scenarios
+        ADD COLUMN IF NOT EXISTS serialized_config text NULL;
         """;
 
     private const string CreateIndexSql = """

@@ -121,7 +121,7 @@ Yêu cầu chi tiết:
      - Gate 2: Yêu cầu nâng cao, bảo mật, tích hợp hoặc các quy tắc tài chính.
      - Gate 3: Các quy tắc xử lý ngoại lệ, duyệt thủ công.
      - Gate 4: Yêu cầu phi chức năng (tải hệ thống, hiệu năng, chuẩn WCAG).
-   - Thiết lập mối quan hệ phụ thuộc (requires): Nếu yêu cầu B chỉ được nói sau khi sinh viên đã biết yêu cầu A, hãy đưa nội dung văn bản của yêu cầu A vào danh sách 'requires' của yêu cầu B.
+    - Thiết lập mối quan hệ phụ thuộc (requires): Nếu yêu cầu B chỉ được nói sau khi sinh viên đã biết yêu cầu A, hãy đưa mã định danh duy nhất (trường 'id', ví dụ: 'R1') của yêu cầu A vào danh sách 'requires' của yêu cầu B.
 4. Xây dựng bản đồ gom nhóm từ khóa cho mỗi Gate (gate_keyword_groups) và bản đồ map câu hỏi (question_type_gate_map) thật tinh gọn, súc tích.
 
 Đáp án trả về phải khớp chính xác cấu trúc JSON Schema được cung cấp.

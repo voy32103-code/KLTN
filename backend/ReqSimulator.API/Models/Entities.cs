@@ -39,6 +39,7 @@ public class Scenario
     public int Version { get; set; } = 1;
     public bool IsActive { get; set; } = true;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public string? SerializedConfig { get; set; }
 
     public ICollection<Persona> Personas { get; set; } = [];
     public ICollection<HiddenRequirement> HiddenRequirements { get; set; } = [];
