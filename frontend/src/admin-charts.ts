@@ -62,13 +62,13 @@ export function renderCoverageDistributionChart(
         title: {
           display: true,
           text: 'Phân bổ Coverage Score (%)',
-          color: '#e2e8f0',
+          color: '#1e293b',
           font: { size: 14, weight: 'bold' }
         }
       },
       scales: {
-        x: { ticks: { color: '#94a3b8' }, grid: { color: '#334155' } },
-        y: { ticks: { color: '#94a3b8', stepSize: 1 }, grid: { color: '#334155' }, beginAtZero: true }
+        x: { ticks: { color: '#64748b' }, grid: { color: 'rgba(99, 102, 241, 0.06)' } },
+        y: { ticks: { color: '#64748b', stepSize: 1 }, grid: { color: 'rgba(99, 102, 241, 0.06)' }, beginAtZero: true }
       }
     }
   })
@@ -106,13 +106,13 @@ export function renderSessionsOverTimeChart(
         title: {
           display: true,
           text: 'Xu hướng phiên phỏng vấn theo ngày',
-          color: '#e2e8f0',
+          color: '#1e293b',
           font: { size: 14, weight: 'bold' }
         }
       },
       scales: {
-        x: { ticks: { color: '#94a3b8', maxRotation: 45 }, grid: { color: '#334155' } },
-        y: { ticks: { color: '#94a3b8', stepSize: 1 }, grid: { color: '#334155' }, beginAtZero: true }
+        x: { ticks: { color: '#64748b', maxRotation: 45 }, grid: { color: 'rgba(99, 102, 241, 0.06)' } },
+        y: { ticks: { color: '#64748b', stepSize: 1 }, grid: { color: 'rgba(99, 102, 241, 0.06)' }, beginAtZero: true }
       }
     }
   })
@@ -147,17 +147,17 @@ export function renderScenarioStatsChart(
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
-        legend: { labels: { color: '#cbd5e1' } },
+        legend: { labels: { color: '#334155' } },
         title: {
           display: true,
           text: 'So sánh hiệu suất theo Kịch bản',
-          color: '#e2e8f0',
+          color: '#1e293b',
           font: { size: 14, weight: 'bold' }
         }
       },
       scales: {
-        x: { ticks: { color: '#94a3b8' }, grid: { color: '#334155' } },
-        y: { ticks: { color: '#94a3b8' }, grid: { color: '#334155' }, beginAtZero: true }
+        x: { ticks: { color: '#64748b' }, grid: { color: 'rgba(99, 102, 241, 0.06)' } },
+        y: { ticks: { color: '#64748b' }, grid: { color: 'rgba(99, 102, 241, 0.06)' }, beginAtZero: true }
       }
     }
   })
@@ -180,7 +180,7 @@ export function renderMatchTypeBreakdownChart(
         {
           data: [exact, semantic, partial, missed],
           backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#ef4444'],
-          borderColor: '#0f172a',
+          borderColor: '#ffffff',
           borderWidth: 2
         }
       ]
@@ -189,11 +189,11 @@ export function renderMatchTypeBreakdownChart(
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
-        legend: { position: 'right', labels: { color: '#cbd5e1', font: { size: 12 } } },
+        legend: { position: 'right', labels: { color: '#334155', font: { size: 12 } } },
         title: {
           display: true,
           text: 'Tỷ lệ Loại so khớp Requirement',
-          color: '#e2e8f0',
+          color: '#1e293b',
           font: { size: 14, weight: 'bold' }
         }
       }
