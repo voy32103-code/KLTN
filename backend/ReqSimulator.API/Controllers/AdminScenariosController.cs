@@ -89,10 +89,11 @@ public class AdminScenariosController : ControllerBase
     private async Task<Scenario> SyncScenarioToDb(ScenarioConfigJson config)
     {
         // 1. Kiểm tra Scenario đã tồn tại chưa
+        var targetTitleLower = (config.ScenarioTitle ?? "").ToLower();
         var scenario = await _db.Scenarios
             .Include(s => s.Personas)
             .Include(s => s.HiddenRequirements)
-            .FirstOrDefaultAsync(s => s.Title.ToLower() == config.ScenarioTitle.ToLower());
+            .FirstOrDefaultAsync(s => s.Title.ToLower() == targetTitleLower);
 
         if (scenario is null)
         {
