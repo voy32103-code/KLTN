@@ -72,6 +72,83 @@ def map_gemini_to_standard_config(gemini_config: ScenarioConfigGeminiSchema) -> 
         requirements=gemini_config.requirements
     )
 
+def parse_and_validate_scenario_config(cleaned_json_text: str) -> ScenarioConfigSchema:
+    """Phân tích cú pháp và xác thực JSON kịch bản một cách an toàn và linh hoạt.
+    Hỗ trợ cả Schema chuẩn (Dictionaries) và Schema tương thích Gemini (Lists of Items).
+    """
+    try:
+        data = json.loads(cleaned_json_text)
+    except Exception as e:
+        logger.error(f"Failed to parse JSON string: {e}")
+        raise e
+
+    # 1. Chuyển đổi toàn bộ key sang snake_case (camelCase -> snake_case)
+    def to_snake(val, parent_key=None):
+        if isinstance(val, dict):
+            if parent_key in ("gate_keyword_groups", "question_type_gate_map"):
+                return {k: to_snake(v, parent_key) for k, v in val.items()}
+            return {
+                re.sub(r'(?<!^)(?=[A-Z])', '_', k).lower(): to_snake(v, re.sub(r'(?<!^)(?=[A-Z])', '_', k).lower())
+                for k, v in val.items()
+            }
+        elif isinstance(val, list):
+            return [to_snake(x, parent_key) for x in val]
+        return val
+
+    data = to_snake(data)
+
+    # 2. Phòng vệ giá trị mặc định cho các trường bắt buộc
+    if "general_keywords" not in data or data["general_keywords"] is None:
+        data["general_keywords"] = []
+    if "max_new_reveals_per_turn" not in data or data["max_new_reveals_per_turn"] is None:
+        data["max_new_reveals_per_turn"] = 1
+    if "requirements" not in data or not isinstance(data["requirements"], list):
+        data["requirements"] = []
+
+    # Phòng vệ cho từng requirement rule
+    for req in data["requirements"]:
+        if "requires" not in req or req["requires"] is None:
+            req["requires"] = []
+        if "keywords" not in req or req["keywords"] is None:
+            req["keywords"] = []
+        if "question_types" not in req or req["question_types"] is None:
+            req["question_types"] = []
+        if "text" not in req or req["text"] is None:
+            req["text"] = ""
+        if "reveal_condition" not in req or req["reveal_condition"] is None:
+            req["reveal_condition"] = ""
+        if "reveal_difficulty" not in req or req["reveal_difficulty"] is None:
+            req["reveal_difficulty"] = "Medium"
+
+    # 3. Phân biệt loại cấu trúc của gate_keyword_groups và question_type_gate_map
+    gate_kw = data.get("gate_keyword_groups")
+    q_map = data.get("question_type_gate_map")
+
+    # Trường hợp 1: LLM trả về dạng Dictionaries (chuẩn của ScenarioConfigSchema)
+    if isinstance(gate_kw, dict) and isinstance(q_map, dict):
+        try:
+            return ScenarioConfigSchema.model_validate(data)
+        except Exception as e:
+            logger.warning(f"Standard validation failed, attempting Gemini schema fallback: {e}")
+
+    # Trường hợp 2: LLM trả về dạng Lists (chuẩn của ScenarioConfigGeminiSchema)
+    # Hoặc nếu validation dạng chuẩn thất bại, chuyển đổi linh hoạt
+    # Nếu gate_kw là dict, ta chuyển đổi sang list của GateKeywordGroup
+    if isinstance(gate_kw, dict):
+        data["gate_keyword_groups"] = [{"gate": str(k), "keywords": v} for k, v in gate_kw.items()]
+    elif not isinstance(gate_kw, list):
+        data["gate_keyword_groups"] = []
+
+    # Nếu q_map là dict, ta chuyển đổi sang list của QuestionTypeGateMapItem
+    if isinstance(q_map, dict):
+        data["question_type_gate_map"] = [{"question_type": k, "gates": v} for k, v in q_map.items()]
+    elif not isinstance(q_map, list):
+        data["question_type_gate_map"] = []
+
+    # Tiến hành validate với ScenarioConfigGeminiSchema và map sang Standard
+    gemini_config = ScenarioConfigGeminiSchema.model_validate(data)
+    return map_gemini_to_standard_config(gemini_config)
+
 
 # ===== Crawler & Structuring Logic =====
 
@@ -169,11 +246,10 @@ Yêu cầu chi tiết:
     cleaned_json_text = extract_json_string(raw_response_text)
         
     try:
-        gemini_config = ScenarioConfigGeminiSchema.model_validate_json(cleaned_json_text)
+        return parse_and_validate_scenario_config(cleaned_json_text)
     except Exception as e:
         logger.error(f"Pydantic validation failed for ScenarioConfigGeminiSchema. Error: {e}. Raw response (truncated): {raw_response_text[:3000]}")
         raise e
-    return map_gemini_to_standard_config(gemini_config)
 
 def save_scenario_config_file(config: ScenarioConfigSchema) -> Path:
     """Lưu kịch bản mới sinh ra thành file JSON trong thư mục scenarios."""
