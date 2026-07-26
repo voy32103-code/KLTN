@@ -244,7 +244,8 @@ public class AdminController : ControllerBase
     [HttpPost("users")]
     public async Task<IActionResult> CreateUser([FromBody] CreateUserDto dto)
     {
-        if (await _db.Users.AnyAsync(u => u.Email.ToLower() == dto.Email.ToLower()))
+        var targetEmailLower = (dto.Email ?? "").ToLower();
+        if (await _db.Users.AnyAsync(u => u.Email.ToLower() == targetEmailLower))
         {
             return BadRequest(new { message = "Email này đã được sử dụng." });
         }
@@ -293,7 +294,8 @@ public class AdminController : ControllerBase
             return NotFound(new { message = "Không tìm thấy người dùng." });
         }
 
-        if (await _db.Users.AnyAsync(u => u.Email.ToLower() == dto.Email.ToLower() && u.Id != id))
+        var targetEmailLower = (dto.Email ?? "").ToLower();
+        if (await _db.Users.AnyAsync(u => u.Email.ToLower() == targetEmailLower && u.Id != id))
         {
             return BadRequest(new { message = "Email đã tồn tại cho tài khoản khác." });
         }
