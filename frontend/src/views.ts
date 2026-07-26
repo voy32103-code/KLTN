@@ -915,12 +915,12 @@ export function renderAdminDashboard(state: AppState) {
       <div class="admin-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
         <div>
           <p class="section-kicker">Bảng điều khiển Admin</p>
-          <h2 style="font-size: 24px; font-weight: 700;">Quản trị Hệ thống & Nạp Tri thức AI</h2>
+          <h2 style="font-size: 24px; font-weight: 700; color: var(--text-primary);">Quản trị Hệ thống & Nạp Tri thức AI</h2>
         </div>
-        <div class="admin-nav-tabs" style="display: flex; gap: 8px; background: #0f172a; padding: 4px; border-radius: 8px; border: 1px solid #334155;">
-          <button class="ghost-button ${isOverviewTab ? 'active' : ''}" data-action="set-admin-tab" data-tab="overview" type="button" style="${isOverviewTab ? 'background: var(--color-primary); color: #fff;' : ''}">Thống kê Analytics</button>
-          <button class="ghost-button ${isUsersTab ? 'active' : ''}" data-action="set-admin-tab" data-tab="users" type="button" style="${isUsersTab ? 'background: var(--color-primary); color: #fff;' : ''}">Quản lý Người dùng (CRUD)</button>
-          <button class="ghost-button ${isScenariosTab ? 'active' : ''}" data-action="set-admin-tab" data-tab="scenarios" type="button" style="${isScenariosTab ? 'background: var(--color-primary); color: #fff;' : ''}">Cào/Nạp Kịch Bản (AI)</button>
+        <div class="admin-nav-tabs" style="display: flex; gap: 8px; background: var(--surface); padding: 4px; border-radius: 8px; border: 1px solid var(--line);">
+          <button class="ghost-button ${isOverviewTab ? 'active' : ''}" data-action="set-admin-tab" data-tab="overview" type="button" style="${isOverviewTab ? 'background: var(--accent-indigo); color: #fff;' : ''}">Thống kê Analytics</button>
+          <button class="ghost-button ${isUsersTab ? 'active' : ''}" data-action="set-admin-tab" data-tab="users" type="button" style="${isUsersTab ? 'background: var(--accent-indigo); color: #fff;' : ''}">Quản lý Người dùng (CRUD)</button>
+          <button class="ghost-button ${isScenariosTab ? 'active' : ''}" data-action="set-admin-tab" data-tab="scenarios" type="button" style="${isScenariosTab ? 'background: var(--accent-indigo); color: #fff;' : ''}">Cào/Nạp Kịch Bản (AI)</button>
         </div>
       </div>
 
@@ -936,25 +936,25 @@ function renderAdminScenarioSection(state: AppState) {
     <div class="admin-scenarios-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px;">
       
       <!-- Card 1: Crawl BA Document -->
-      <div class="card glass-panel" style="padding: 24px; display: flex; flex-direction: column; gap: 16px; border: 1px solid var(--glass-border); background: var(--glass-bg); border-radius: var(--radius-lg);">
+      <div class="card glass-panel" style="padding: 24px; display: flex; flex-direction: column; gap: 16px; border: 1px solid var(--line); background: var(--surface); border-radius: var(--radius-lg); box-shadow: var(--shadow-subtle);">
         <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
-          <div style="background: rgba(56, 189, 248, 0.1); padding: 8px; border-radius: 8px; color: #38bdf8;">
+          <div style="background: rgba(217, 119, 87, 0.1); padding: 8px; border-radius: 8px; color: var(--accent-indigo);">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
           </div>
           <div>
-            <h3 style="font-size: 18px; font-weight: 600; color: #f8fafc; margin: 0;">Cào & Trích xuất Tài liệu BA</h3>
-            <p style="font-size: 13px; color: #94a3b8; margin: 4px 0 0 0;">Tự động phân tích PRD/SRS từ URL thành kịch bản phỏng vấn</p>
+            <h3 style="font-size: 18px; font-weight: 600; color: var(--text-primary); margin: 0;">Cào & Trích xuất Tài liệu BA</h3>
+            <p style="font-size: 13px; color: var(--text-secondary); margin: 4px 0 0 0;">Tự động phân tích PRD/SRS từ URL thành kịch bản phỏng vấn</p>
           </div>
         </div>
         
         <div class="form-group" style="display: flex; flex-direction: column; gap: 8px;">
-          <label style="font-size: 13px; color: #cbd5e1; font-weight: 500;">Đường dẫn URL chứa tài liệu:</label>
-          <input id="admin-crawl-url-input" type="text" placeholder="https://example.com/spec.html hoặc URL raw text..." style="background: #0f172a; color: #f8fafc; border: 1px solid #475569; border-radius: 6px; padding: 10px 12px; font-size: 13px; outline: none; width: 100%;" />
+          <label style="font-size: 13px; color: var(--text-secondary); font-weight: 500;">Đường dẫn URL chứa tài liệu:</label>
+          <input id="admin-crawl-url-input" type="text" placeholder="https://example.com/spec.html hoặc URL raw text..." style="background: var(--surface-raised); color: var(--text-primary); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; font-size: 13px; outline: none; width: 100%;" />
         </div>
 
         <div class="form-group" style="display: flex; flex-direction: column; gap: 8px;">
-          <label style="font-size: 13px; color: #cbd5e1; font-weight: 500;">Mô hình AI xử lý:</label>
-          <select id="admin-crawl-model-select" style="background: #0f172a; color: #f8fafc; border: 1px solid #475569; border-radius: 6px; padding: 10px 12px; font-size: 13px; cursor: pointer; outline: none; width: 100%;">
+          <label style="font-size: 13px; color: var(--text-secondary); font-weight: 500;">Mô hình AI xử lý:</label>
+          <select id="admin-crawl-model-select" style="background: var(--surface-raised); color: var(--text-primary); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; font-size: 13px; cursor: pointer; outline: none; width: 100%;">
             <option value="gemini-2.5-flash">Gemini 2.5 Flash (Khuyên dùng - Structured Output)</option>
             <option value="gemini-2.5-pro">Gemini 2.5 Pro (Thông minh hơn - Tốc độ chậm hơn)</option>
             <option value="llama-3.3-70b-versatile">Llama 3.3 70B (Groq Fallback - JSON mode)</option>
@@ -975,36 +975,36 @@ function renderAdminScenarioSection(state: AppState) {
       </div>
 
       <!-- Card 2: Video Knowledge Upload -->
-      <div class="card glass-panel" style="padding: 24px; display: flex; flex-direction: column; gap: 16px; border: 1px solid var(--glass-border); background: var(--glass-bg); border-radius: var(--radius-lg);">
+      <div class="card glass-panel" style="padding: 24px; display: flex; flex-direction: column; gap: 16px; border: 1px solid var(--line); background: var(--surface); border-radius: var(--radius-lg); box-shadow: var(--shadow-subtle);">
         <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
           <div style="background: rgba(168, 85, 247, 0.1); padding: 8px; border-radius: 8px; color: #a855f7;">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>
           </div>
           <div>
-            <h3 style="font-size: 18px; font-weight: 600; color: #f8fafc; margin: 0;">Nạp Tri thức Nghiệp vụ từ Video</h3>
-            <p style="font-size: 13px; color: #94a3b8; margin: 4px 0 0 0;">Sử dụng Multimodal AI để trích xuất kịch bản từ video/audio cuộc họp</p>
+            <h3 style="font-size: 18px; font-weight: 600; color: var(--text-primary); margin: 0;">Nạp Tri thức Nghiệp vụ từ Video</h3>
+            <p style="font-size: 13px; color: var(--text-secondary); margin: 4px 0 0 0;">Sử dụng Multimodal AI để trích xuất kịch bản từ video/audio cuộc họp</p>
           </div>
         </div>
 
         <div class="form-group" style="display: flex; flex-direction: column; gap: 8px;">
-          <label style="font-size: 13px; color: #cbd5e1; font-weight: 500;">Đường dẫn tệp video tuyệt đối (Local Path):</label>
-          <input id="admin-video-path-input" type="text" placeholder="Ví dụ: d:\\KLTN\\tools\\meeting_recording.mp4" style="background: #0f172a; color: #f8fafc; border: 1px solid #475569; border-radius: 6px; padding: 10px 12px; font-size: 13px; outline: none; width: 100%;" />
+          <label style="font-size: 13px; color: var(--text-secondary); font-weight: 500;">Đường dẫn tệp video tuyệt đối (Local Path):</label>
+          <input id="admin-video-path-input" type="text" placeholder="Ví dụ: d:\\KLTN\\tools\\meeting_recording.mp4" style="background: var(--surface-raised); color: var(--text-primary); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; font-size: 13px; outline: none; width: 100%;" />
         </div>
 
         <div class="form-group" style="display: flex; flex-direction: column; gap: 8px;">
-          <label style="font-size: 13px; color: #cbd5e1; font-weight: 500;">Mô hình AI xử lý:</label>
-          <select id="admin-video-model-select" style="background: #0f172a; color: #f8fafc; border: 1px solid #475569; border-radius: 6px; padding: 10px 12px; font-size: 13px; cursor: pointer; outline: none; width: 100%;">
+          <label style="font-size: 13px; color: var(--text-secondary); font-weight: 500;">Mô hình AI xử lý:</label>
+          <select id="admin-video-model-select" style="background: var(--surface-raised); color: var(--text-primary); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; font-size: 13px; cursor: pointer; outline: none; width: 100%;">
             <option value="gemini-2.5-flash">Gemini 2.5 Flash (Khuyên dùng - Multimodal)</option>
             <option value="gemini-2.5-pro">Gemini 2.5 Pro (Multimodal Pro)</option>
           </select>
         </div>
 
-        <div style="background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.2); border-radius: 6px; padding: 10px 12px; display: flex; gap: 8px; align-items: flex-start;">
-          <span style="color: #f59e0b; font-weight: bold; font-size: 14px;">⚠️</span>
-          <span style="font-size: 11px; color: #cbd5e1; line-height: 1.4;">Hệ thống sẽ tự động sử dụng <strong>FFmpeg</strong> cục bộ để tối ưu dung lượng (tách âm thanh mp3) trước khi gửi lên Gemini File API xử lý đa phương tiện.</span>
+        <div style="background: rgba(217, 119, 87, 0.08); border: 1px solid rgba(217, 119, 87, 0.2); border-radius: 6px; padding: 10px 12px; display: flex; gap: 8px; align-items: flex-start;">
+          <span style="color: var(--accent-indigo); font-weight: bold; font-size: 14px;">⚠️</span>
+          <span style="font-size: 11px; color: var(--text-secondary); line-height: 1.4;">Hệ thống sẽ tự động sử dụng <strong>FFmpeg</strong> cục bộ để tối ưu dung lượng (tách âm thanh mp3) trước khi gửi lên Gemini File API xử lý đa phương tiện.</span>
         </div>
 
-        <button class="primary-button" data-action="admin-video" type="button" ${state.busy ? 'disabled' : ''} style="margin-top: 4px; background: linear-gradient(135deg, #a855f7, #7c3aed); border: none; display: flex; align-items: center; justify-content: center; gap: 8px;">
+        <button class="primary-button" data-action="admin-video" type="button" ${state.busy ? 'disabled' : ''} style="margin-top: 4px; background: linear-gradient(135deg, var(--accent-indigo), #c96b4b); border: none; display: flex; align-items: center; justify-content: center; gap: 8px;">
           ${state.busy ? '<span class="spinner-mini"></span> Đang xử lý...' : 'Bắt đầu Nạp từ Video'}
         </button>
       </div>
@@ -1019,51 +1019,51 @@ function renderAdminOverviewSection(admin: AdminState) {
     <div class="admin-overview-stack" style="display: grid; gap: 24px;">
       <!-- Metrics Overview Cards -->
       <div class="admin-metrics-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 16px;">
-        <div class="admin-metric-card" style="background: #1e293b; padding: 16px; border-radius: 10px; border: 1px solid #334155;">
-          <span style="font-size: 12px; color: #94a3b8; display: block;">Tổng số phiên</span>
-          <strong style="font-size: 28px; color: #38bdf8; display: block; margin-top: 4px;">${overview?.totalSessions ?? 0}</strong>
-          <small style="font-size: 11px; color: #64748b;">${overview?.completedSessions ?? 0} hoàn thành · ${overview?.activeSessions ?? 0} đang mở</small>
+        <div class="admin-metric-card" style="background: var(--surface); padding: 16px; border-radius: 10px; border: 1px solid var(--line); box-shadow: var(--shadow-subtle);">
+          <span style="font-size: 12px; color: var(--text-secondary); display: block;">Tổng số phiên</span>
+          <strong style="font-size: 28px; color: var(--accent-indigo); display: block; margin-top: 4px;">${overview?.totalSessions ?? 0}</strong>
+          <small style="font-size: 11px; color: var(--muted);">${overview?.completedSessions ?? 0} hoàn thành · ${overview?.activeSessions ?? 0} đang mở</small>
         </div>
-        <div class="admin-metric-card" style="background: #1e293b; padding: 16px; border-radius: 10px; border: 1px solid #334155;">
-          <span style="font-size: 12px; color: #94a3b8; display: block;">Sinh viên</span>
-          <strong style="font-size: 28px; color: #818cf8; display: block; margin-top: 4px;">${overview?.totalStudents ?? 0}</strong>
-          <small style="font-size: 11px; color: #64748b;">Tài khoản sinh viên</small>
+        <div class="admin-metric-card" style="background: var(--surface); padding: 16px; border-radius: 10px; border: 1px solid var(--line); box-shadow: var(--shadow-subtle);">
+          <span style="font-size: 12px; color: var(--text-secondary); display: block;">Sinh viên</span>
+          <strong style="font-size: 28px; color: var(--pastel-blue-text); display: block; margin-top: 4px;">${overview?.totalStudents ?? 0}</strong>
+          <small style="font-size: 11px; color: var(--muted);">Tài khoản sinh viên</small>
         </div>
-        <div class="admin-metric-card" style="background: #1e293b; padding: 16px; border-radius: 10px; border: 1px solid #334155;">
-          <span style="font-size: 12px; color: #94a3b8; display: block;">Kịch bản nghiệp vụ</span>
-          <strong style="font-size: 28px; color: #34d399; display: block; margin-top: 4px;">${overview?.totalScenarios ?? 0}</strong>
-          <small style="font-size: 11px; color: #64748b;">Kịch bản sẵn sàng</small>
+        <div class="admin-metric-card" style="background: var(--surface); padding: 16px; border-radius: 10px; border: 1px solid var(--line); box-shadow: var(--shadow-subtle);">
+          <span style="font-size: 12px; color: var(--text-secondary); display: block;">Kịch bản nghiệp vụ</span>
+          <strong style="font-size: 28px; color: var(--pastel-green-text); display: block; margin-top: 4px;">${overview?.totalScenarios ?? 0}</strong>
+          <small style="font-size: 11px; color: var(--muted);">Kịch bản sẵn sàng</small>
         </div>
-        <div class="admin-metric-card" style="background: #1e293b; padding: 16px; border-radius: 10px; border: 1px solid #334155;">
-          <span style="font-size: 12px; color: #94a3b8; display: block;">Coverage Score TB</span>
-          <strong style="font-size: 28px; color: #fbbf24; display: block; margin-top: 4px;">${overview?.averageCoverage ?? 0}%</strong>
-          <small style="font-size: 11px; color: #64748b;">Trung bình toàn hệ thống</small>
+        <div class="admin-metric-card" style="background: var(--surface); padding: 16px; border-radius: 10px; border: 1px solid var(--line); box-shadow: var(--shadow-subtle);">
+          <span style="font-size: 12px; color: var(--text-secondary); display: block;">Coverage Score TB</span>
+          <strong style="font-size: 28px; color: var(--pastel-yellow-text); display: block; margin-top: 4px;">${overview?.averageCoverage ?? 0}%</strong>
+          <small style="font-size: 11px; color: var(--muted);">Trung bình toàn hệ thống</small>
         </div>
       </div>
 
       <!-- Charts 2x2 Grid -->
       <div class="admin-charts-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-        <div class="chart-card" style="background: #1e293b; padding: 16px; border-radius: 10px; border: 1px solid #334155; height: 320px;">
+        <div class="chart-card" style="background: var(--surface); padding: 16px; border-radius: 10px; border: 1px solid var(--line); height: 320px; box-shadow: var(--shadow-subtle);">
           <canvas id="chart-coverage-dist"></canvas>
         </div>
-        <div class="chart-card" style="background: #1e293b; padding: 16px; border-radius: 10px; border: 1px solid #334155; height: 320px;">
+        <div class="chart-card" style="background: var(--surface); padding: 16px; border-radius: 10px; border: 1px solid var(--line); height: 320px; box-shadow: var(--shadow-subtle);">
           <canvas id="chart-sessions-time"></canvas>
         </div>
-        <div class="chart-card" style="background: #1e293b; padding: 16px; border-radius: 10px; border: 1px solid #334155; height: 320px;">
+        <div class="chart-card" style="background: var(--surface); padding: 16px; border-radius: 10px; border: 1px solid var(--line); height: 320px; box-shadow: var(--shadow-subtle);">
           <canvas id="chart-scenario-stats"></canvas>
         </div>
-        <div class="chart-card" style="background: #1e293b; padding: 16px; border-radius: 10px; border: 1px solid #334155; height: 320px;">
+        <div class="chart-card" style="background: var(--surface); padding: 16px; border-radius: 10px; border: 1px solid var(--line); height: 320px; box-shadow: var(--shadow-subtle);">
           <canvas id="chart-match-breakdown"></canvas>
         </div>
       </div>
 
       <!-- Top Students Table -->
-      <div class="top-students-card" style="background: #1e293b; padding: 20px; border-radius: 10px; border: 1px solid #334155;">
-        <h3 style="margin-bottom: 12px; font-size: 16px; color: #f8fafc;">Bảng xếp hạng Top Sinh viên</h3>
+      <div class="top-students-card" style="background: var(--surface); padding: 20px; border-radius: 10px; border: 1px solid var(--line); box-shadow: var(--shadow-subtle);">
+        <h3 style="margin-bottom: 12px; font-size: 16px; color: var(--text-primary);">Bảng xếp hạng Top Sinh viên</h3>
         <div style="overflow-x: auto;">
           <table style="width: 100%; border-collapse: collapse; font-size: 13px; text-align: left;">
             <thead>
-              <tr style="border-bottom: 1px solid #334155; color: #94a3b8;">
+              <tr style="border-bottom: 1px solid var(--line); color: var(--text-secondary);">
                 <th style="padding: 10px;">Họ tên</th>
                 <th style="padding: 10px;">Email</th>
                 <th style="padding: 10px; text-align: center;">Phiên phỏng vấn</th>
@@ -1072,13 +1072,13 @@ function renderAdminOverviewSection(admin: AdminState) {
               </tr>
             </thead>
             <tbody>
-              ${admin.topStudents.length === 0 ? '<tr><td colspan="5" style="padding: 20px; text-align: center; color: #64748b;">Chưa có dữ liệu sinh viên hoàn thành phiên.</td></tr>' : admin.topStudents.map((s) => `
-                <tr style="border-bottom: 1px solid rgba(51, 65, 85, 0.5);">
-                  <td style="padding: 10px; font-weight: 600; color: #f1f5f9;">${escapeHtml(s.studentName)}</td>
-                  <td style="padding: 10px; color: #cbd5e1; font-family: var(--font-mono); font-size: 12px;">${escapeHtml(s.studentEmail)}</td>
-                  <td style="padding: 10px; text-align: center; color: #cbd5e1;">${s.completedCount} / ${s.sessionCount}</td>
-                  <td style="padding: 10px; text-align: center; font-weight: bold; color: #34d399;">${s.bestCoverage}%</td>
-                  <td style="padding: 10px; text-align: center; font-weight: bold; color: #38bdf8;">${s.averageCoverage}%</td>
+              ${admin.topStudents.length === 0 ? '<tr><td colspan="5" style="padding: 20px; text-align: center; color: var(--muted);">Chưa có dữ liệu sinh viên hoàn thành phiên.</td></tr>' : admin.topStudents.map((s) => `
+                <tr style="border-bottom: 1px solid var(--line-subtle);">
+                  <td style="padding: 10px; font-weight: 600; color: var(--text-primary);">${escapeHtml(s.studentName)}</td>
+                  <td style="padding: 10px; color: var(--text-secondary); font-family: var(--font-mono); font-size: 12px;">${escapeHtml(s.studentEmail)}</td>
+                  <td style="padding: 10px; text-align: center; color: var(--text-secondary);">${s.completedCount} / ${s.sessionCount}</td>
+                  <td style="padding: 10px; text-align: center; font-weight: bold; color: var(--pastel-green-text);">${s.bestCoverage}%</td>
+                  <td style="padding: 10px; text-align: center; font-weight: bold; color: var(--pastel-blue-text);">${s.averageCoverage}%</td>
                 </tr>
               `).join('')}
             </tbody>
@@ -1094,10 +1094,10 @@ function renderAdminUserManagementSection(admin: AdminState) {
   return `
     <div class="admin-users-stack" style="display: grid; gap: 20px;">
       <!-- Controls Bar -->
-      <div style="display: flex; gap: 12px; justify-content: space-between; align-items: center; background: #1e293b; padding: 14px; border-radius: 10px; border: 1px solid #334155;">
+      <div style="display: flex; gap: 12px; justify-content: space-between; align-items: center; background: var(--surface); padding: 14px; border-radius: 10px; border: 1px solid var(--line); box-shadow: var(--shadow-subtle);">
         <div style="display: flex; gap: 12px; align-items: center; flex: 1;">
-          <input id="user-search-input" type="text" value="${escapeAttribute(admin.userSearch)}" placeholder="Tìm kiếm theo tên hoặc email..." style="background: #0f172a; color: #f8fafc; border: 1px solid #475569; border-radius: 6px; padding: 8px 12px; font-size: 13px; min-width: 250px;" />
-          <select id="user-role-filter" style="background: #0f172a; color: #f8fafc; border: 1px solid #475569; border-radius: 6px; padding: 8px 12px; font-size: 13px;">
+          <input id="user-search-input" type="text" value="${escapeAttribute(admin.userSearch)}" placeholder="Tìm kiếm theo tên hoặc email..." style="background: var(--surface-raised); color: var(--text-primary); border: 1px solid var(--line); border-radius: 6px; padding: 8px 12px; font-size: 13px; min-width: 250px;" />
+          <select id="user-role-filter" style="background: var(--surface-raised); color: var(--text-primary); border: 1px solid var(--line); border-radius: 6px; padding: 8px 12px; font-size: 13px;">
             <option value="" ${admin.userRoleFilter === '' ? 'selected' : ''}>Tất cả vai trò</option>
             <option value="Student" ${admin.userRoleFilter === 'Student' ? 'selected' : ''}>Student</option>
             <option value="Lecturer" ${admin.userRoleFilter === 'Lecturer' ? 'selected' : ''}>Lecturer</option>
@@ -1105,7 +1105,7 @@ function renderAdminUserManagementSection(admin: AdminState) {
           </select>
           <button class="ghost-button" data-action="filter-users" type="button">Lọc</button>
         </div>
-        <button class="primary-button" data-action="open-create-user-modal" type="button" style="background: var(--color-primary);">+ Thêm người dùng mới</button>
+        <button class="primary-button" data-action="open-create-user-modal" type="button">+ Thêm người dùng mới</button>
       </div>
 
       <!-- Create / Edit User Modal / Panel if open -->
@@ -1113,12 +1113,12 @@ function renderAdminUserManagementSection(admin: AdminState) {
       ${admin.editingUser ? renderEditUserForm(admin.editingUser) : ''}
 
       <!-- Users Table -->
-      <div style="background: #1e293b; padding: 20px; border-radius: 10px; border: 1px solid #334155;">
-        <h3 style="margin-bottom: 12px; font-size: 16px; color: #f8fafc;">Danh sách Người dùng (${users.length})</h3>
+      <div style="background: var(--surface); padding: 20px; border-radius: 10px; border: 1px solid var(--line); box-shadow: var(--shadow-subtle);">
+        <h3 style="margin-bottom: 12px; font-size: 16px; color: var(--text-primary);">Danh sách Người dùng (${users.length})</h3>
         <div style="overflow-x: auto;">
           <table style="width: 100%; border-collapse: collapse; font-size: 13px; text-align: left;">
             <thead>
-              <tr style="border-bottom: 1px solid #334155; color: #94a3b8;">
+              <tr style="border-bottom: 1px solid var(--line); color: var(--text-secondary);">
                 <th style="padding: 10px;">Họ tên</th>
                 <th style="padding: 10px;">Email</th>
                 <th style="padding: 10px;">Vai trò</th>
@@ -1127,15 +1127,15 @@ function renderAdminUserManagementSection(admin: AdminState) {
               </tr>
             </thead>
             <tbody>
-              ${users.length === 0 ? '<tr><td colspan="5" style="padding: 20px; text-align: center; color: #64748b;">Không tìm thấy người dùng nào.</td></tr>' : users.map((u) => `
-                <tr style="border-bottom: 1px solid rgba(51, 65, 85, 0.5);">
-                  <td style="padding: 10px; font-weight: 600; color: #f1f5f9;">${escapeHtml(u.name)}</td>
-                  <td style="padding: 10px; color: #cbd5e1; font-family: var(--font-mono); font-size: 12px;">${escapeHtml(u.email)}</td>
-                  <td style="padding: 10px;"><span class="user-role-badge ${u.role.toLowerCase()}" style="padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; background: ${u.role === 'Admin' ? '#ef4444' : u.role === 'Lecturer' ? '#f59e0b' : '#3b82f6'}; color: #fff;">${escapeHtml(u.role)}</span></td>
-                  <td style="padding: 10px; color: #94a3b8; font-size: 12px;">${formatTime(u.createdAt)}</td>
+              ${users.length === 0 ? '<tr><td colspan="5" style="padding: 20px; text-align: center; color: var(--muted);">Không tìm thấy người dùng nào.</td></tr>' : users.map((u) => `
+                <tr style="border-bottom: 1px solid var(--line-subtle);">
+                  <td style="padding: 10px; font-weight: 600; color: var(--text-primary);">${escapeHtml(u.name)}</td>
+                  <td style="padding: 10px; color: var(--text-secondary); font-family: var(--font-mono); font-size: 12px;">${escapeHtml(u.email)}</td>
+                  <td style="padding: 10px;"><span class="user-role-badge ${u.role.toLowerCase()}" style="padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; background: ${u.role === 'Admin' ? 'var(--pastel-red-bg)' : u.role === 'Lecturer' ? 'var(--pastel-yellow-bg)' : 'var(--pastel-blue-bg)'}; color: ${u.role === 'Admin' ? 'var(--pastel-red-text)' : u.role === 'Lecturer' ? 'var(--pastel-yellow-text)' : 'var(--pastel-blue-text)'}; border: 1px solid var(--line);">${escapeHtml(u.role)}</span></td>
+                  <td style="padding: 10px; color: var(--text-secondary); font-size: 12px;">${formatTime(u.createdAt)}</td>
                   <td style="padding: 10px; text-align: right;">
                     <button class="ghost-button" data-action="edit-user" data-user-id="${escapeAttribute(u.id)}" type="button" style="padding: 2px 8px; font-size: 12px;">Sửa</button>
-                    <button class="ghost-button" data-action="delete-user" data-user-id="${escapeAttribute(u.id)}" type="button" style="padding: 2px 8px; font-size: 12px; color: #f87171; border-color: rgba(248, 113, 113, 0.3);">Xóa</button>
+                    <button class="ghost-button" data-action="delete-user" data-user-id="${escapeAttribute(u.id)}" type="button" style="padding: 2px 8px; font-size: 12px; color: var(--accent-rose); border-color: rgba(201, 90, 100, 0.3);">Xóa</button>
                   </td>
                 </tr>
               `).join('')}
@@ -1149,24 +1149,24 @@ function renderAdminUserManagementSection(admin: AdminState) {
 
 function renderCreateUserForm() {
   return `
-    <div style="background: #0f172a; padding: 20px; border-radius: 10px; border: 1px solid var(--color-primary); margin-bottom: 16px;">
-      <h4 style="margin-bottom: 12px; color: #38bdf8;">Tạo mới Người dùng</h4>
+    <div style="background: var(--surface); padding: 20px; border-radius: 10px; border: 1px solid var(--accent-indigo); margin-bottom: 16px; box-shadow: var(--shadow-subtle);">
+      <h4 style="margin-bottom: 12px; color: var(--accent-indigo); font-weight: bold;">Tạo mới Người dùng</h4>
       <form id="create-user-form" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
         <div>
-          <label style="display: block; font-size: 12px; color: #cbd5e1; margin-bottom: 4px;">Họ và tên *</label>
-          <input name="name" type="text" required placeholder="Nguyễn Văn A" style="width: 100%; background: #1e293b; color: #fff; border: 1px solid #475569; border-radius: 6px; padding: 8px; font-size: 13px;" />
+          <label style="display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Họ và tên *</label>
+          <input name="name" type="text" required placeholder="Nguyễn Văn A" style="width: 100%; background: var(--surface-raised); color: var(--text-primary); border: 1px solid var(--line); border-radius: 6px; padding: 8px; font-size: 13px;" />
         </div>
         <div>
-          <label style="display: block; font-size: 12px; color: #cbd5e1; margin-bottom: 4px;">Email *</label>
-          <input name="email" type="email" required placeholder="user@example.com" style="width: 100%; background: #1e293b; color: #fff; border: 1px solid #475569; border-radius: 6px; padding: 8px; font-size: 13px;" />
+          <label style="display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Email *</label>
+          <input name="email" type="email" required placeholder="user@example.com" style="width: 100%; background: var(--surface-raised); color: var(--text-primary); border: 1px solid var(--line); border-radius: 6px; padding: 8px; font-size: 13px;" />
         </div>
         <div>
-          <label style="display: block; font-size: 12px; color: #cbd5e1; margin-bottom: 4px;">Mật khẩu (tối thiểu 6 ký tự) *</label>
-          <input name="password" type="password" required minlength="6" placeholder="******" style="width: 100%; background: #1e293b; color: #fff; border: 1px solid #475569; border-radius: 6px; padding: 8px; font-size: 13px;" />
+          <label style="display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Mật khẩu (tối thiểu 6 ký tự) *</label>
+          <input name="password" type="password" required minlength="6" placeholder="******" style="width: 100%; background: var(--surface-raised); color: var(--text-primary); border: 1px solid var(--line); border-radius: 6px; padding: 8px; font-size: 13px;" />
         </div>
         <div>
-          <label style="display: block; font-size: 12px; color: #cbd5e1; margin-bottom: 4px;">Vai trò *</label>
-          <select name="role" required style="width: 100%; background: #1e293b; color: #fff; border: 1px solid #475569; border-radius: 6px; padding: 8px; font-size: 13px;">
+          <label style="display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Vai trò *</label>
+          <select name="role" required style="width: 100%; background: var(--surface-raised); color: var(--text-primary); border: 1px solid var(--line); border-radius: 6px; padding: 8px; font-size: 13px; cursor: pointer;">
             <option value="Student">Student (Sinh viên)</option>
             <option value="Lecturer">Lecturer (Giảng viên)</option>
             <option value="Admin">Admin (Quản trị viên)</option>
@@ -1174,7 +1174,7 @@ function renderCreateUserForm() {
         </div>
         <div style="grid-column: 1 / -1; display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px;">
           <button class="ghost-button" data-action="cancel-user-form" type="button">Hủy</button>
-          <button class="primary-button" data-action="submit-create-user" type="button" style="background: var(--color-primary);">Tạo người dùng</button>
+          <button class="primary-button" data-action="submit-create-user" type="button">Tạo người dùng</button>
         </div>
       </form>
     </div>
@@ -1183,24 +1183,24 @@ function renderCreateUserForm() {
 
 function renderEditUserForm(user: AdminUserItem) {
   return `
-    <div style="background: #0f172a; padding: 20px; border-radius: 10px; border: 1px solid #f59e0b; margin-bottom: 16px;">
-      <h4 style="margin-bottom: 12px; color: #f59e0b;">Cập nhật Người dùng: ${escapeHtml(user.name)}</h4>
+    <div style="background: var(--surface); padding: 20px; border-radius: 10px; border: 1px solid var(--accent-amber); margin-bottom: 16px; box-shadow: var(--shadow-subtle);">
+      <h4 style="margin-bottom: 12px; color: var(--accent-amber); font-weight: bold;">Cập nhật Người dùng: ${escapeHtml(user.name)}</h4>
       <form id="edit-user-form" data-user-id="${escapeAttribute(user.id)}" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
         <div>
-          <label style="display: block; font-size: 12px; color: #cbd5e1; margin-bottom: 4px;">Họ và tên *</label>
-          <input name="name" type="text" value="${escapeAttribute(user.name)}" required style="width: 100%; background: #1e293b; color: #fff; border: 1px solid #475569; border-radius: 6px; padding: 8px; font-size: 13px;" />
+          <label style="display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Họ và tên *</label>
+          <input name="name" type="text" value="${escapeAttribute(user.name)}" required style="width: 100%; background: var(--surface-raised); color: var(--text-primary); border: 1px solid var(--line); border-radius: 6px; padding: 8px; font-size: 13px;" />
         </div>
         <div>
-          <label style="display: block; font-size: 12px; color: #cbd5e1; margin-bottom: 4px;">Email *</label>
-          <input name="email" type="email" value="${escapeAttribute(user.email)}" required style="width: 100%; background: #1e293b; color: #fff; border: 1px solid #475569; border-radius: 6px; padding: 8px; font-size: 13px;" />
+          <label style="display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Email *</label>
+          <input name="email" type="email" value="${escapeAttribute(user.email)}" required style="width: 100%; background: var(--surface-raised); color: var(--text-primary); border: 1px solid var(--line); border-radius: 6px; padding: 8px; font-size: 13px;" />
         </div>
         <div>
-          <label style="display: block; font-size: 12px; color: #cbd5e1; margin-bottom: 4px;">Mật khẩu mới (bỏ trống nếu không đổi)</label>
-          <input name="newPassword" type="password" placeholder="Để trống nếu giữ nguyên" style="width: 100%; background: #1e293b; color: #fff; border: 1px solid #475569; border-radius: 6px; padding: 8px; font-size: 13px;" />
+          <label style="display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Mật khẩu mới (bỏ trống nếu không đổi)</label>
+          <input name="newPassword" type="password" placeholder="Để trống nếu giữ nguyên" style="width: 100%; background: var(--surface-raised); color: var(--text-primary); border: 1px solid var(--line); border-radius: 6px; padding: 8px; font-size: 13px;" />
         </div>
         <div>
-          <label style="display: block; font-size: 12px; color: #cbd5e1; margin-bottom: 4px;">Vai trò *</label>
-          <select name="role" required style="width: 100%; background: #1e293b; color: #fff; border: 1px solid #475569; border-radius: 6px; padding: 8px; font-size: 13px;">
+          <label style="display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Vai trò *</label>
+          <select name="role" required style="width: 100%; background: var(--surface-raised); color: var(--text-primary); border: 1px solid var(--line); border-radius: 6px; padding: 8px; font-size: 13px; cursor: pointer;">
             <option value="Student" ${user.role === 'Student' ? 'selected' : ''}>Student (Sinh viên)</option>
             <option value="Lecturer" ${user.role === 'Lecturer' ? 'selected' : ''}>Lecturer (Giảng viên)</option>
             <option value="Admin" ${user.role === 'Admin' ? 'selected' : ''}>Admin (Quản trị viên)</option>
@@ -1208,7 +1208,7 @@ function renderEditUserForm(user: AdminUserItem) {
         </div>
         <div style="grid-column: 1 / -1; display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px;">
           <button class="ghost-button" data-action="cancel-user-form" type="button">Hủy</button>
-          <button class="primary-button" data-action="submit-edit-user" type="button" style="background: #f59e0b; color: #000; font-weight: bold;">Lưu thay đổi</button>
+          <button class="primary-button" data-action="submit-edit-user" type="button" style="background: var(--accent-amber); color: var(--text-primary); font-weight: bold; border: none;">Lưu thay đổi</button>
         </div>
       </form>
     </div>
