@@ -8,39 +8,40 @@
   --transition-smooth: cubic-bezier(0.16, 1, 0.3, 1);
   --transition-fast: cubic-bezier(0.4, 0, 0.2, 1);
 
-  /* Deep Obsidian Glassmorphic Base & Vibrant Semantic Accents */
-  --bg: #090A0F;
-  --surface: #12141C;
-  --surface-raised: #1A1D28;
-  --surface-glass: rgba(18, 20, 28, 0.75);
+  /* Light Glassmorphic Base & Clear Semantic Accents */
+  --bg: #F4F7FB;
+  --surface: rgba(255, 255, 255, 0.85);
+  --surface-raised: rgba(255, 255, 255, 0.95);
+  --surface-muted: rgba(99, 102, 241, 0.03);
+  --surface-glass: rgba(255, 255, 255, 0.65);
   
-  --text: #F3F4F6;
-  --text-primary: #F3F4F6;
-  --text-secondary: #9CA3AF;
-  --muted: #6B7280;
-  --muted-strong: #9CA3AF;
+  --text: #1E293B;
+  --text-primary: #0F172A;
+  --text-secondary: #475569;
+  --muted: #64748B;
+  --muted-strong: #334155;
   
-  --line: rgba(255, 255, 255, 0.08);
-  --line-subtle: rgba(255, 255, 255, 0.08);
-  --line-strong: rgba(255, 255, 255, 0.18);
+  --line: rgba(99, 102, 241, 0.1);
+  --line-subtle: rgba(99, 102, 241, 0.06);
+  --line-strong: rgba(99, 102, 241, 0.18);
 
   /* Vibrant High-Agency Color Tokens */
-  --accent-indigo: #6366F1;
-  --accent-indigo-glow: rgba(99, 102, 241, 0.25);
-  --accent-emerald: #10B981;
-  --accent-emerald-glow: rgba(16, 185, 129, 0.25);
-  --accent-amber: #F59E0B;
-  --accent-amber-glow: rgba(245, 158, 11, 0.25);
-  --accent-rose: #F43F5E;
+  --accent-indigo: #4F46E5;
+  --accent-indigo-glow: rgba(99, 102, 241, 0.15);
+  --accent-emerald: #059669;
+  --accent-emerald-glow: rgba(16, 185, 129, 0.15);
+  --accent-amber: #D97706;
+  --accent-amber-glow: rgba(245, 158, 11, 0.15);
+  --accent-rose: #E11D48;
 
-  --pastel-red-bg: rgba(244, 63, 94, 0.15);
-  --pastel-red-text: #F43F5E;
-  --pastel-blue-bg: rgba(99, 102, 241, 0.15);
-  --pastel-blue-text: #818CF8;
-  --pastel-green-bg: rgba(16, 185, 129, 0.15);
-  --pastel-green-text: #34D399;
-  --pastel-yellow-bg: rgba(245, 158, 11, 0.15);
-  --pastel-yellow-text: #FBBF24;
+  --pastel-red-bg: rgba(225, 29, 72, 0.08);
+  --pastel-red-text: #E11D48;
+  --pastel-blue-bg: rgba(79, 70, 229, 0.08);
+  --pastel-blue-text: #4F46E5;
+  --pastel-green-bg: rgba(5, 150, 105, 0.08);
+  --pastel-green-text: #059669;
+  --pastel-yellow-bg: rgba(217, 119, 6, 0.08);
+  --pastel-yellow-text: #D97706;
 
   --radius: 12px;
   --radius-xl: 16px;
@@ -48,8 +49,8 @@
   --radius-md: 8px;
   --radius-sm: 4px;
   
-  --shadow-subtle: 0 4px 20px rgba(0, 0, 0, 0.4);
-  --shadow-glow: 0 0 28px rgba(99, 102, 241, 0.2);
+  --shadow-subtle: 0 8px 30px rgba(99, 102, 241, 0.06), 0 1px 2px rgba(99, 102, 241, 0.04);
+  --shadow-glow: 0 0 28px rgba(99, 102, 241, 0.12);
 }
 
 * {
@@ -57,7 +58,7 @@
 }
 
 html {
-  background-color: var(--bg);
+  background: radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.08) 0px, transparent 50%), radial-gradient(at 50% 0%, rgba(5, 150, 105, 0.04) 0px, transparent 50%), radial-gradient(at 100% 0%, rgba(217, 119, 6, 0.04) 0px, transparent 50%), var(--bg);
   color: var(--text);
   font-family: var(--font-sans);
   font-size: 16px;
@@ -127,12 +128,12 @@ p {
 
 /* Liquid Glass Effect */
 .liquid-glass {
-  background: rgba(255, 255, 255, 0.01);
+  background: rgba(255, 255, 255, 0.65);
   background-blend-mode: luminosity;
-  -webkit-backdrop-filter: blur(4px);
-  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
   border: none;
-  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
   position: relative;
   overflow: hidden;
 }
@@ -142,11 +143,11 @@ p {
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  padding: 1.4px;
+  padding: 1.2px;
   background: linear-gradient(180deg,
-    rgba(255,255,255,0.45) 0%, rgba(255,255,255,0.15) 20%,
+    rgba(255,255,255,0.65) 0%, rgba(255,255,255,0.3) 20%,
     rgba(255,255,255,0) 40%, rgba(255,255,255,0) 60%,
-    rgba(255,255,255,0.15) 80%, rgba(255,255,255,0.45) 100%);
+    rgba(255,255,255,0.3) 80%, rgba(255,255,255,0.65) 100%);
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
@@ -491,9 +492,9 @@ textarea:focus {
 }
 
 .ghost-button:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: var(--line-strong);
-  color: #FFF;
+  background: rgba(99, 102, 241, 0.08);
+  border-color: var(--accent-indigo);
+  color: var(--accent-indigo);
   transform: translateY(-1px);
 }
 
@@ -640,9 +641,9 @@ textarea:focus {
 }
 
 .override-badge {
-  background: rgba(245, 158, 11, 0.2);
-  border-color: #f59e0b;
-  color: #fbbf24;
+  background: rgba(217, 119, 6, 0.12);
+  border-color: #D97706;
+  color: #D97706;
 }
 
 /* Detail Panel / Workspace */
@@ -977,7 +978,7 @@ dd {
   font-family: var(--font-serif);
   font-size: 17px;
   line-height: 1.6;
-  color: #F3F4F6;
+  color: var(--text-primary);
 }
 
 .message.pending {
