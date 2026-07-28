@@ -38,7 +38,13 @@ public class AiServiceClient
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(120));
             var response = await _http.PostAsJsonAsync("/api/chat", request, cts.Token);
             response.EnsureSuccessStatusCode();
-            return (await response.Content.ReadFromJsonAsync<AiChatResponse>(cts.Token))!;
+            var result = await response.Content.ReadFromJsonAsync<AiChatResponse>(cts.Token);
+            if (result is null)
+            {
+                _logger.LogError("AI Service /api/chat returned an empty JSON payload. SessionId={SessionId}", request.SessionId);
+                return CreateChatFallback();
+            }
+            return result;
         }
         catch (HttpRequestException ex)
         {
@@ -65,7 +71,13 @@ public class AiServiceClient
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(120));
             var response = await _http.PostAsJsonAsync("/api/extract", request, cts.Token);
             response.EnsureSuccessStatusCode();
-            return (await response.Content.ReadFromJsonAsync<AiExtractResponse>(cts.Token))!;
+            var result = await response.Content.ReadFromJsonAsync<AiExtractResponse>(cts.Token);
+            if (result is null)
+            {
+                _logger.LogError("AI Service /api/extract returned an empty JSON payload. SessionId={SessionId}", request.SessionId);
+                return new AiExtractResponse([new ExtractedReq(ExtractFallbackMessage, 0m)], IsFallback: true);
+            }
+            return result;
         }
         catch (HttpRequestException ex)
         {
@@ -92,7 +104,13 @@ public class AiServiceClient
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(120));
             var response = await _http.PostAsJsonAsync("/api/evaluate", request, cts.Token);
             response.EnsureSuccessStatusCode();
-            return (await response.Content.ReadFromJsonAsync<AiEvaluateResponse>(cts.Token))!;
+            var result = await response.Content.ReadFromJsonAsync<AiEvaluateResponse>(cts.Token);
+            if (result is null)
+            {
+                _logger.LogError("AI Service /api/evaluate returned an empty JSON payload.");
+                return CreateEvaluateFallback(request);
+            }
+            return result;
         }
         catch (HttpRequestException ex)
         {
@@ -131,16 +149,19 @@ public class AiServiceClient
                         errMsg = detailProp.GetString() ?? errMsg;
                     }
                 }
-                catch { }
-                _logger.LogError("Lỗi từ AI Service /api/admin/crawl-scenario: {Msg}. Body={Body}", errMsg, errorText);
+                catch (JsonException parseException)
+                {
+                    _logger.LogDebug(parseException, "AI service error payload was not JSON.");
+                }
+                _logger.LogError("AI Service crawl request failed with status {StatusCode}.", (int)response.StatusCode);
                 return new AiAdminScenarioResponse(false, errMsg, null, true);
             }
             return (await response.Content.ReadFromJsonAsync<AiAdminScenarioResponse>(cts.Token))!;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Lỗi khi gọi AI Service /api/admin/crawl-scenario. URL={Url}", url);
-            return new AiAdminScenarioResponse(false, $"Không thể kết nối đến dịch vụ AI: {ex.Message}", null, true);
+            _logger.LogError(ex, "AI Service crawl request failed.");
+            return new AiAdminScenarioResponse(false, "AI service request failed.", null, true);
         }
     }
 
@@ -164,16 +185,19 @@ public class AiServiceClient
                         errMsg = detailProp.GetString() ?? errMsg;
                     }
                 }
-                catch { }
-                _logger.LogError("Lỗi từ AI Service /api/admin/upload-video-scenario: {Msg}. Body={Body}", errMsg, errorText);
+                catch (JsonException parseException)
+                {
+                    _logger.LogDebug(parseException, "AI service error payload was not JSON.");
+                }
+                _logger.LogError("AI Service video request failed with status {StatusCode}.", (int)response.StatusCode);
                 return new AiAdminScenarioResponse(false, errMsg, null, true);
             }
             return (await response.Content.ReadFromJsonAsync<AiAdminScenarioResponse>(cts.Token))!;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Lỗi khi gọi AI Service /api/admin/upload-video-scenario. VideoPath={VideoPath}", videoPath);
-            return new AiAdminScenarioResponse(false, $"Không thể kết nối đến dịch vụ AI: {ex.Message}", null, true);
+            _logger.LogError(ex, "AI Service video request failed.");
+            return new AiAdminScenarioResponse(false, "AI service request failed.", null, true);
         }
     }
 

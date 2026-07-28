@@ -214,7 +214,7 @@ function renderAuth(state: AppState) {
           </label>
           <label>
             Mật khẩu
-            <input name="password" type="password" autocomplete="${isLogin ? 'current-password' : 'new-password'}" required minlength="6" />
+            <input name="password" type="password" autocomplete="${isLogin ? 'current-password' : 'new-password'}" required minlength="${isLogin ? 1 : 12}" maxlength="128" />
           </label>
           <button class="primary-button" type="submit" ${state.busy ? 'disabled' : ''}>
             ${state.busy ? 'Đang xử lý...' : isLogin ? 'Vào hệ thống' : 'Tạo tài khoản'}
@@ -1161,8 +1161,8 @@ function renderCreateUserForm() {
           <input name="email" type="email" required placeholder="user@example.com" style="width: 100%; background: var(--surface-raised); color: var(--text-primary); border: 1px solid var(--line); border-radius: 6px; padding: 8px; font-size: 13px;" />
         </div>
         <div>
-          <label style="display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Mật khẩu (tối thiểu 6 ký tự) *</label>
-          <input name="password" type="password" required minlength="6" placeholder="******" style="width: 100%; background: var(--surface-raised); color: var(--text-primary); border: 1px solid var(--line); border-radius: 6px; padding: 8px; font-size: 13px;" />
+          <label style="display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Mật khẩu (tối thiểu 12 ký tự) *</label>
+          <input name="password" type="password" required minlength="12" maxlength="128" placeholder="******" style="width: 100%; background: var(--surface-raised); color: var(--text-primary); border: 1px solid var(--line); border-radius: 6px; padding: 8px; font-size: 13px;" />
         </div>
         <div>
           <label style="display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Vai trò *</label>
@@ -1196,7 +1196,7 @@ function renderEditUserForm(user: AdminUserItem) {
         </div>
         <div>
           <label style="display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Mật khẩu mới (bỏ trống nếu không đổi)</label>
-          <input name="newPassword" type="password" placeholder="Để trống nếu giữ nguyên" style="width: 100%; background: var(--surface-raised); color: var(--text-primary); border: 1px solid var(--line); border-radius: 6px; padding: 8px; font-size: 13px;" />
+          <input name="newPassword" type="password" minlength="12" maxlength="128" placeholder="Để trống nếu giữ nguyên" style="width: 100%; background: var(--surface-raised); color: var(--text-primary); border: 1px solid var(--line); border-radius: 6px; padding: 8px; font-size: 13px;" />
         </div>
         <div>
           <label style="display: block; font-size: 12px; color: var(--text-secondary); margin-bottom: 4px;">Vai trò *</label>

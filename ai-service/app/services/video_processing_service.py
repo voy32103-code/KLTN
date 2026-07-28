@@ -1,6 +1,7 @@
 import os
 import subprocess
 import shutil
+import tempfile
 import logging
 import asyncio
 from pathlib import Path
@@ -22,15 +23,14 @@ async def extract_audio_from_video(video_path: Path) -> Path:
     Sử dụng FFmpeg để trích xuất âm thanh từ video sang tệp mp3 bất đồng bộ.
     Giúp giảm dung lượng truyền tải đi 90%.
     """
-    if not video_path.exists():
+    if not video_path.is_file():
         raise FileNotFoundError(f"Không tìm thấy tệp video tại {video_path}")
         
-    output_audio_path = video_path.with_suffix(".mp3")
+    descriptor, output_name = tempfile.mkstemp(prefix="reqsim-audio-", suffix=".mp3")
+    os.close(descriptor)
+    output_audio_path = Path(output_name)
+    output_audio_path.unlink(missing_ok=True)
     
-    # Nếu tệp mp3 đã tồn tại, xóa đi để tạo mới
-    if output_audio_path.exists():
-        output_audio_path.unlink()
-        
     # Câu lệnh FFmpeg để trích xuất audio
     cmd = [
         "ffmpeg",
@@ -43,7 +43,7 @@ async def extract_audio_from_video(video_path: Path) -> Path:
         str(output_audio_path)
     ]
     
-    logger.info(f"Đang trích xuất âm thanh từ video bằng câu lệnh: {' '.join(cmd)}")
+    logger.info("Extracting audio from media file %s.", video_path.name)
     process = await asyncio.create_subprocess_exec(
         *cmd,
         stdout=asyncio.subprocess.PIPE,
@@ -52,10 +52,11 @@ async def extract_audio_from_video(video_path: Path) -> Path:
     stdout, stderr = await process.communicate()
     
     if process.returncode != 0:
+        output_audio_path.unlink(missing_ok=True)
         logger.error(f"FFmpeg trích xuất âm thanh thất bại: {stderr.decode('utf-8', errors='ignore')}")
         raise RuntimeError("FFmpeg trích xuất âm thanh thất bại.")
         
-    logger.info(f"Trích xuất âm thanh thành công tại: {output_audio_path}")
+    logger.info("Trích xuất âm thanh thành công vào tệp tạm.")
     return output_audio_path
  
 async def generate_scenario_from_video(
@@ -67,8 +68,16 @@ async def generate_scenario_from_video(
     yêu cầu phân tích Multimodal và trích xuất kịch bản dạng JSON.
     """
     video_path = Path(video_file_path)
-    if not video_path.exists():
-        raise FileNotFoundError(f"Không tìm thấy tệp video tại {video_file_path}")
+    if not video_path.is_file():
+        raise FileNotFoundError(f"Không tìm thấy tệp media tại {video_path.name}")
+
+    allowed_extensions = {".mp4", ".mov", ".mkv", ".webm", ".mp3", ".wav", ".m4a", ".aac", ".ogg"}
+    if video_path.suffix.lower() not in allowed_extensions:
+        raise ValueError("Định dạng tệp media không được hỗ trợ.")
+
+    model_name = selected_model or MODEL
+    if not model_name.lower().startswith("gemini-"):
+        raise ValueError("Video ingestion chỉ hỗ trợ mô hình Gemini.")
  
     # 1. Trích xuất âm thanh bằng FFmpeg nếu có thể
     media_path = video_path
@@ -85,12 +94,14 @@ async def generate_scenario_from_video(
 
     # 2. Lấy client Gemini đang hoạt động
     idx = client_manager._get_active_gemini_client_index()
+    if idx is None:
+        raise RuntimeError("Tất cả Gemini API keys đang tạm thời không khả dụng.")
     client = client_manager.gemini_clients[idx]
 
     uploaded_file = None
     try:
         # 3. Tải file media lên Gemini (chạy trong thread pool vì đây là gọi I/O)
-        logger.info(f"Đang tải tệp {media_path.name} lên Gemini File API...")
+        logger.info("Uploading media file %s to Gemini.", media_path.name)
         uploaded_file = await asyncio.to_thread(
             client.files.upload,
             file=str(media_path)
@@ -126,7 +137,6 @@ Yêu cầu chi tiết:
 
 Đáp án trả về phải khớp chính xác cấu trúc JSON Schema được cung cấp.
 """
-        model_name = selected_model or MODEL
         gen_config = types.GenerateContentConfig(
             response_mime_type="application/json",
             response_schema=ScenarioConfigGeminiSchema,
@@ -170,6 +180,6 @@ Yêu cầu chi tiết:
         if temp_audio_created and media_path.exists():
             try:
                 media_path.unlink()
-                logger.info(f"Đã dọn dẹp tệp audio tạm local: {media_path}")
+                logger.info("Removed temporary audio file.")
             except Exception as delete_local_ex:
                 logger.warning(f"Không thể xóa tệp audio tạm local: {delete_local_ex}")

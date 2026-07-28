@@ -235,6 +235,7 @@ async def chat(req: ChatRequest):
                 ),
                 detectedQuestionType=question_type,
                 stateUpdate=state_update,
+                isFallback=True,
             )
         except Exception as fallback_error:
             logger.exception("AI chat error and fallback failed.")

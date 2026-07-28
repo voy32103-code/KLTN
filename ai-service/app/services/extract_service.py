@@ -80,6 +80,7 @@ async def extract_requirements(req: ExtractRequest):
     try:
         conversation_text = _format_conversation(req.history)
         requirements = []
+        used_fallback = False
         max_retries = 3
 
         for attempt in range(max_retries):
@@ -100,10 +101,11 @@ async def extract_requirements(req: ExtractRequest):
                         "Falling back to regex parser."
                     )
                     requirements = _fallback_extract_requirements(req.history)
+                    used_fallback = True
                 else:
                     await asyncio.sleep(1 * (attempt + 1))
 
-        return ExtractResponse(requirements=requirements)
+        return ExtractResponse(requirements=requirements, isFallback=used_fallback)
     except Exception as e:
         logger.exception("Requirement extraction error.")
         raise HTTPException(status_code=500, detail="An error occurred during requirement extraction.")

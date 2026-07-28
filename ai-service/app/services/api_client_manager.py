@@ -36,11 +36,11 @@ class ApiClientManager:
         self.groq_api_key = os.getenv("GROQ_API_KEY")
         
         # 3. Đọc DeepSeek và Mimo keys
-        self.deepseek_api_key = os.getenv("DEEPSEEK_API_KEY", "***DELETED***")
-        self.mimo_api_key = os.getenv("MIMO_API_KEY", "***DELETED***")
+        self.deepseek_api_key = os.getenv("DEEPSEEK_API_KEY")
+        self.mimo_api_key = os.getenv("MIMO_API_KEY")
         
         # 4. Đọc OpenRouter key
-        self.openrouter_api_key = os.getenv("OPENROUTER_API_KEY", "***DELETED***")
+        self.openrouter_api_key = os.getenv("OPENROUTER_API_KEY")
 
         logger.info(
             f"ApiClientManager initialized with {len(self.gemini_clients)} Gemini clients. "
@@ -50,8 +50,8 @@ class ApiClientManager:
             f"OpenRouter API Key configured: {bool(self.openrouter_api_key)}."
         )
 
-    def _get_active_gemini_client_index(self) -> int:
-        """Tìm index của client Gemini đầu tiên không bị block, hoặc fallback sang 0 nếu bị block hết."""
+    def _get_active_gemini_client_index(self) -> int | None:
+        """Tìm index của client Gemini đầu tiên không bị block; trả None nếu không có client khả dụng."""
         now = time.time()
         for idx in range(len(self.gemini_clients)):
             until = self.blocked_until.get(idx, 0)
@@ -59,8 +59,8 @@ class ApiClientManager:
                 return idx
         
         if self.gemini_clients:
-            logger.warning("All Gemini API keys are currently blocked! Falling back to the first key.")
-            return 0
+            logger.warning("All Gemini API keys are currently blocked.")
+            return None
         raise RuntimeError("No Gemini API keys are configured.")
 
     def block_key(self, index: int, duration_seconds: int = 120):
@@ -291,10 +291,36 @@ class ApiClientManager:
         Sinh nội dung từ model được chọn (hỗ trợ cả Gemini, Groq, DeepSeek, Mimo và OpenRouter).
         """
         model_lower = model.lower() if model else ""
+        effective_system_instruction = (
+            system_instruction
+            or (config.system_instruction if config else None)
+        )
+        effective_temperature = (
+            temperature
+            if config is None or config.temperature is None
+            else config.temperature
+        )
+        effective_max_output_tokens = (
+            max_output_tokens
+            if config is None or config.max_output_tokens is None
+            else config.max_output_tokens
+        )
+        response_format = (
+            {"type": "json_object"}
+            if config and config.response_mime_type == "application/json"
+            else None
+        )
         
         # Nếu là model Llama -> Gọi Groq
         if model_lower.startswith("llama"):
-            return await self._call_groq(model, contents, system_instruction, temperature, max_output_tokens)
+            return await self._call_groq(
+                model=model,
+                contents=contents,
+                system_instruction=effective_system_instruction,
+                temperature=effective_temperature,
+                max_output_tokens=effective_max_output_tokens,
+                response_format=response_format,
+            )
 
         # Nếu là DeepSeek -> Gọi DeepSeek
         if model_lower.startswith("deepseek"):
@@ -304,9 +330,9 @@ class ApiClientManager:
             return await self._call_deepseek(
                 model=model,
                 contents=contents,
-                system_instruction=system_instruction or (config.system_instruction if config else None),
-                temperature=temperature if (config is None or config.temperature is None) else config.temperature,
-                max_output_tokens=max_output_tokens if (config is None or config.max_output_tokens is None) else config.max_output_tokens,
+                system_instruction=effective_system_instruction,
+                temperature=effective_temperature,
+                max_output_tokens=effective_max_output_tokens,
                 response_format=response_format
             )
 
@@ -318,9 +344,9 @@ class ApiClientManager:
             return await self._call_mimo(
                 model=model,
                 contents=contents,
-                system_instruction=system_instruction or (config.system_instruction if config else None),
-                temperature=temperature if (config is None or config.temperature is None) else config.temperature,
-                max_output_tokens=max_output_tokens if (config is None or config.max_output_tokens is None) else config.max_output_tokens,
+                system_instruction=effective_system_instruction,
+                temperature=effective_temperature,
+                max_output_tokens=effective_max_output_tokens,
                 response_format=response_format
             )
 
@@ -332,9 +358,9 @@ class ApiClientManager:
             return await self._call_openrouter(
                 model=model,
                 contents=contents,
-                system_instruction=system_instruction or (config.system_instruction if config else None),
-                temperature=temperature if (config is None or config.temperature is None) else config.temperature,
-                max_output_tokens=max_output_tokens if (config is None or config.max_output_tokens is None) else config.max_output_tokens,
+                system_instruction=effective_system_instruction,
+                temperature=effective_temperature,
+                max_output_tokens=effective_max_output_tokens,
                 response_format=response_format
             )
 
@@ -344,6 +370,8 @@ class ApiClientManager:
         
         while attempts < max_attempts:
             idx = self._get_active_gemini_client_index()
+            if idx is None:
+                break
             client = self.gemini_clients[idx]
             try:
                 logger.info(f"Calling Gemini API with model: {model} using key index {idx}")
@@ -398,9 +426,9 @@ class ApiClientManager:
             return await self._call_groq(
                 model=fallback_model,
                 contents=contents,
-                system_instruction=system_instruction,
-                temperature=temperature,
-                max_output_tokens=max_output_tokens,
+                system_instruction=effective_system_instruction,
+                temperature=effective_temperature,
+                max_output_tokens=effective_max_output_tokens,
                 response_format=response_format
             )
             
@@ -415,6 +443,8 @@ class ApiClientManager:
         
         while attempts < max_attempts:
             idx = self._get_active_gemini_client_index()
+            if idx is None:
+                break
             client = self.gemini_clients[idx]
             try:
                 logger.info(f"Calling Gemini Embedding API with model: {model} using key index {idx}")

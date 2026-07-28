@@ -22,6 +22,7 @@ public class SessionsController : ControllerBase
 {
     private readonly AppDbContext _db;
     private readonly AiServiceClient _ai;
+    private readonly ILogger<SessionsController> _logger;
     private static readonly TimeSpan FinalizationLeaseDuration = TimeSpan.FromMinutes(3);
     private static readonly TimeSpan EvaluationWaitTimeout = TimeSpan.FromSeconds(75);
     private static readonly TimeSpan EvaluationPollInterval = TimeSpan.FromSeconds(1);
@@ -60,10 +61,14 @@ public class SessionsController : ControllerBase
     private sealed record FinalizationLeaseClaim(Guid LeaseId, DateTime StartedAt, DateTime ExpiresAt);
     private sealed record FinalizationLeaseSnapshot(SessionFinalizationState Status, DateTime? ExpiresAt);
 
-    public SessionsController(AppDbContext db, AiServiceClient ai)
+    public SessionsController(
+        AppDbContext db,
+        AiServiceClient ai,
+        ILogger<SessionsController>? logger = null)
     {
         _db = db;
         _ai = ai;
+        _logger = logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<SessionsController>.Instance;
     }
 
     private Guid? GetCurrentUserId()
@@ -245,6 +250,7 @@ public class SessionsController : ControllerBase
                     ? null
                     : new
                     {
+                        s.EvaluationResult.Id,
                         s.EvaluationResult.CoverageScore,
                         s.EvaluationResult.MatchedCount,
                         s.EvaluationResult.PartialCount,
@@ -558,7 +564,10 @@ public class SessionsController : ControllerBase
         if (persona is null)
             return BadRequest("Stakeholder không thuộc kịch bản đã chọn.");
 
-        var selectedModel = string.IsNullOrWhiteSpace(dto.SelectedModel) ? "gemini-2.5-flash" : dto.SelectedModel;
+        if (!AiModelCatalog.IsSupported(dto.SelectedModel))
+            return BadRequest("Mô hình AI không được hỗ trợ.");
+
+        var selectedModel = AiModelCatalog.NormalizeOrDefault(dto.SelectedModel);
         var session = new SimulationSession
         {
             StudentId = userId.Value,
@@ -581,7 +590,7 @@ public class SessionsController : ControllerBase
     }
 
     [HttpPost("{sessionId}/messages")]
-    [EnableRateLimiting("ai_chat_limit")]
+    [EnableRateLimiting("ai_expensive")]
     public async Task<IActionResult> SendMessage(Guid sessionId, [FromBody] SendMessageDto dto)
     {
         var rawUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -600,8 +609,7 @@ public class SessionsController : ControllerBase
 
         if (sessionInit is null) return NotFound();
 
-        var isPrivileged = IsPrivilegedUser();
-        if (!isPrivileged && sessionInit.StudentId != parsedUserId) return Forbid();
+        if (sessionInit.StudentId != parsedUserId) return Forbid();
         if (!sessionInit.IsActive) return BadRequest("Phiên phỏng vấn này đã kết thúc.");
 
         // Lấy lịch sử chat hiện tại để truyền cho AI
@@ -611,6 +619,7 @@ public class SessionsController : ControllerBase
             .OrderBy(m => m.Timestamp)
             .Select(m => new ChatMessage(m.Sender.ToString(), m.Content, m.Timestamp))
             .ToListAsync();
+        var historyMessageCount = messagesHistory.Count;
 
         var personaStateInit = DeserializePersonaState(sessionInit.PersonaState, sessionInit.Persona);
 
@@ -673,6 +682,15 @@ public class SessionsController : ControllerBase
         await _db.Entry(session).Reference(s => s.Persona).LoadAsync();
         if (!session.IsActive) return BadRequest("Phiên phỏng vấn này đã kết thúc.");
 
+        var currentMessageCount = await _db.Messages.CountAsync(m => m.SessionId == sessionId);
+        if (currentMessageCount != historyMessageCount)
+        {
+            return Conflict(new
+            {
+                message = "The session changed while this message was being processed. Reload and retry."
+            });
+        }
+
         var studentMsg = new Message
         {
             SessionId = sessionId,
@@ -720,7 +738,7 @@ public class SessionsController : ControllerBase
     }
 
     [HttpPost("{sessionId}/end")]
-    [EnableRateLimiting("ai_chat_limit")]
+    [EnableRateLimiting("ai_expensive")]
     public async Task<IActionResult> EndSession(Guid sessionId)
     {
         var rawUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -733,8 +751,7 @@ public class SessionsController : ControllerBase
 
         if (session is null) return NotFound();
 
-        var isPrivileged = IsPrivilegedUser();
-        if (!isPrivileged && session.StudentId != parsedUserId) return Forbid();
+        if (session.StudentId != parsedUserId) return Forbid();
 
         // Order messages locally to ensure correct chronological history
         session.Messages = session.Messages.OrderBy(m => m.Timestamp).ToList();
@@ -774,16 +791,19 @@ public class SessionsController : ControllerBase
                 .Select(m => new ChatMessage(m.Sender.ToString(), m.Content, m.Timestamp))
                 .ToList();
 
-            var selectedModel = "gemini-2.5-flash";
+            var selectedModel = AiModelCatalog.DefaultModel;
             try
             {
                 var snapshot = JsonSerializer.Deserialize<PersonaStateSnapshot>(
                     session.PersonaState ?? "{}",
                     new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
                 if (snapshot?.SelectedModel is not null)
-                    selectedModel = snapshot.SelectedModel;
+                    selectedModel = AiModelCatalog.NormalizeOrDefault(snapshot.SelectedModel);
             }
-            catch { }
+            catch (JsonException exception)
+            {
+                _logger.LogWarning(exception, "Stored persona state could not be parsed; using the default model.");
+            }
 
             var extractResult = await _ai.ExtractRequirements(
                 new AiExtractRequest(sessionId.ToString(), history, selectedModel));
@@ -923,7 +943,6 @@ public class SessionsController : ControllerBase
     }
 
     [HttpGet("{sessionId}/messages")]
-    [EnableRateLimiting("ai_chat_limit")]
     public async Task<IActionResult> GetMessages(Guid sessionId)
     {
         var rawUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
@@ -1000,7 +1019,16 @@ public class SessionsController : ControllerBase
                         TurnCount = turn
                     };
                 }
-                catch { }
+                catch (JsonException)
+                {
+                    return new PersonaStateSnapshot
+                    {
+                        Mood = persona.InitialMood,
+                        Patience = persona.InitialPatience,
+                        RevealedRequirements = [],
+                        TurnCount = 0
+                    };
+                }
             }
         }
 

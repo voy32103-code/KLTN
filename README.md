@@ -100,7 +100,7 @@ Backend sẽ tự động kiểm tra cấu trúc cơ sở dữ liệu và tự v
    ```
 3. Tạo tệp `.env` cấu hình API URL trỏ về cổng của Backend:
    ```env
-   VITE_API_BASE_URL="http://localhost:5242/api"
+   VITE_API_BASE_URL="http://localhost:5242"
    ```
 4. Khởi chạy ở chế độ phát triển (dev):
    ```bash

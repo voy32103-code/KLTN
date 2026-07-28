@@ -1,193 +1,130 @@
 using System.ComponentModel.DataAnnotations;
-using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using ReqSimulator.API.Data;
-using ReqSimulator.API.Models;
 using ReqSimulator.API.Services;
 
 namespace ReqSimulator.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Roles = "Lecturer,Admin")] // Cho phép cả Giảng viên và Admin quản lý
+[Authorize(Roles = "Lecturer,Admin")]
+[EnableRateLimiting("admin_ingestion")]
 public class AdminScenariosController : ControllerBase
 {
-    private readonly AppDbContext _db;
     private readonly AiServiceClient _ai;
+    private readonly ScenarioVersionPublisher _publisher;
     private readonly ILogger<AdminScenariosController> _logger;
 
-    public record CrawlRequestDto([Required] string Url, string? SelectedModel);
-    public record VideoRequestDto([Required] string VideoPath, string? SelectedModel);
+    public sealed record CrawlRequestDto(
+        [Required, Url, StringLength(2048)] string Url,
+        [StringLength(100)] string? SelectedModel);
 
-    public AdminScenariosController(AppDbContext db, AiServiceClient ai, ILogger<AdminScenariosController> logger)
+    public sealed record VideoRequestDto(
+        [Required, StringLength(1024)] string VideoPath,
+        [StringLength(100)] string? SelectedModel);
+
+    public AdminScenariosController(
+        AiServiceClient ai,
+        ScenarioVersionPublisher publisher,
+        ILogger<AdminScenariosController> logger)
     {
-        _db = db;
         _ai = ai;
+        _publisher = publisher;
         _logger = logger;
     }
 
     [HttpPost("crawl")]
-    public async Task<IActionResult> CrawlScenario([FromBody] CrawlRequestDto dto)
+    public async Task<IActionResult> CrawlScenario(
+        [FromBody] CrawlRequestDto dto,
+        CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Admin bắt đầu cào kịch bản từ URL: {Url}", dto.Url);
-        
+        if (!IsAllowedModel(dto.SelectedModel))
+            return BadRequest(new { message = "Mô hình AI không được hỗ trợ." });
+
+        _logger.LogInformation(
+            "Bắt đầu tạo scenario từ host {Host}.",
+            GetSafeHost(dto.Url));
+
         var response = await _ai.CrawlScenario(dto.Url, dto.SelectedModel);
         if (!response.Success || response.Scenario is null)
-        {
-            return BadRequest(new { message = response.Message });
-        }
+            return BadRequest(new { message = "Không thể tạo scenario từ nguồn đã cung cấp." });
 
         try
         {
-            var scenario = await SyncScenarioToDb(response.Scenario);
+            var scenario = await _publisher.PublishAsync(response.Scenario, cancellationToken);
             return Ok(new
             {
-                message = "Cào dữ liệu và tạo kịch bản thành công.",
+                message = "Tạo và publish scenario thành công.",
                 scenarioId = scenario.Id,
-                title = scenario.Title,
+                scenario.ScenarioKey,
+                scenario.Version,
+                scenario.Title,
                 requirementsCount = scenario.HiddenRequirements.Count
             });
         }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning(ex, "Scenario được tạo không vượt qua validation.");
+            return BadRequest(new { message = "Scenario được tạo không hợp lệ." });
+        }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Lỗi khi đồng bộ kịch bản từ URL vào cơ sở dữ liệu. URL={Url}", dto.Url);
-            return BadRequest(new { message = "Lỗi đồng bộ kịch bản vào cơ sở dữ liệu: " + ex.Message });
+            _logger.LogError(ex, "Không thể publish scenario từ URL.");
+            return StatusCode(
+                StatusCodes.Status500InternalServerError,
+                new { message = "Không thể publish scenario." });
         }
     }
 
     [HttpPost("upload-video")]
-    public async Task<IActionResult> UploadVideoScenario([FromBody] VideoRequestDto dto)
+    public async Task<IActionResult> UploadVideoScenario(
+        [FromBody] VideoRequestDto dto,
+        CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Admin bắt đầu nạp kịch bản từ Video Path: {VideoPath}", dto.VideoPath);
+        if (!AiModelCatalog.IsGemini(dto.SelectedModel))
+            return BadRequest(new { message = "Mô hình AI không được hỗ trợ." });
+
+        _logger.LogInformation(
+            "Bắt đầu tạo scenario từ video {FileName}.",
+            Path.GetFileName(dto.VideoPath));
 
         var response = await _ai.UploadVideoScenario(dto.VideoPath, dto.SelectedModel);
         if (!response.Success || response.Scenario is null)
-        {
-            return BadRequest(new { message = response.Message });
-        }
+            return BadRequest(new { message = "Không thể tạo scenario từ video đã cung cấp." });
 
         try
         {
-            var scenario = await SyncScenarioToDb(response.Scenario);
+            var scenario = await _publisher.PublishAsync(response.Scenario, cancellationToken);
             return Ok(new
             {
-                message = "Xử lý video và tạo kịch bản thành công.",
+                message = "Tạo và publish scenario thành công.",
                 scenarioId = scenario.Id,
-                title = scenario.Title,
+                scenario.ScenarioKey,
+                scenario.Version,
+                scenario.Title,
                 requirementsCount = scenario.HiddenRequirements.Count
             });
         }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning(ex, "Scenario được tạo từ video không vượt qua validation.");
+            return BadRequest(new { message = "Scenario được tạo không hợp lệ." });
+        }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Lỗi khi đồng bộ kịch bản từ video vào cơ sở dữ liệu. VideoPath={VideoPath}", dto.VideoPath);
-            return BadRequest(new { message = "Lỗi đồng bộ kịch bản vào cơ sở dữ liệu: " + ex.Message });
+            _logger.LogError(ex, "Không thể publish scenario từ video.");
+            return StatusCode(
+                StatusCodes.Status500InternalServerError,
+                new { message = "Không thể publish scenario." });
         }
     }
 
-    private async Task<Scenario> SyncScenarioToDb(ScenarioConfigJson config)
-    {
-        // 1. Kiểm tra Scenario đã tồn tại chưa
-        var targetTitleLower = (config.ScenarioTitle ?? "").ToLower();
-        var scenario = await _db.Scenarios
-            .Include(s => s.Personas)
-            .Include(s => s.HiddenRequirements)
-            .FirstOrDefaultAsync(s => s.Title.ToLower() == targetTitleLower);
+    private static bool IsAllowedModel(string? model) =>
+        AiModelCatalog.IsSupported(model);
 
-        if (scenario is null)
-        {
-            scenario = new Scenario
-            {
-                Id = Guid.NewGuid(),
-                CreatedAt = DateTime.UtcNow
-            };
-            _db.Scenarios.Add(scenario);
-        }
-
-        scenario.Title = config.ScenarioTitle;
-        scenario.Description = string.IsNullOrEmpty(config.Context) 
-            ? "General scenario context." 
-            : (config.Context.Length > 500 ? config.Context.Substring(0, 500) : config.Context);
-        scenario.Domain = "General"; // Có thể mở rộng để AI tự động phân loại
-        scenario.Difficulty = PersonaDifficulty.Medium;
-        scenario.Version = 1;
-        scenario.IsActive = true;
-        scenario.SerializedConfig = JsonSerializer.Serialize(config);
-
-        // 2. Tạo hoặc Cập nhật default Persona
-        var persona = scenario.Personas.FirstOrDefault();
-        if (persona is null)
-        {
-            persona = new Persona
-            {
-                Id = Guid.NewGuid(),
-                ScenarioId = scenario.Id,
-                CreatedAt = DateTime.UtcNow
-            };
-            _db.Personas.Add(persona);
-        }
-
-        persona.Name = "Khách Hàng (Stakeholder)";
-        persona.RoleTitle = "Đại Diện Nghiệp Vụ";
-        persona.PersonalityTraits = "{\"traits\": [\"busy\", \"detail_oriented\"], \"jargon_level\": \"medium\"}";
-        persona.CommunicationStyle = "professional";
-        persona.KnowledgeLevel = "high";
-        persona.Difficulty = PersonaDifficulty.Medium;
-        persona.InitialMood = "neutral";
-        persona.InitialPatience = 1.00m;
-
-        // 3. Cập nhật danh sách Hidden Requirements
-        // Để tránh trùng lặp hoặc mâu thuẫn, xóa requirements cũ đi nạp lại hoặc cập nhật
-        if (scenario.HiddenRequirements.Count > 0)
-        {
-            _db.HiddenRequirements.RemoveRange(scenario.HiddenRequirements);
-        }
-
-        foreach (var rule in config.Requirements)
-        {
-            var req = new HiddenRequirement
-            {
-                Id = Guid.NewGuid(),
-                ScenarioId = scenario.Id,
-                RequirementText = rule.Text ?? "",
-                Category = MapCategory(rule.Gate, rule.Text ?? ""),
-                RevealDifficulty = MapDifficulty(rule.RevealDifficulty),
-                RevealCondition = rule.RevealCondition,
-                GateOrder = rule.Gate,
-                CreatedAt = DateTime.UtcNow
-            };
-            _db.HiddenRequirements.Add(req);
-        }
-
-        await _db.SaveChangesAsync();
-        return scenario;
-    }
-
-    private static RequirementCategory MapCategory(int gate, string text)
-    {
-        if (gate == 4) return RequirementCategory.NonFunctional;
-        if (gate == 3) return RequirementCategory.BusinessRule;
-        
-        if (string.IsNullOrEmpty(text)) return RequirementCategory.Functional;
-        
-        string lower = text.ToLower();
-        if (gate == 2 && (lower.Contains("chặn") || lower.Contains("bảo mật") || lower.Contains("phân quyền") || lower.Contains("quyền")))
-        {
-            return RequirementCategory.Constraint;
-        }
-        
-        return RequirementCategory.Functional;
-    }
-
-    private static PersonaDifficulty MapDifficulty(string diff)
-    {
-        if (string.IsNullOrEmpty(diff)) return PersonaDifficulty.Medium;
-        return diff.ToLower() switch
-        {
-            "easy" => PersonaDifficulty.Easy,
-            "hard" => PersonaDifficulty.Hard,
-            _ => PersonaDifficulty.Medium
-        };
-    }
+    private static string GetSafeHost(string rawUrl) =>
+        Uri.TryCreate(rawUrl, UriKind.Absolute, out var uri)
+            ? uri.IdnHost
+            : "invalid-host";
 }

@@ -32,6 +32,7 @@ public class User
 public class Scenario
 {
     [Key] public Guid Id { get; set; }
+    [MaxLength(100)] public string ScenarioKey { get; set; } = "";
     [MaxLength(200)] public string Title { get; set; } = "";
     public string Description { get; set; } = "";
     [MaxLength(100)] public string? Domain { get; set; }
@@ -39,6 +40,9 @@ public class Scenario
     public int Version { get; set; } = 1;
     public bool IsActive { get; set; } = true;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime PublishedAt { get; set; } = DateTime.UtcNow;
+    public DateTime? SupersededAt { get; set; }
+    [MaxLength(64)] public string? ConfigHash { get; set; }
     public string? SerializedConfig { get; set; }
 
     public ICollection<Persona> Personas { get; set; } = [];

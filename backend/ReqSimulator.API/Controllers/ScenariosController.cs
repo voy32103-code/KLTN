@@ -34,17 +34,19 @@ public class ScenariosController : ControllerBase
     [HttpGet("{id}")]
     public async Task<IActionResult> GetById(Guid id)
     {
+        var role = User.FindFirst(ClaimTypes.Role)?.Value;
+        var canViewInactive = role is "Lecturer" or "Admin";
+
         var scenario = await _db.Scenarios
             .Include(s => s.Personas)
-            .FirstOrDefaultAsync(s => s.Id == id);
+            .FirstOrDefaultAsync(s => s.Id == id && (s.IsActive || canViewInactive));
 
         if (scenario == null) return NotFound();
 
-        var role = User.FindFirst(ClaimTypes.Role)?.Value;
-
         return Ok(new
         {
-            scenario.Id, scenario.Title, scenario.Description,
+            scenario.Id, scenario.ScenarioKey, scenario.Version,
+            scenario.Title, scenario.Description,
             scenario.Domain, scenario.Difficulty,
             PersonaCount = scenario.Personas.Count,
             RequirementCount = await _db.HiddenRequirements.CountAsync(r => r.ScenarioId == id),

@@ -6,31 +6,35 @@ namespace ReqSimulator.API.Data;
 public static class SeedData
 {
     private const string ScenarioTitle = "University Course Registration System";
+    private const string ScenarioKey = "university_course_registration";
 
     public static async Task SeedScenarioV1Async(this IServiceProvider services, ILogger logger)
     {
         using var scope = services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
+        var scenarioId = Guid.Parse("11111111-1111-4111-8111-111111111111");
         var scenario = await db.Scenarios
-            .FirstOrDefaultAsync(s => s.Title == ScenarioTitle);
+            .FirstOrDefaultAsync(s => s.Id == scenarioId);
 
         if (scenario is null)
         {
             scenario = new Scenario
             {
-                Id = Guid.Parse("11111111-1111-4111-8111-111111111111"),
+                Id = scenarioId,
                 CreatedAt = DateTime.UtcNow
             };
             db.Scenarios.Add(scenario);
         }
 
+        scenario.ScenarioKey = ScenarioKey;
         scenario.Title = ScenarioTitle;
         scenario.Description = "HUFLIT wants to modernize its course registration process through a new online registration system.";
         scenario.Domain = "Education";
         scenario.Difficulty = PersonaDifficulty.Medium;
         scenario.Version = 1;
         scenario.IsActive = true;
+        scenario.PublishedAt = scenario.CreatedAt;
 
         await SeedPersona(db, scenario.Id);
         await SeedHiddenRequirements(db, scenario.Id);
@@ -105,6 +109,7 @@ public static class SeedData
 
     private sealed record ScenarioSeed(
         Guid Id,
+        string ScenarioKey,
         string Title,
         string Description,
         string Domain,
@@ -129,7 +134,7 @@ public static class SeedData
         IReadOnlyList<HiddenRequirementSeed> requirements)
     {
         var scenario = await db.Scenarios
-            .FirstOrDefaultAsync(s => s.Title == scenarioSeed.Title);
+            .FirstOrDefaultAsync(s => s.Id == scenarioSeed.Id);
 
         if (scenario is null)
         {
@@ -141,12 +146,14 @@ public static class SeedData
             db.Scenarios.Add(scenario);
         }
 
+        scenario.ScenarioKey = scenarioSeed.ScenarioKey;
         scenario.Title = scenarioSeed.Title;
         scenario.Description = scenarioSeed.Description;
         scenario.Domain = scenarioSeed.Domain;
         scenario.Difficulty = scenarioSeed.Difficulty;
         scenario.Version = scenarioSeed.Version;
         scenario.IsActive = true;
+        scenario.PublishedAt = scenario.CreatedAt;
 
         var persona = await db.Personas
             .FirstOrDefaultAsync(p => p.ScenarioId == scenario.Id && p.Name == personaSeed.Name);
@@ -271,6 +278,7 @@ public static class SeedData
 
     private static readonly ScenarioSeed HospitalScenario = new(
         Guid.Parse("44444444-4444-4444-8444-444444444444"),
+        "hospital_appointment",
         "Hospital Appointment System",
         "CityCare Clinic wants an online appointment booking system to reduce front-desk workload and help patients manage appointments.",
         "Healthcare",
@@ -306,6 +314,7 @@ public static class SeedData
 
     private static readonly ScenarioSeed InventoryScenario = new(
         Guid.Parse("77777777-7777-4777-8777-777777777777"),
+        "small_business_inventory",
         "Small Business Inventory Management",
         "A small retail shop wants to replace manual stock notes and spreadsheets with a simple inventory management system.",
         "Retail",
