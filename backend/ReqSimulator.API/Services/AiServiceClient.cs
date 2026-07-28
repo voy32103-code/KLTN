@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace ReqSimulator.API.Services;
 
@@ -263,25 +264,25 @@ public record AiEvaluateResponse(
 
 // Admin DTOs
 public record ScenarioRequirementRuleJson(
-    string Id,
-    string Text,
-    int Gate,
-    List<string> Keywords,
-    List<string> QuestionTypes,
-    string RevealCondition,
-    string RevealDifficulty,
-    List<string>? Requires
+    [property: JsonPropertyName("id")] string Id,
+    [property: JsonPropertyName("text")] string Text,
+    [property: JsonPropertyName("gate")] int Gate,
+    [property: JsonPropertyName("keywords")] List<string> Keywords,
+    [property: JsonPropertyName("question_types")] List<string> QuestionTypes,
+    [property: JsonPropertyName("reveal_condition")] string RevealCondition,
+    [property: JsonPropertyName("reveal_difficulty")] string RevealDifficulty,
+    [property: JsonPropertyName("requires")] List<string>? Requires
 );
 
 public record ScenarioConfigJson(
-    string ScenarioKey,
-    string ScenarioTitle,
-    string Context,
-    List<string> GeneralKeywords,
-    Dictionary<string, List<string>> GateKeywordGroups,
-    Dictionary<string, List<int>> QuestionTypeGateMap,
-    int MaxNewRevealsPerTurn,
-    List<ScenarioRequirementRuleJson> Requirements
+    [property: JsonPropertyName("scenario_key")] string ScenarioKey,
+    [property: JsonPropertyName("scenario_title")] string ScenarioTitle,
+    [property: JsonPropertyName("context")] string Context,
+    [property: JsonPropertyName("general_keywords")] List<string> GeneralKeywords,
+    [property: JsonPropertyName("gate_keyword_groups")] Dictionary<string, List<string>> GateKeywordGroups,
+    [property: JsonPropertyName("question_type_gate_map")] Dictionary<string, List<int>> QuestionTypeGateMap,
+    [property: JsonPropertyName("max_new_reveals_per_turn")] int MaxNewRevealsPerTurn,
+    [property: JsonPropertyName("requirements")] List<ScenarioRequirementRuleJson> Requirements
 );
 
 public record AiAdminScenarioResponse(
