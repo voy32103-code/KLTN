@@ -2,8 +2,12 @@ import re
 import os
 import logging
 import json
+import asyncio
+import ipaddress
+import socket
 from pathlib import Path
 from typing import Dict, List, Optional
+from urllib.parse import urljoin, urlsplit
 from pydantic import BaseModel, Field
 import httpx
 from google.genai import types
@@ -28,7 +32,12 @@ class ScenarioRequirementRuleSchema(BaseModel):
     requires: Optional[List[str]] = Field(default=[], description="Danh sách các mã yêu cầu (trường id, ví dụ: ['R1']) tiên quyết cần mở khóa trước yêu cầu này (nếu có)")
 
 class ScenarioConfigSchema(BaseModel):
-    scenario_key: str = Field(description="Mã kịch bản (snake_case, ví dụ: hospital_booking, inventory_control)")
+    scenario_key: str = Field(
+        min_length=1,
+        max_length=100,
+        pattern=r"^[a-z0-9]+(?:_[a-z0-9]+)*$",
+        description="Mã kịch bản (snake_case, ví dụ: hospital_booking, inventory_control)",
+    )
     scenario_title: str = Field(description="Tên kịch bản viết bằng tiếng Anh (ví dụ: Hospital Appointment System)")
     context: str = Field(description="Bối cảnh nghiệp vụ chi tiết của kịch bản dùng để hướng dẫn Stakeholder ảo nhập vai (viết bằng tiếng Việt hoặc tiếng Anh)")
     general_keywords: List[str] = Field(description="Danh sách các từ khóa chung về kịch bản (ví dụ: hệ thống, mục tiêu, quy trình...)")
@@ -47,7 +56,12 @@ class QuestionTypeGateMapItem(BaseModel):
     gates: List[int] = Field(description="Danh sách các cổng liên kết với loại câu hỏi này")
 
 class ScenarioConfigGeminiSchema(BaseModel):
-    scenario_key: str = Field(description="Mã kịch bản (snake_case)")
+    scenario_key: str = Field(
+        min_length=1,
+        max_length=100,
+        pattern=r"^[a-z0-9]+(?:_[a-z0-9]+)*$",
+        description="Mã kịch bản (snake_case)",
+    )
     scenario_title: str = Field(description="Tên kịch bản viết bằng tiếng Anh")
     context: str = Field(description="Bối cảnh nghiệp vụ chi tiết")
     general_keywords: List[str] = Field(description="Từ khóa chung")
@@ -181,21 +195,75 @@ def clean_html(html: str) -> str:
     text = re.sub(r"\s+", " ", text).strip()
     return text
 
+
+def _is_public_address(address: str) -> bool:
+    return bool(ipaddress.ip_address(address).is_global)
+
+
+async def validate_public_http_url(url: str) -> None:
+    parsed = urlsplit(url)
+    if parsed.scheme not in {"http", "https"} or not parsed.hostname:
+        raise ValueError("Only absolute HTTP(S) URLs are allowed.")
+
+    try:
+        literal_ip = ipaddress.ip_address(parsed.hostname)
+    except ValueError:
+        literal_ip = None
+
+    if literal_ip is not None:
+        if not literal_ip.is_global:
+            raise ValueError("Private or local network URLs are not allowed.")
+        return
+
+    try:
+        address_info = await asyncio.to_thread(
+            socket.getaddrinfo,
+            parsed.hostname,
+            parsed.port or (443 if parsed.scheme == "https" else 80),
+            type=socket.SOCK_STREAM,
+        )
+    except socket.gaierror as exception:
+        raise ValueError("URL host could not be resolved.") from exception
+
+    addresses = {item[4][0] for item in address_info}
+    if not addresses or any(not _is_public_address(address) for address in addresses):
+        raise ValueError("Private or local network URLs are not allowed.")
+
+
 async def fetch_url_content(url: str) -> str:
-    """Tải nội dung từ URL, hỗ trợ cả HTML và raw text/markdown."""
+    """Download bounded public HTTP(S) content without following unsafe redirects."""
     headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        "User-Agent": "ReqSimulator/1.0"
     }
-    async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
-        response = await client.get(url, headers=headers)
-        if response.status_code != 200:
-            raise RuntimeError(f"Tải URL thất bại với mã lỗi HTTP {response.status_code}")
-        
-        # Nếu là raw markdown hoặc text, giữ nguyên. Ngược lại, làm sạch HTML
-        content_type = response.headers.get("content-type", "").lower()
-        if "html" in content_type:
-            return clean_html(response.text)
-        return response.text
+    current_url = url
+    max_bytes = 2 * 1024 * 1024
+
+    async with httpx.AsyncClient(timeout=30.0, follow_redirects=False) as client:
+        for _ in range(6):
+            await validate_public_http_url(current_url)
+            async with client.stream("GET", current_url, headers=headers) as response:
+                if response.is_redirect:
+                    location = response.headers.get("location")
+                    if not location:
+                        raise RuntimeError("Redirect response did not include a location.")
+                    current_url = urljoin(current_url, location)
+                    continue
+                if response.status_code != 200:
+                    raise RuntimeError(
+                        f"URL download failed with HTTP status {response.status_code}"
+                    )
+
+                body = bytearray()
+                async for chunk in response.aiter_bytes():
+                    body.extend(chunk)
+                    if len(body) > max_bytes:
+                        raise RuntimeError("URL content exceeds the 2 MiB limit.")
+
+                text = bytes(body).decode(response.encoding or "utf-8", errors="replace")
+                content_type = response.headers.get("content-type", "").lower()
+                return clean_html(text) if "html" in content_type else text
+
+    raise RuntimeError("URL redirected too many times.")
 
 async def generate_scenario_from_ba_text(raw_text: str, selected_model: Optional[str] = None) -> ScenarioConfigSchema:
     """Gọi Gemini Structured Outputs để phân tích văn bản đặc tả BA thô thành cấu hình kịch bản."""
@@ -254,13 +322,19 @@ Yêu cầu chi tiết:
 def save_scenario_config_file(config: ScenarioConfigSchema) -> Path:
     """Lưu kịch bản mới sinh ra thành file JSON trong thư mục scenarios."""
     SCENARIO_DIR.mkdir(parents=True, exist_ok=True)
-    file_path = SCENARIO_DIR / f"{config.scenario_key}.json"
+    scenario_dir = SCENARIO_DIR.resolve()
+    file_path = (scenario_dir / f"{config.scenario_key}.json").resolve()
+    if file_path.parent != scenario_dir:
+        raise ValueError("Scenario key resolves outside the scenario directory.")
     
     # Chuyển đổi Pydantic model sang dict để dump JSON có thụt lề đẹp
     config_dict = config.model_dump()
     
     with open(file_path, "w", encoding="utf-8") as f:
         json.dump(config_dict, f, ensure_ascii=False, indent=2)
+
+    from app.services.scenario_config_service import load_scenario_configs
+    load_scenario_configs.cache_clear()
         
-    logger.info(f"Đã lưu kịch bản mới thành công tại {file_path}")
+    logger.info("Saved scenario configuration %s.", file_path.name)
     return file_path

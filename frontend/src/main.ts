@@ -1,6 +1,7 @@
 import './style.css'
 import { createApiClient } from './api'
 import { API_BASE_URL, EXPIRED_SESSION_NOTICE, TOKEN_KEY } from './constants'
+import { buildLecturerOverridePayload } from './contracts'
 import type {
   AdminOverview,
   AdminUserItem,
@@ -527,11 +528,11 @@ async function submitLecturerOverride() {
   if (!form) return
 
   const matchSelects = form.querySelectorAll<HTMLSelectElement>('.override-type-select')
-  const overrides: { matchId: string; overriddenType: string }[] = []
+  const overrides: { matchId: string; matchType: string }[] = []
   matchSelects.forEach((select) => {
     const matchId = select.dataset.matchId
     if (matchId && matchId !== '00000000-0000-0000-0000-000000000000') {
-      overrides.push({ matchId, overriddenType: select.value })
+      overrides.push({ matchId, matchType: select.value })
     }
   })
 
@@ -541,7 +542,7 @@ async function submitLecturerOverride() {
   await withBusy(async () => {
     const updatedEval = await api.request<EvaluationResult>(`/api/Sessions/review/${state.reviewDetail?.session.id}/override`, {
       method: 'PUT',
-      body: { overrides, comment },
+      body: buildLecturerOverridePayload(overrides, comment),
     })
 
     if (state.reviewDetail) {

@@ -17,6 +17,11 @@ frontend/dist/
 # Environment
 .env
 *.env.local
+**/.env.*.local
+**/*.secrets.json
+**/*credentials*.json
+**/*.private.pem
+**/*.private.key
 **/tools/logs/
 backend/ReqSimulator.API/.keys/
 .keys/

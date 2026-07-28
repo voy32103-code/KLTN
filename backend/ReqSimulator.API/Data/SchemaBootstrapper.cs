@@ -20,11 +20,39 @@ public static class SchemaBootstrapper
 
         ALTER TABLE scenarios
         ADD COLUMN IF NOT EXISTS serialized_config text NULL;
+
+        ALTER TABLE scenarios
+        ADD COLUMN IF NOT EXISTS scenario_key character varying(100) NULL;
+
+        ALTER TABLE scenarios
+        ADD COLUMN IF NOT EXISTS config_hash character varying(64) NULL;
+
+        ALTER TABLE scenarios
+        ADD COLUMN IF NOT EXISTS published_at timestamp with time zone NOT NULL DEFAULT NOW();
+
+        ALTER TABLE scenarios
+        ADD COLUMN IF NOT EXISTS superseded_at timestamp with time zone NULL;
+
+        UPDATE scenarios
+        SET scenario_key = 'legacy_' || replace(id::text, '-', '')
+        WHERE scenario_key IS NULL OR btrim(scenario_key) = '';
+
+        ALTER TABLE scenarios
+        ALTER COLUMN scenario_key SET NOT NULL;
         """;
 
     private const string CreateIndexSql = """
         CREATE INDEX IF NOT EXISTS idx_sessions_finalization_state
             ON simulation_sessions (finalization_status, finalization_expires_at);
+
+        CREATE UNIQUE INDEX IF NOT EXISTS uq_scenarios_key_version
+            ON scenarios (scenario_key, version);
+
+        CREATE INDEX IF NOT EXISTS idx_scenarios_key_active
+            ON scenarios (scenario_key, is_active);
+
+        CREATE UNIQUE INDEX IF NOT EXISTS uq_scenarios_one_active
+            ON scenarios (scenario_key) WHERE is_active;
         """;
 
     private const string UpdateSessionsSql = """
@@ -77,33 +105,25 @@ public static class SchemaBootstrapper
         """;
 
     private const string CleanAndEnforceUniqueSql = """
-        -- 1. Clean up duplicate requirement_matches associated with duplicate evaluation results
-        DELETE FROM requirement_matches
-        WHERE evaluation_id IN (
-            SELECT id FROM (
-                SELECT id, ROW_NUMBER() OVER (PARTITION BY session_id ORDER BY evaluated_at ASC) as rn
-                FROM evaluation_results
-            ) t
-            WHERE t.rn > 1
-        );
-
-        -- 2. Clean up duplicate evaluation results, keeping only the earliest one per session
-        DELETE FROM evaluation_results
-        WHERE id IN (
-            SELECT id FROM (
-                SELECT id, ROW_NUMBER() OVER (PARTITION BY session_id ORDER BY evaluated_at ASC) as rn
-                FROM evaluation_results
-            ) t
-            WHERE t.rn > 1
-        );
-
-        -- 3. Create UNIQUE constraint on session_id column in evaluation_results table
         DO $$
         BEGIN
-            IF NOT EXISTS (
-                SELECT 1 FROM pg_constraint WHERE conname = 'uq_evaluation_results_session_id'
+            IF EXISTS (
+                SELECT 1
+                FROM evaluation_results
+                GROUP BY session_id
+                HAVING COUNT(*) > 1
             ) THEN
-                ALTER TABLE evaluation_results ADD CONSTRAINT uq_evaluation_results_session_id UNIQUE (session_id);
+                RAISE EXCEPTION
+                    'Duplicate evaluation_results rows exist. Resolve them explicitly before enforcing uniqueness.';
+            END IF;
+
+            IF NOT EXISTS (
+                SELECT 1
+                FROM pg_constraint
+                WHERE conname = 'uq_evaluation_results_session_id'
+            ) THEN
+                ALTER TABLE evaluation_results
+                ADD CONSTRAINT uq_evaluation_results_session_id UNIQUE (session_id);
             END IF;
         END $$;
         """;
@@ -150,49 +170,9 @@ public static class SchemaBootstrapper
         await db.Database.ExecuteSqlRawAsync(CleanAndEnforceUniqueSql);
         await db.Database.ExecuteSqlRawAsync(LecturerOverrideSchemaSql);
 
-        await SeedDefaultUsersAsync(db, logger);
+        var configuration = scope.ServiceProvider.GetRequiredService<IConfiguration>();
+        await BootstrapUserSeeder.SeedAsync(db, configuration, logger);
 
-        logger.LogInformation("Ensured operational schema, unique constraint, lecturer override tables, and default Lecturer/Admin accounts.");
-    }
-
-    private static async Task SeedDefaultUsersAsync(AppDbContext db, ILogger logger)
-    {
-        var defaultAccounts = new[]
-        {
-            new { Email = "lecturer@reqsim.edu.vn", Name = "Giảng Viên (Lecturer)", Password = "Password123!", Role = UserRole.Lecturer },
-            new { Email = "lecturer@example.com", Name = "Giảng Viên Demo", Password = "Password123!", Role = UserRole.Lecturer },
-            new { Email = "admin@reqsim.edu.vn", Name = "Quản Trị Viên (Admin)", Password = "Password123!", Role = UserRole.Admin },
-            new { Email = "admin@example.com", Name = "Quản Trị Viên Demo", Password = "Password123!", Role = UserRole.Admin }
-        };
-
-        bool hasChanges = false;
-        foreach (var acc in defaultAccounts)
-        {
-            var user = await db.Users.FirstOrDefaultAsync(u => u.Email == acc.Email);
-            if (user == null)
-            {
-                db.Users.Add(new User
-                {
-                    Name = acc.Name,
-                    Email = acc.Email,
-                    PasswordHash = BCrypt.Net.BCrypt.HashPassword(acc.Password),
-                    Role = acc.Role,
-                    CreatedAt = DateTime.UtcNow
-                });
-                hasChanges = true;
-                logger.LogInformation("Seeded default {Role} account: {Email}", acc.Role, acc.Email);
-            }
-            else if (user.Role != acc.Role)
-            {
-                user.Role = acc.Role;
-                hasChanges = true;
-                logger.LogInformation("Updated role of {Email} to {Role}", acc.Email, acc.Role);
-            }
-        }
-
-        if (hasChanges)
-        {
-            await db.SaveChangesAsync();
-        }
+        logger.LogInformation("Ensured operational schema, scenario version indexes, and lecturer override tables.");
     }
 }

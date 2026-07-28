@@ -1,4 +1,5 @@
 using System.IdentityModel.Tokens.Jwt;
+using System.Net.Mail;
 using System.Security.Claims;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
@@ -15,6 +16,9 @@ namespace ReqSimulator.API.Services;
 /// </summary>
 public class AuthService
 {
+    private static readonly string DummyPasswordHash =
+        BCrypt.Net.BCrypt.HashPassword(Guid.NewGuid().ToString("N"));
+
     private readonly AppDbContext _db;
     private readonly IConfiguration _config;
 
@@ -26,16 +30,22 @@ public class AuthService
 
     public async Task<User> Register(string name, string email, string password, UserRole role = UserRole.Student)
     {
+        var normalizedName = name?.Trim() ?? "";
         var normalizedEmail = email?.Trim().ToLowerInvariant() ?? "";
-        if (string.IsNullOrWhiteSpace(normalizedEmail))
-            throw new InvalidOperationException("Email không được để trống.");
+        if (normalizedName.Length is < 2 or > 100)
+            throw new InvalidOperationException("Tên không hợp lệ.");
+        if (normalizedEmail.Length > 255 || !MailAddress.TryCreate(normalizedEmail, out var parsedEmail) ||
+            !string.Equals(parsedEmail.Address, normalizedEmail, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("Email không hợp lệ.");
+        if (password is null || password.Length is < 12 or > 128)
+            throw new InvalidOperationException("Mật khẩu không hợp lệ.");
 
         if (await _db.Users.AnyAsync(u => u.Email.ToLower() == normalizedEmail))
             throw new InvalidOperationException("Email đã tồn tại.");
 
         var user = new User
         {
-            Name = name?.Trim() ?? "",
+            Name = normalizedName,
             Email = normalizedEmail,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(password),
             Role = role
@@ -48,21 +58,18 @@ public class AuthService
     public async Task<string> Login(string email, string password)
     {
         var normalizedEmail = email?.Trim().ToLowerInvariant() ?? "";
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.Email.ToLower() == normalizedEmail)
-            ?? throw new UnauthorizedAccessException("Thông tin đăng nhập không chính xác.");
-
-        bool isValidPassword = false;
-
-        // 1. Kiểm tra bằng BCrypt chuẩn
-        if (BCrypt.Net.BCrypt.Verify(password, user.PasswordHash))
+        var user = await _db.Users.FirstOrDefaultAsync(u => u.Email.ToLower() == normalizedEmail);
+        if (user is null)
         {
-            isValidPassword = true;
+            // Perform a BCrypt verification even for unknown accounts to reduce
+            // observable timing differences that can enable account enumeration.
+            BCrypt.Net.BCrypt.Verify(password ?? "", DummyPasswordHash);
+            throw new UnauthorizedAccessException("Thông tin đăng nhập không chính xác.");
         }
-        // 2. Tương thích ngược: Nếu hash cũ dùng SHA-256 (chuỗi hex 64 ký tự)
-        else if (user.PasswordHash.Length == 64 && IsSha256Match(password, user.PasswordHash))
+
+        var isValidPassword = VerifyPassword(password, user.PasswordHash, out var needsUpgrade);
+        if (isValidPassword && needsUpgrade)
         {
-            isValidPassword = true;
-            // Tự động nâng cấp mật khẩu sang BCrypt
             user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(password);
             await _db.SaveChangesAsync();
         }
@@ -73,6 +80,21 @@ public class AuthService
         return GenerateToken(user);
     }
 
+    private static bool VerifyPassword(string password, string storedHash, out bool needsUpgrade)
+    {
+        needsUpgrade = storedHash.Length == 64 && storedHash.All(Uri.IsHexDigit);
+        if (needsUpgrade)
+            return IsSha256Match(password, storedHash);
+
+        try
+        {
+            return BCrypt.Net.BCrypt.Verify(password, storedHash);
+        }
+        catch (BCrypt.Net.SaltParseException)
+        {
+            return false;
+        }
+    }
     private static bool IsSha256Match(string password, string storedHash)
     {
         using var sha256 = System.Security.Cryptography.SHA256.Create();

@@ -90,6 +90,21 @@ public class AppDbContext : DbContext
             .HasIndex(s => new { s.FinalizationStatus, s.FinalizationExpiresAt })
             .HasDatabaseName("idx_sessions_finalization_state");
 
+        modelBuilder.Entity<Scenario>()
+            .HasIndex(s => new { s.ScenarioKey, s.Version })
+            .IsUnique()
+            .HasDatabaseName("uq_scenarios_key_version");
+
+        modelBuilder.Entity<Scenario>()
+            .HasIndex(s => new { s.ScenarioKey, s.IsActive })
+            .HasDatabaseName("idx_scenarios_key_active");
+
+        modelBuilder.Entity<Scenario>()
+            .HasIndex(s => s.ScenarioKey)
+            .IsUnique()
+            .HasFilter("is_active")
+            .HasDatabaseName("uq_scenarios_one_active");
+
         modelBuilder.Entity<EvaluationResult>()
             .HasIndex(e => e.SessionId)
             .IsUnique();

@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http;
+using System.Net.Http.Json;
 using System.Net.Http.Headers;
 using System.Net.Sockets;
 using System.Security.Claims;
@@ -113,9 +114,11 @@ internal static class Program
             .AddEnvironmentVariables()
             .Build());
         services.AddScoped<AuthService>();
+        services.AddScoped<ScenarioVersionPublisher>();
 
         var connectionString = NormalizePostgresConnectionString(
             GetRequiredConfig("ConnectionStrings:DefaultConnection"));
+        ValidateIntegrationDatabase(connectionString);
         var dataSourceBuilder = new NpgsqlDataSourceBuilder(connectionString);
         dataSourceBuilder.MapEnum<UserRole>("user_role");
         dataSourceBuilder.MapEnum<SenderType>("sender_type");
@@ -137,6 +140,29 @@ internal static class Program
             }));
 
         return services.BuildServiceProvider();
+    }
+
+    private static void ValidateIntegrationDatabase(string connectionString)
+    {
+        var builder = new NpgsqlConnectionStringBuilder(connectionString);
+        var explicitApproval = string.Equals(
+            Environment.GetEnvironmentVariable("ALLOW_EXTERNAL_INTEGRATION_DB"),
+            "true",
+            StringComparison.OrdinalIgnoreCase);
+
+        var databaseName = builder.Database ?? "";
+        var looksLikeTestDatabase =
+            databaseName.Contains("test", StringComparison.OrdinalIgnoreCase) ||
+            databaseName.Contains("integration", StringComparison.OrdinalIgnoreCase);
+
+        if (!looksLikeTestDatabase && !explicitApproval)
+        {
+            throw new InvalidOperationException(
+                "Integration tests refuse to modify a database whose name does not contain " +
+                "'test' or 'integration'. Configure an isolated test database, or set " +
+                "ALLOW_EXTERNAL_INTEGRATION_DB=true only after explicitly approving writes " +
+                $"to database '{builder.Database}' on host '{builder.Host}'.");
+        }
     }
 
     private static string GetRequiredConfig(string key)
@@ -329,6 +355,7 @@ internal static class Program
     {
         private readonly List<Guid> _createdUserIds = [];
         private readonly List<Guid> _createdSessionIds = [];
+        private readonly List<Guid> _createdScenarioIds = [];
         private readonly List<ScenarioExecutionResult> _scenarioResults = [];
         private FakeAiService? _sharedHttpAiService;
         private FakeAiHttpServer? _sharedHttpAiServer;
@@ -350,7 +377,9 @@ internal static class Program
                 ("http_auth_header_middleware_rejects_missing_invalid_and_forbidden_tokens", TestHttpAuthHeaderMiddlewareAsync),
                 ("http_lecturer_and_admin_can_review_hidden_requirements_and_session_history", TestHttpLecturerAdminReviewAccessAsync),
                 ("login_with_wrong_password_returns_unauthorized", TestLoginWrongPasswordAsync),
-                ("register_duplicate_email_returns_conflict", TestRegisterDuplicateEmailAsync),
+                ("register_duplicate_email_returns_generic_bad_request", TestRegisterDuplicateEmailGenericAsync),
+                ("scenario_publish_creates_immutable_versions", TestScenarioVersionPublishingAsync),
+                ("auth_sixth_request_is_rate_limited", TestAuthRateLimitingAsync),
                 ("send_message_without_user_id_returns_unauthorized", TestUnauthorizedSendMessageAsync),
                 ("send_message_as_other_student_returns_forbid", TestForbiddenSendMessageAsync),
                 ("send_message_after_session_end_returns_bad_request", TestSendMessageAfterSessionEndedAsync),
@@ -1184,6 +1213,193 @@ internal static class Program
             Assert(emailCount == 1, $"duplicate register should leave exactly 1 user row, got {emailCount}");
         }
 
+        private async Task TestRegisterDuplicateEmailGenericAsync()
+        {
+            var email = $"register-generic-{Guid.NewGuid():N}@example.com";
+
+            using var initial = AssertOk(
+                await RunRegisterAsync("Generic Duplicate Student", email, "IntegrationPass!123"),
+                "initial generic duplicate registration");
+            _createdUserIds.Add(initial.RootElement.GetProperty("Id").GetGuid());
+
+            var duplicateResult = await RunRegisterAsync(
+                "Generic Duplicate Student 2",
+                email,
+                "AnotherPass!123");
+
+            if (duplicateResult is not BadRequestObjectResult badRequest)
+            {
+                throw new InvalidOperationException(
+                    $"duplicate registration expected BadRequestObjectResult but got {duplicateResult.GetType().Name}");
+            }
+
+            using var payload = JsonDocument.Parse(JsonSerializer.Serialize(badRequest.Value));
+            Assert(
+                string.Equals(
+                    payload.RootElement.GetProperty("error").GetString(),
+                    "Không thể tạo tài khoản với thông tin đã cung cấp.",
+                    StringComparison.Ordinal),
+                "duplicate registration should return a generic error");
+            Assert(!payload.RootElement.GetProperty("error").GetString()!.Contains(
+                    email,
+                    StringComparison.OrdinalIgnoreCase),
+                "duplicate registration response must not expose the account identifier");
+        }
+
+        private async Task TestScenarioVersionPublishingAsync()
+        {
+            var scenarioKey = $"integration_version_{Guid.NewGuid():N}";
+            var title = $"Integration Version Scenario {Guid.NewGuid():N}";
+
+            ScenarioConfigJson CreateConfig(string requirementText) => new(
+                ScenarioKey: scenarioKey,
+                ScenarioTitle: title,
+                Context: "An integration scenario used to verify immutable publishing.",
+                GeneralKeywords: ["integration"],
+                GateKeywordGroups: new Dictionary<string, List<string>>
+                {
+                    ["1"] = ["integration"]
+                },
+                QuestionTypeGateMap: new Dictionary<string, List<int>>
+                {
+                    ["Probing"] = [1]
+                },
+                MaxNewRevealsPerTurn: 1,
+                Requirements:
+                [
+                    new ScenarioRequirementRuleJson(
+                        "R1",
+                        requirementText,
+                        1,
+                        ["integration"],
+                        ["Probing"],
+                        "Ask about the integration requirement.",
+                        "Medium",
+                        [])
+                ]);
+
+            async Task<Scenario> PublishInNewScopeAsync(ScenarioConfigJson config)
+            {
+                await using var scope = provider.CreateAsyncScope();
+                var publisher = scope.ServiceProvider.GetRequiredService<ScenarioVersionPublisher>();
+                return await publisher.PublishAsync(config);
+            }
+
+            var versionOne = await PublishInNewScopeAsync(
+                CreateConfig("The first published requirement must remain immutable."));
+            _createdScenarioIds.Add(versionOne.Id);
+
+            var user = await CreateTestUserAsync("scenario-version");
+            var session = new SimulationSession
+            {
+                Id = Guid.NewGuid(),
+                StudentId = user.Id,
+                ScenarioId = versionOne.Id,
+                PersonaId = versionOne.Personas.Single().Id,
+                IsActive = false,
+                EndedAt = DateTime.UtcNow
+            };
+            var evaluation = new EvaluationResult
+            {
+                Id = Guid.NewGuid(),
+                SessionId = session.Id,
+                CoverageScore = 0,
+                TotalRequirements = 1,
+                MissedCount = 1
+            };
+            var match = new RequirementMatch
+            {
+                Id = Guid.NewGuid(),
+                EvaluationId = evaluation.Id,
+                HiddenRequirementId = versionOne.HiddenRequirements.Single().Id,
+                MatchType = ReqSimulator.API.Models.MatchType.Missed
+            };
+
+            await using (var scope = provider.CreateAsyncScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                db.SimulationSessions.Add(session);
+                db.EvaluationResults.Add(evaluation);
+                db.RequirementMatches.Add(match);
+                await db.SaveChangesAsync();
+            }
+            _createdSessionIds.Add(session.Id);
+
+            var versionTwoConfig = CreateConfig(
+                "The second published requirement must not mutate version one.");
+            var concurrentResults = await Task.WhenAll(
+                PublishInNewScopeAsync(versionTwoConfig),
+                PublishInNewScopeAsync(versionTwoConfig));
+
+            Assert(
+                concurrentResults[0].Id == concurrentResults[1].Id,
+                "concurrent idempotent publishes should return the same version");
+            _createdScenarioIds.Add(concurrentResults[0].Id);
+
+            await using var verificationScope = provider.CreateAsyncScope();
+            var verificationDb = verificationScope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var versions = await verificationDb.Scenarios
+                .AsNoTracking()
+                .Where(s => s.ScenarioKey == scenarioKey)
+                .OrderBy(s => s.Version)
+                .ToListAsync();
+
+            Assert(versions.Count == 2, $"expected 2 immutable versions, got {versions.Count}");
+            Assert(!versions[0].IsActive && versions[0].Version == 1,
+                "version one should be superseded but retained");
+            Assert(versions[1].IsActive && versions[1].Version == 2,
+                "version two should be the only active version");
+
+            var storedSession = await verificationDb.SimulationSessions
+                .AsNoTracking()
+                .SingleAsync(s => s.Id == session.Id);
+            Assert(storedSession.ScenarioId == versionOne.Id,
+                "existing session must remain bound to version one");
+
+            var storedMatch = await verificationDb.RequirementMatches
+                .AsNoTracking()
+                .SingleAsync(m => m.Id == match.Id);
+            Assert(storedMatch.HiddenRequirementId == versionOne.HiddenRequirements.Single().Id,
+                "historical match must retain its version-one hidden requirement");
+        }
+
+        private async Task TestAuthRateLimitingAsync()
+        {
+            var fakeAiService = new FakeAiService();
+            await using var fakeAiServer = await FakeAiHttpServer.StartAsync(fakeAiService);
+            await using var backendServer = await BackendApiServer.StartAsync(
+                Directory.GetCurrentDirectory(),
+                fakeAiServer.BaseUrl,
+                new Dictionary<string, string>
+                {
+                    ["GLOBAL_RATE_LIMIT_PERMIT_LIMIT"] = "1000",
+                    ["AUTH_RATE_LIMIT_ATTEMPTS"] = "5",
+                    ["AUTH_RATE_LIMIT_WINDOW_MINUTES"] = "15"
+                });
+
+            var email = $"rate-limit-{Guid.NewGuid():N}@example.com";
+            for (var attempt = 1; attempt <= 5; attempt++)
+            {
+                using var response = await backendServer.Client.PostAsJsonAsync(
+                    "/api/Auth/login",
+                    new { email, password = "WrongPassword!456" });
+                Assert(response.StatusCode == HttpStatusCode.Unauthorized,
+                    $"auth request {attempt} should be processed before the limit");
+            }
+
+            using var rejected = await backendServer.Client.PostAsJsonAsync(
+                "/api/Auth/login",
+                new { email, password = "WrongPassword!456" });
+            var body = await rejected.Content.ReadAsStringAsync();
+
+            Assert(rejected.StatusCode == HttpStatusCode.TooManyRequests,
+                "the sixth auth request should return 429");
+            Assert(rejected.Headers.RetryAfter is not null,
+                "429 response should include Retry-After");
+            Assert(!body.Contains(email, StringComparison.OrdinalIgnoreCase),
+                "429 response must not disclose the account identifier");
+        }
+
         private async Task TestUnauthorizedSendMessageAsync()
         {
             var scenario = await GetScenarioAsync();
@@ -1528,6 +1744,19 @@ internal static class Program
             {
                 await db.Users
                     .Where(u => _createdUserIds.Contains(u.Id))
+                    .ExecuteDeleteAsync();
+            }
+
+            if (_createdScenarioIds.Count > 0)
+            {
+                await db.HiddenRequirements
+                    .Where(r => _createdScenarioIds.Contains(r.ScenarioId))
+                    .ExecuteDeleteAsync();
+                await db.Personas
+                    .Where(p => _createdScenarioIds.Contains(p.ScenarioId))
+                    .ExecuteDeleteAsync();
+                await db.Scenarios
+                    .Where(s => _createdScenarioIds.Contains(s.Id))
                     .ExecuteDeleteAsync();
             }
         }
@@ -2115,7 +2344,10 @@ internal static class Program
             };
         }
 
-        public static async Task<BackendApiServer> StartAsync(string repoRoot, string aiBaseUrl)
+        public static async Task<BackendApiServer> StartAsync(
+            string repoRoot,
+            string aiBaseUrl,
+            IReadOnlyDictionary<string, string>? environmentOverrides = null)
         {
             var port = GetAvailablePort();
             var baseUrl = $"http://127.0.0.1:{port}";
@@ -2138,6 +2370,11 @@ internal static class Program
             startInfo.Environment["Jwt__Issuer"] = "ReqSimulator";
             startInfo.Environment["Jwt__Audience"] = "ReqSimulator";
             startInfo.Environment["Jwt__ExpiresInHours"] = "24";
+            startInfo.Environment["AiService__InternalKey"] = "integration-only-internal-key-at-least-32-bytes";
+            startInfo.Environment["GLOBAL_RATE_LIMIT_PERMIT_LIMIT"] = "10000";
+            startInfo.Environment["AUTH_RATE_LIMIT_ATTEMPTS"] = "1000";
+            startInfo.Environment["AI_RATE_LIMIT_PERMIT_LIMIT"] = "1000";
+            startInfo.Environment["ADMIN_INGESTION_RATE_LIMIT_PERMIT_LIMIT"] = "1000";
 
             var connectionString = Environment.GetEnvironmentVariable("ConnectionStrings__DefaultConnection");
             if (!string.IsNullOrWhiteSpace(connectionString))
@@ -2150,6 +2387,12 @@ internal static class Program
             var internalKey = Environment.GetEnvironmentVariable("AiService__InternalKey");
             if (!string.IsNullOrWhiteSpace(internalKey))
                 startInfo.Environment["AiService__InternalKey"] = internalKey;
+
+            if (environmentOverrides is not null)
+            {
+                foreach (var (key, value) in environmentOverrides)
+                    startInfo.Environment[key] = value;
+            }
 
             var process = new Process
             {

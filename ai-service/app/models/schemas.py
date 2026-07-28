@@ -45,6 +45,7 @@ class ChatResponse(BaseModel):
     stakeholderReply: str
     detectedQuestionType: str | None = None
     stateUpdate: PersonaStateUpdate | None = None
+    isFallback: bool = False
 
 
 # ===== Extract =====
@@ -61,6 +62,7 @@ class ExtractedReq(BaseModel):
 
 class ExtractResponse(BaseModel):
     requirements: list[ExtractedReq]
+    isFallback: bool = False
 
 
 # ===== Evaluate =====

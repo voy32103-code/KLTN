@@ -192,11 +192,17 @@ builder.Services.AddAuthorization();
 
 // ===== Services (DI) =====
 builder.Services.AddScoped<AuthService>();
+builder.Services.AddScoped<ScenarioVersionPublisher>();
+var aiServiceBaseUrl = GetRequiredConfig(builder.Configuration, "AiService:BaseUrl");
+var aiServiceInternalKey = GetRequiredConfig(builder.Configuration, "AiService:InternalKey");
+if (Encoding.UTF8.GetByteCount(aiServiceInternalKey) < 32)
+    throw new InvalidOperationException("AiService:InternalKey must be at least 32 bytes long.");
+
 builder.Services.AddHttpClient<AiServiceClient>(client =>
 {
-    client.BaseAddress = new Uri(GetRequiredConfig(builder.Configuration, "AiService:BaseUrl"));
+    client.BaseAddress = new Uri(aiServiceBaseUrl);
     client.Timeout = TimeSpan.FromSeconds(120); // LLM calls can be slow.
-    client.DefaultRequestHeaders.Add("X-AI-Service-Key", builder.Configuration["AiService:InternalKey"] ?? "dev-internal-key");
+    client.DefaultRequestHeaders.Add("X-AI-Service-Key", aiServiceInternalKey);
 });
 
 // ===== CORS: allow the React frontend (localhost + Vercel) to call the API =====
@@ -218,24 +224,106 @@ builder.Services.AddCors(options =>
 });
 
 // ===== Rate Limiting =====
+var globalPermitLimit = Math.Max(
+    1,
+    builder.Configuration.GetValue<int?>("GLOBAL_RATE_LIMIT_PERMIT_LIMIT") ??
+    builder.Configuration.GetValue("RateLimiting:Global:PermitLimit", 120));
+var globalWindowSeconds = Math.Max(
+    1,
+    builder.Configuration.GetValue<int?>("GLOBAL_RATE_LIMIT_WINDOW_SECONDS") ??
+    builder.Configuration.GetValue("RateLimiting:Global:WindowSeconds", 60));
+var authPermitLimit = Math.Max(
+    1,
+    builder.Configuration.GetValue<int?>("AUTH_RATE_LIMIT_ATTEMPTS") ??
+    builder.Configuration.GetValue("RateLimiting:Auth:PermitLimit", 5));
+var authWindowSeconds = Math.Max(
+    1,
+    (builder.Configuration.GetValue<int?>("AUTH_RATE_LIMIT_WINDOW_MINUTES") is int authWindowMinutes
+        ? authWindowMinutes * 60
+        : builder.Configuration.GetValue("RateLimiting:Auth:WindowSeconds", 900)));
+var aiPermitLimit = Math.Max(
+    1,
+    builder.Configuration.GetValue<int?>("AI_RATE_LIMIT_PERMIT_LIMIT") ??
+    builder.Configuration.GetValue("RateLimiting:Ai:PermitLimit", 10));
+var aiWindowSeconds = Math.Max(
+    1,
+    builder.Configuration.GetValue<int?>("AI_RATE_LIMIT_WINDOW_SECONDS") ??
+    builder.Configuration.GetValue("RateLimiting:Ai:WindowSeconds", 60));
+var adminPermitLimit = Math.Max(
+    1,
+    builder.Configuration.GetValue<int?>("ADMIN_INGESTION_RATE_LIMIT_PERMIT_LIMIT") ??
+    builder.Configuration.GetValue("RateLimiting:AdminIngestion:PermitLimit", 3));
+var adminWindowSeconds = Math.Max(
+    1,
+    builder.Configuration.GetValue<int?>("ADMIN_INGESTION_RATE_LIMIT_WINDOW_SECONDS") ??
+    builder.Configuration.GetValue("RateLimiting:AdminIngestion:WindowSeconds", 300));
+
+static string GetRateLimitPartitionKey(HttpContext context)
+{
+    var subject = context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+    if (!string.IsNullOrWhiteSpace(subject))
+        return $"user:{subject}";
+
+    return $"ip:{context.Connection.RemoteIpAddress?.ToString() ?? "unknown"}";
+}
+
+static RateLimitPartition<string> CreateFixedWindowPartition(
+    string key,
+    int permitLimit,
+    int windowSeconds) =>
+    RateLimitPartition.GetFixedWindowLimiter(key, _ => new FixedWindowRateLimiterOptions
+    {
+        AutoReplenishment = true,
+        PermitLimit = permitLimit,
+        Window = TimeSpan.FromSeconds(windowSeconds),
+        QueueLimit = 0,
+        QueueProcessingOrder = QueueProcessingOrder.OldestFirst
+    });
+
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-    options.AddPolicy("ai_chat_limit", httpContext =>
-    {
-        var userKey = httpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value 
-                      ?? httpContext.Connection.RemoteIpAddress?.ToString() 
-                      ?? "anonymous";
 
-        return RateLimitPartition.GetFixedWindowLimiter(userKey, _ => new FixedWindowRateLimiterOptions
+    options.OnRejected = async (context, cancellationToken) =>
+    {
+        if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter))
         {
-            AutoReplenishment = true,
-            PermitLimit = 10,
-            Window = TimeSpan.FromMinutes(1),
-            QueueLimit = 2,
-            QueueProcessingOrder = QueueProcessingOrder.OldestFirst
-        });
-    });
+            context.HttpContext.Response.Headers.RetryAfter =
+                Math.Max(1, (int)Math.Ceiling(retryAfter.TotalSeconds)).ToString();
+        }
+
+        if (!context.HttpContext.Response.HasStarted)
+        {
+            context.HttpContext.Response.ContentType = "application/json";
+            await context.HttpContext.Response.WriteAsJsonAsync(
+                new { error = "Too many requests. Please retry later." },
+                cancellationToken);
+        }
+    };
+
+    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(
+        httpContext => CreateFixedWindowPartition(
+            GetRateLimitPartitionKey(httpContext),
+            globalPermitLimit,
+            globalWindowSeconds));
+
+    options.AddPolicy("auth_strict", httpContext =>
+        CreateFixedWindowPartition(
+            $"auth:{httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown"}",
+            authPermitLimit,
+            authWindowSeconds));
+
+    options.AddPolicy("ai_expensive", httpContext =>
+        CreateFixedWindowPartition(
+            $"ai:{GetRateLimitPartitionKey(httpContext)}",
+            aiPermitLimit,
+            aiWindowSeconds));
+
+    options.AddPolicy("admin_ingestion", httpContext =>
+        CreateFixedWindowPartition(
+            $"admin-ingestion:{GetRateLimitPartitionKey(httpContext)}",
+            adminPermitLimit,
+            adminWindowSeconds));
 });
 
 builder.Services.AddControllers();
@@ -251,6 +339,10 @@ if (builder.Configuration.GetValue<bool>("SeedData:Enabled"))
     await app.Services.SeedScenarioV1Async(app.Logger);
 }
 
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHsts();
+}
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -275,11 +367,21 @@ app.UseExceptionHandler(exceptionHandlerApp =>
     });
 });
 
+app.Use(async (context, next) =>
+{
+    context.Response.Headers.XContentTypeOptions = "nosniff";
+    context.Response.Headers.XFrameOptions = "DENY";
+    context.Response.Headers["Referrer-Policy"] = "no-referrer";
+    context.Response.Headers["Permissions-Policy"] =
+        "camera=(), microphone=(), geolocation=()";
+    await next();
+});
+
 app.UseRouting();
 app.UseCors(AllowVercelOrigin);
 app.UseAuthentication();
-app.UseAuthorization();
 app.UseRateLimiter();
+app.UseAuthorization();
 app.MapControllers();
 
 app.Run();

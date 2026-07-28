@@ -237,7 +237,7 @@ public class AdminController : ControllerBase
     public record CreateUserDto(
         [Required, StringLength(100)] string Name,
         [Required, EmailAddress] string Email,
-        [Required, StringLength(100, MinimumLength = 6)] string Password,
+        [Required, StringLength(128, MinimumLength = 12)] string Password,
         [Required] string Role);
 
     /// <summary>Tạo mới người dùng (Student, Lecturer, hoặc Admin)</summary>
@@ -258,8 +258,8 @@ public class AdminController : ControllerBase
         var user = new User
         {
             Id = Guid.NewGuid(),
-            Name = dto.Name.Trim(),
-            Email = dto.Email.Trim().ToLowerInvariant(),
+            Name = dto.Name!.Trim(),
+            Email = dto.Email!.Trim().ToLowerInvariant(),
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
             Role = role,
             CreatedAt = DateTime.UtcNow
@@ -282,7 +282,7 @@ public class AdminController : ControllerBase
         [Required, StringLength(100)] string Name,
         [Required, EmailAddress] string Email,
         [Required] string Role,
-        string? NewPassword);
+        [StringLength(128, MinimumLength = 12)] string? NewPassword);
 
     /// <summary>Cập nhật thông tin người dùng</summary>
     [HttpPut("users/{id:guid}")]
@@ -305,11 +305,11 @@ public class AdminController : ControllerBase
             return BadRequest(new { message = "Vai trò không hợp lệ." });
         }
 
-        user.Name = dto.Name.Trim();
-        user.Email = dto.Email.Trim().ToLowerInvariant();
+        user.Name = dto.Name!.Trim();
+        user.Email = dto.Email!.Trim().ToLowerInvariant();
         user.Role = role;
 
-        if (!string.IsNullOrWhiteSpace(dto.NewPassword) && dto.NewPassword.Length >= 6)
+        if (!string.IsNullOrWhiteSpace(dto.NewPassword))
         {
             user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
         }
