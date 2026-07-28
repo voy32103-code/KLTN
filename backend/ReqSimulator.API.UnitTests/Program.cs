@@ -10,6 +10,7 @@ var tests = new (string Name, Func<Task> Run)[]
 {
     ("ai_client_null_chat_response_becomes_fallback", TestNullChatResponseAsync),
     ("ai_client_null_extract_response_becomes_fallback", TestNullExtractResponseAsync),
+    ("ai_client_deserializes_snake_case_scenario", TestSnakeCaseScenarioResponseAsync),
     ("legacy_sha256_password_verifies_and_requests_upgrade", TestLegacySha256Password),
     ("schema_bootstrap_never_deletes_duplicate_evaluations", TestSchemaBootstrapIsNonDestructive),
 };
@@ -54,6 +55,43 @@ static async Task TestNullExtractResponseAsync()
     Assert(result is not null && result.IsFallback, "null extract payload must produce an explicit fallback");
 }
 
+static async Task TestSnakeCaseScenarioResponseAsync()
+{
+    const string responseJson = """
+        {
+          "success": true,
+          "message": "ok",
+          "scenario": {
+            "scenario_key": "software_requirements_specification",
+            "scenario_title": "Software Requirements Specification",
+            "context": "Elicit requirements for a software system.",
+            "general_keywords": ["requirements"],
+            "gate_keyword_groups": {"0": ["scope"]},
+            "question_type_gate_map": {"OpenEnded": [0]},
+            "max_new_reveals_per_turn": 1,
+            "requirements": [{
+              "id": "REQ-001",
+              "text": "The system shall define its scope.",
+              "gate": 0,
+              "keywords": ["scope"],
+              "question_types": ["OpenEnded"],
+              "reveal_condition": "Ask about scope.",
+              "reveal_difficulty": "Easy",
+              "requires": []
+            }]
+          }
+        }
+        """;
+
+    var client = CreateClient(new StaticJsonHandler(responseJson));
+    var result = await client.CrawlScenario("https://example.test/requirements.md", null);
+
+    Assert(result.Success, "successful AI response must remain successful");
+    Assert(result.Scenario?.ScenarioKey == "software_requirements_specification",
+        "scenario_key must map to ScenarioKey");
+    Assert(result.Scenario?.Requirements.Single().QuestionTypes.Single() == "OpenEnded",
+        "nested snake_case fields must be deserialized");
+}
 static Task TestLegacySha256Password()
 {
     const string password = "legacy-password";
@@ -80,9 +118,9 @@ static Task TestSchemaBootstrapIsNonDestructive()
         "schema bootstrap must fail explicitly when duplicate data exists");
     return Task.CompletedTask;
 }
-static AiServiceClient CreateClient()
+static AiServiceClient CreateClient(HttpMessageHandler? handler = null)
 {
-    var httpClient = new HttpClient(new NullJsonHandler())
+    var httpClient = new HttpClient(handler ?? new NullJsonHandler())
     {
         BaseAddress = new Uri("http://ai-service.test")
     };
@@ -95,6 +133,16 @@ static void Assert(bool condition, string message)
         throw new InvalidOperationException(message);
 }
 
+sealed class StaticJsonHandler(string json) : HttpMessageHandler
+{
+    protected override Task<HttpResponseMessage> SendAsync(
+        HttpRequestMessage request,
+        CancellationToken cancellationToken) =>
+        Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(json, Encoding.UTF8, "application/json")
+        });
+}
 sealed class NullJsonHandler : HttpMessageHandler
 {
     protected override Task<HttpResponseMessage> SendAsync(
