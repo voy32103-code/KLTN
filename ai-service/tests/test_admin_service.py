@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import AsyncMock, patch
 from app.services.admin_crawler_service import clean_html, ScenarioConfigSchema
 
 class AdminServiceTests(unittest.TestCase):
@@ -235,5 +236,53 @@ class AdminServiceTests(unittest.TestCase):
         self.assertEqual(config.requirements[0].requires, [])
         self.assertEqual(config.requirements[0].reveal_difficulty, "Medium")
 
+
+class AdminPreviewPersistenceTests(unittest.IsolatedAsyncioTestCase):
+    async def test_preview_does_not_persist_unapproved_scenario_file(self):
+        from app.services.admin_service import CrawlScenarioRequest, crawl_scenario
+
+        config = ScenarioConfigSchema(
+            scenario_key="preview_scenario",
+            scenario_title="Preview Scenario",
+            context="Preview context",
+            general_keywords=[],
+            gate_keyword_groups={},
+            question_type_gate_map={},
+            max_new_reveals_per_turn=1,
+            requirements=[
+                {
+                    "id": "R1",
+                    "text": "A valid requirement",
+                    "gate": 0,
+                    "keywords": [],
+                    "question_types": ["OpenEnded"],
+                    "reveal_condition": "Ask about the requirement",
+                    "reveal_difficulty": "Easy",
+                    "requires": [],
+                }
+            ],
+        )
+
+        with (
+            patch(
+                "app.services.admin_service.fetch_url_content",
+                new=AsyncMock(return_value="source document"),
+            ),
+            patch(
+                "app.services.admin_service.generate_scenario_from_ba_text",
+                new=AsyncMock(return_value=config),
+            ),
+            patch("app.services.admin_service.save_scenario_config_file") as save_mock,
+        ):
+            response = await crawl_scenario(
+                CrawlScenarioRequest(
+                    url="https://example.com/requirements.md",
+                    persist=False,
+                )
+            )
+
+        self.assertTrue(response.success)
+        self.assertEqual(response.scenario.scenario_key, "preview_scenario")
+        save_mock.assert_not_called()
 if __name__ == "__main__":
     unittest.main()

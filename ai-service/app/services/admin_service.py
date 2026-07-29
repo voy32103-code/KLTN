@@ -24,6 +24,7 @@ ModelName = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1
 class CrawlScenarioRequest(BaseModel):
     url: AnyHttpUrl
     selectedModel: ModelName | None = None
+    persist: bool = True
 
     @field_validator("url")
     @classmethod
@@ -45,6 +46,7 @@ class VideoScenarioRequest(BaseModel):
         StringConstraints(strip_whitespace=True, min_length=1, max_length=1024),
     ]
     selectedModel: ModelName | None = None
+    persist: bool = True
 
 
 class AdminScenarioResponse(BaseModel):
@@ -63,7 +65,8 @@ async def crawl_scenario(req: CrawlScenarioRequest):
         )
         raw_text = await fetch_url_content(raw_url)
         config = await generate_scenario_from_ba_text(raw_text, req.selectedModel)
-        save_scenario_config_file(config)
+        if req.persist:
+            save_scenario_config_file(config)
 
         return AdminScenarioResponse(
             success=True,
@@ -88,7 +91,8 @@ async def upload_video_scenario(req: VideoScenarioRequest):
             Path(req.videoPath).name,
         )
         config = await generate_scenario_from_video(req.videoPath, req.selectedModel)
-        save_scenario_config_file(config)
+        if req.persist:
+            save_scenario_config_file(config)
 
         return AdminScenarioResponse(
             success=True,

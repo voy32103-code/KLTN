@@ -14,6 +14,8 @@ import type {
   ReviewSessionDetail,
   ReviewSessionSummary,
   ScenarioDetail,
+  ScenarioDraft,
+  ScenarioPreviewResponse,
   ScenarioStatItem,
   ScenarioSummary,
   SessionState,
@@ -181,6 +183,38 @@ function bindEvents() {
     event.preventDefault()
     void sendMessage(new FormData(event.currentTarget as HTMLFormElement))
   })
+  document.querySelector<HTMLButtonElement>('#admin-add-requirement')?.addEventListener('click', () => {
+    if (!state.adminState || state.busy) return
+    try {
+      const draft = readScenarioDraftForm()
+      draft.requirements.push(createEmptyRequirement(draft.requirements.length + 1))
+      state.adminState.scenarioDraft = draft
+      clearNotice()
+      render()
+    } catch (error) {
+      setNotice('error', getErrorMessage(error))
+    }
+  })
+
+  document.querySelectorAll<HTMLButtonElement>('[data-draft-remove-index]').forEach((button) => {
+    button.addEventListener('click', () => {
+      if (!state.adminState || state.busy) return
+      try {
+        const draft = readScenarioDraftForm()
+        if (draft.requirements.length <= 1) {
+          throw new Error('Scenario phải có ít nhất một yêu cầu.')
+        }
+        const index = Number(button.dataset.draftRemoveIndex)
+        if (!Number.isInteger(index) || index < 0 || index >= draft.requirements.length) return
+        draft.requirements.splice(index, 1)
+        state.adminState.scenarioDraft = draft
+        clearNotice()
+        render()
+      } catch (error) {
+        setNotice('error', getErrorMessage(error))
+      }
+    })
+  })
 
   document.querySelectorAll<HTMLButtonElement>('[data-action]').forEach((button) => {
     button.addEventListener('click', (event) => {
@@ -293,6 +327,17 @@ async function handleAction(action: string, options: { tab?: string; userId?: st
       break
     case 'admin-video':
       await runAdminVideo()
+      break
+    case 'admin-publish-scenario':
+      await publishAdminScenario()
+      break
+    case 'admin-cancel-preview':
+      if (state.adminState) {
+        state.adminState.scenarioDraft = null
+        state.adminState.scenarioDraftSource = null
+        clearNotice()
+        render()
+      }
       break
     case 'submit-override':
       await submitLecturerOverride()
@@ -573,6 +618,8 @@ async function openAdminDashboard() {
       userRoleFilter: '',
       editingUser: null,
       isCreatingUser: false,
+      scenarioDraft: null,
+      scenarioDraftSource: null,
     }
     clearNotice()
 
@@ -730,6 +777,187 @@ function exportReviewCsv() {
   setNotice('success', 'Đã xuất dữ liệu phiên phỏng vấn dưới dạng CSV.')
 }
 
+function splitDraftList(value: string): string[] {
+  return value
+    .split(',')
+    .map(item => item.trim())
+    .filter(Boolean)
+}
+
+function parseDraftMap<T extends string | number>(
+  raw: string,
+  label: string,
+  itemType: 'string' | 'number'
+): Record<string, T[]> {
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(raw.trim() || '{}')
+  } catch {
+    throw new Error(`${label} phải là JSON hợp lệ.`)
+  }
+
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new Error(`${label} phải là một JSON object.`)
+  }
+
+  const result: Record<string, T[]> = {}
+  for (const [key, value] of Object.entries(parsed)) {
+    if (!Array.isArray(value)) {
+      throw new Error(`${label}.${key} phải là một mảng.`)
+    }
+    if (itemType === 'string' && value.some(item => typeof item !== 'string')) {
+      throw new Error(`${label}.${key} chỉ được chứa chuỗi.`)
+    }
+    if (itemType === 'number' && value.some(item => typeof item !== 'number' || !Number.isInteger(item))) {
+      throw new Error(`${label}.${key} chỉ được chứa số nguyên.`)
+    }
+    result[key] = value as T[]
+  }
+  return result
+}
+
+function getDraftField(root: ParentNode, field: string): string {
+  const element = root.querySelector<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(
+    `[data-draft-field="${field}"]`
+  )
+  if (!element) throw new Error(`Không tìm thấy trường ${field} trong bản preview.`)
+  return element.value.trim()
+}
+
+function createEmptyRequirement(index: number): ScenarioDraft['requirements'][number] {
+  return {
+    id: `R${index}`,
+    text: '',
+    gate: 0,
+    keywords: [],
+    question_types: ['OpenEnded'],
+    reveal_condition: '',
+    reveal_difficulty: 'Medium',
+    requires: [],
+  }
+}
+
+function readScenarioDraftForm(): ScenarioDraft {
+  if (!state.adminState?.scenarioDraft) {
+    throw new Error('Không có bản scenario preview để chỉnh sửa.')
+  }
+
+  const form = document.querySelector<HTMLFormElement>('#admin-scenario-preview-form')
+  if (!form) return state.adminState.scenarioDraft
+
+  const requirements = Array.from(form.querySelectorAll<HTMLElement>('[data-requirement-row]')).map((row) => {
+    const gate = Number(getDraftField(row, 'gate'))
+    const difficulty = getDraftField(row, 'reveal_difficulty') as 'Easy' | 'Medium' | 'Hard'
+    return {
+      id: getDraftField(row, 'id'),
+      text: getDraftField(row, 'text'),
+      gate,
+      keywords: splitDraftList(getDraftField(row, 'keywords')),
+      question_types: splitDraftList(getDraftField(row, 'question_types')),
+      reveal_condition: getDraftField(row, 'reveal_condition'),
+      reveal_difficulty: difficulty,
+      requires: splitDraftList(getDraftField(row, 'requires')),
+    }
+  })
+
+  const draft: ScenarioDraft = {
+    scenario_key: getDraftField(form, 'scenario_key'),
+    scenario_title: getDraftField(form, 'scenario_title'),
+    context: getDraftField(form, 'context'),
+    general_keywords: splitDraftList(getDraftField(form, 'general_keywords')),
+    gate_keyword_groups: parseDraftMap<string>(
+      getDraftField(form, 'gate_keyword_groups'),
+      'Nhóm từ khóa Gate',
+      'string'
+    ),
+    question_type_gate_map: parseDraftMap<number>(
+      getDraftField(form, 'question_type_gate_map'),
+      'Ánh xạ loại câu hỏi',
+      'number'
+    ),
+    max_new_reveals_per_turn: Number(getDraftField(form, 'max_new_reveals_per_turn')),
+    requirements,
+  }
+
+  validateScenarioDraft(draft)
+  return draft
+}
+
+function validateScenarioDraft(draft: ScenarioDraft) {
+  if (!/^[a-z0-9]+(?:_[a-z0-9]+)*$/.test(draft.scenario_key) || draft.scenario_key.length > 100) {
+    throw new Error('Mã scenario chỉ gồm chữ thường, số và dấu gạch dưới; tối đa 100 ký tự.')
+  }
+  if (!draft.scenario_title) throw new Error('Tên scenario không được để trống.')
+  if (!draft.context) throw new Error('Bối cảnh scenario không được để trống.')
+  if (!Number.isInteger(draft.max_new_reveals_per_turn) ||
+      draft.max_new_reveals_per_turn < 1 ||
+      draft.max_new_reveals_per_turn > 12) {
+    throw new Error('Số yêu cầu tiết lộ mỗi lượt phải là số nguyên từ 1 đến 12.')
+  }
+  if (draft.requirements.length === 0) throw new Error('Scenario phải có ít nhất một yêu cầu.')
+
+  const ids = new Set<string>()
+  for (const [index, requirement] of draft.requirements.entries()) {
+    if (!requirement.id) throw new Error(`Yêu cầu ${index + 1} chưa có mã.`)
+    const normalizedId = requirement.id.toLowerCase()
+    if (ids.has(normalizedId)) throw new Error(`Mã yêu cầu "${requirement.id}" bị trùng.`)
+    ids.add(normalizedId)
+    if (!requirement.text) throw new Error(`Nội dung yêu cầu ${requirement.id} không được để trống.`)
+    if (!Number.isInteger(requirement.gate) || requirement.gate < 0 || requirement.gate > 4) {
+      throw new Error(`Gate của yêu cầu ${requirement.id} phải từ 0 đến 4.`)
+    }
+    if (!['Easy', 'Medium', 'Hard'].includes(requirement.reveal_difficulty)) {
+      throw new Error(`Độ khó của yêu cầu ${requirement.id} không hợp lệ.`)
+    }
+  }
+
+  for (const requirement of draft.requirements) {
+    for (const dependency of requirement.requires) {
+      if (!ids.has(dependency.toLowerCase())) {
+        throw new Error(`Yêu cầu ${requirement.id} phụ thuộc mã không tồn tại: ${dependency}.`)
+      }
+      if (dependency.toLowerCase() === requirement.id.toLowerCase()) {
+        throw new Error(`Yêu cầu ${requirement.id} không thể phụ thuộc chính nó.`)
+      }
+    }
+  }
+}
+
+async function publishAdminScenario() {
+  if (!state.adminState?.scenarioDraft) return
+
+  let scenario: ScenarioDraft
+  try {
+    scenario = readScenarioDraftForm()
+    state.adminState.scenarioDraft = scenario
+  } catch (error) {
+    setNotice('error', getErrorMessage(error))
+    return
+  }
+
+  await withBusy(async () => {
+    clearNotice()
+    const result = await api.request<{
+      message: string
+      scenarioId: string
+      scenarioKey: string
+      version: number
+      title: string
+      requirementsCount: number
+    }>('/api/AdminScenarios/publish', {
+      method: 'POST',
+      body: scenario,
+    })
+    if (!state.adminState) return
+    state.adminState.scenarioDraft = null
+    state.adminState.scenarioDraftSource = null
+    setNotice(
+      'success',
+      `Đã publish "${result.title}" phiên bản ${result.version} với ${result.requirementsCount} yêu cầu.`
+    )
+  })
+}
+
 async function runAdminCrawl() {
   const urlInput = document.querySelector('#admin-crawl-url-input') as HTMLInputElement | null
   const modelSelect = document.querySelector('#admin-crawl-model-select') as HTMLSelectElement | null
@@ -742,12 +970,14 @@ async function runAdminCrawl() {
 
   await withBusy(async () => {
     clearNotice()
-    const result = await api.request<{ message: string }>('/api/AdminScenarios/crawl', {
+    const result = await api.request<ScenarioPreviewResponse>('/api/AdminScenarios/crawl/preview', {
       method: 'POST',
       body: { url, selectedModel }
     })
-    setNotice('success', result.message || 'Cào dữ liệu và tạo kịch bản thành công!')
-    if (urlInput) urlInput.value = ''
+    if (!state.adminState) return
+    state.adminState.scenarioDraft = result.scenario
+    state.adminState.scenarioDraftSource = url
+    setNotice('success', 'Đã tạo bản preview. Hãy kiểm tra, chỉnh sửa và xác nhận publish.')
   })
 }
 
@@ -763,15 +993,16 @@ async function runAdminVideo() {
 
   await withBusy(async () => {
     clearNotice()
-    const result = await api.request<{ message: string }>('/api/AdminScenarios/upload-video', {
+    const result = await api.request<ScenarioPreviewResponse>('/api/AdminScenarios/upload-video/preview', {
       method: 'POST',
       body: { videoPath, selectedModel }
     })
-    setNotice('success', result.message || 'Xử lý video và tạo kịch bản thành công!')
-    if (videoPathInput) videoPathInput.value = ''
+    if (!state.adminState) return
+    state.adminState.scenarioDraft = result.scenario
+    state.adminState.scenarioDraftSource = videoPath
+    setNotice('success', 'Đã tạo bản preview từ video. Hãy kiểm tra trước khi publish.')
   })
 }
-
 async function withBusy(task: () => Promise<void>) {
   state.busy = true
   render()
