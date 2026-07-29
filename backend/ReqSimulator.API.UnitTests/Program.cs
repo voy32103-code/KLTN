@@ -83,14 +83,20 @@ static async Task TestSnakeCaseScenarioResponseAsync()
         }
         """;
 
-    var client = CreateClient(new StaticJsonHandler(responseJson));
-    var result = await client.CrawlScenario("https://example.test/requirements.md", null);
+    var handler = new StaticJsonHandler(responseJson);
+    var client = CreateClient(handler);
+    var result = await client.CrawlScenario(
+        "https://example.test/requirements.md",
+        null,
+        persist: false);
 
     Assert(result.Success, "successful AI response must remain successful");
     Assert(result.Scenario?.ScenarioKey == "software_requirements_specification",
         "scenario_key must map to ScenarioKey");
     Assert(result.Scenario?.Requirements.Single().QuestionTypes.Single() == "OpenEnded",
         "nested snake_case fields must be deserialized");
+    Assert(handler.LastRequestBody?.Contains("\"persist\":false", StringComparison.Ordinal) == true,
+        "preview generation must tell the AI service not to persist an unapproved draft");
 }
 static Task TestLegacySha256Password()
 {
@@ -135,13 +141,20 @@ static void Assert(bool condition, string message)
 
 sealed class StaticJsonHandler(string json) : HttpMessageHandler
 {
-    protected override Task<HttpResponseMessage> SendAsync(
+    public string? LastRequestBody { get; private set; }
+
+    protected override async Task<HttpResponseMessage> SendAsync(
         HttpRequestMessage request,
-        CancellationToken cancellationToken) =>
-        Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+        CancellationToken cancellationToken)
+    {
+        LastRequestBody = request.Content is null
+            ? null
+            : await request.Content.ReadAsStringAsync(cancellationToken);
+        return new HttpResponseMessage(HttpStatusCode.OK)
         {
             Content = new StringContent(json, Encoding.UTF8, "application/json")
-        });
+        };
+    }
 }
 sealed class NullJsonHandler : HttpMessageHandler
 {

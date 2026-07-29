@@ -131,12 +131,15 @@ public class AiServiceClient
     }
 
     /// <summary>Yêu cầu AI Service cào và tạo kịch bản từ URL đặc tả BA</summary>
-    public async Task<AiAdminScenarioResponse> CrawlScenario(string url, string? selectedModel)
+    public async Task<AiAdminScenarioResponse> CrawlScenario(
+        string url,
+        string? selectedModel,
+        bool persist = true)
     {
         try
         {
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(180));
-            var payload = new { url, selectedModel };
+            var payload = new { url, selectedModel, persist };
             var response = await _http.PostAsJsonAsync("/api/admin/crawl-scenario", payload, cts.Token);
             if (!response.IsSuccessStatusCode)
             {
@@ -167,12 +170,15 @@ public class AiServiceClient
     }
 
     /// <summary>Yêu cầu AI Service trích xuất và tạo kịch bản từ video</summary>
-    public async Task<AiAdminScenarioResponse> UploadVideoScenario(string videoPath, string? selectedModel)
+    public async Task<AiAdminScenarioResponse> UploadVideoScenario(
+        string videoPath,
+        string? selectedModel,
+        bool persist = true)
     {
         try
         {
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(300));
-            var payload = new { videoPath, selectedModel };
+            var payload = new { videoPath, selectedModel, persist };
             var response = await _http.PostAsJsonAsync("/api/admin/upload-video-scenario", payload, cts.Token);
             if (!response.IsSuccessStatusCode)
             {

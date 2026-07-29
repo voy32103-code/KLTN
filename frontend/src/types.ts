@@ -215,6 +215,32 @@ export type AdminUserItem = {
   createdAt: string
 }
 
+export type ScenarioRequirementDraft = {
+  id: string
+  text: string
+  gate: number
+  keywords: string[]
+  question_types: string[]
+  reveal_condition: string
+  reveal_difficulty: 'Easy' | 'Medium' | 'Hard'
+  requires: string[]
+}
+
+export type ScenarioDraft = {
+  scenario_key: string
+  scenario_title: string
+  context: string
+  general_keywords: string[]
+  gate_keyword_groups: Record<string, string[]>
+  question_type_gate_map: Record<string, number[]>
+  max_new_reveals_per_turn: number
+  requirements: ScenarioRequirementDraft[]
+}
+
+export type ScenarioPreviewResponse = {
+  message: string
+  scenario: ScenarioDraft
+}
 export type AdminState = {
   activeTab: 'overview' | 'users' | 'scenarios'
   overview: AdminOverview | null
@@ -228,6 +254,8 @@ export type AdminState = {
   userRoleFilter: string
   editingUser: AdminUserItem | null
   isCreatingUser: boolean
+  scenarioDraft: ScenarioDraft | null
+  scenarioDraftSource: string | null
 }
 
 export type Notice = {

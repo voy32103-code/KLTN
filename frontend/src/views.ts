@@ -933,6 +933,7 @@ export function renderAdminDashboard(state: AppState) {
 
 function renderAdminScenarioSection(state: AppState) {
   return `
+    ${renderAdminScenarioPreview(state)}
     <div class="admin-scenarios-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px;">
       
       <!-- Card 1: Crawl BA Document -->
@@ -970,7 +971,7 @@ function renderAdminScenarioSection(state: AppState) {
         </div>
 
         <button class="primary-button" data-action="admin-crawl" type="button" ${state.busy ? 'disabled' : ''} style="margin-top: 12px; display: flex; align-items: center; justify-content: center; gap: 8px;">
-          ${state.busy ? '<span class="spinner-mini"></span> Đang xử lý...' : 'Bắt đầu Cào & Trích xuất'}
+          ${state.busy ? '<span class="spinner-mini"></span> Đang xử lý...' : 'Tạo bản preview từ tài liệu'}
         </button>
       </div>
 
@@ -1005,7 +1006,7 @@ function renderAdminScenarioSection(state: AppState) {
         </div>
 
         <button class="primary-button" data-action="admin-video" type="button" ${state.busy ? 'disabled' : ''} style="margin-top: 4px; background: linear-gradient(135deg, var(--accent-indigo), #c96b4b); border: none; display: flex; align-items: center; justify-content: center; gap: 8px;">
-          ${state.busy ? '<span class="spinner-mini"></span> Đang xử lý...' : 'Bắt đầu Nạp từ Video'}
+          ${state.busy ? '<span class="spinner-mini"></span> Đang xử lý...' : 'Tạo bản preview từ video'}
         </button>
       </div>
 
@@ -1013,6 +1014,145 @@ function renderAdminScenarioSection(state: AppState) {
   `
 }
 
+function renderAdminScenarioPreview(state: AppState) {
+  const draft = state.adminState?.scenarioDraft
+  if (!draft) return ''
+
+  const source = state.adminState?.scenarioDraftSource
+  const requirementCards = draft.requirements.map((requirement, index) => `
+    <article class="scenario-draft-requirement" data-requirement-row="${index}">
+      <div class="scenario-draft-requirement-header">
+        <div>
+          <span class="scenario-draft-index">Yêu cầu ${index + 1}</span>
+          <strong>${escapeHtml(requirement.id || `R${index + 1}`)}</strong>
+        </div>
+        <button class="ghost-button danger-button" data-draft-remove-index="${index}" type="button"
+          ${draft.requirements.length <= 1 || state.busy ? 'disabled' : ''}>Xóa yêu cầu</button>
+      </div>
+
+      <div class="scenario-draft-grid compact">
+        <label>
+          <span>Mã yêu cầu *</span>
+          <input data-draft-field="id" value="${escapeAttribute(requirement.id)}" maxlength="50" />
+        </label>
+        <label>
+          <span>Gate (0–4) *</span>
+          <input data-draft-field="gate" type="number" min="0" max="4" step="1"
+            value="${requirement.gate}" />
+        </label>
+        <label class="span-2">
+          <span>Nội dung yêu cầu *</span>
+          <textarea data-draft-field="text" rows="2">${escapeHtml(requirement.text)}</textarea>
+        </label>
+        <label>
+          <span>Từ khóa (phân cách bằng dấu phẩy)</span>
+          <input data-draft-field="keywords"
+            value="${escapeAttribute(requirement.keywords.join(', '))}" />
+        </label>
+        <label>
+          <span>Loại câu hỏi</span>
+          <input data-draft-field="question_types"
+            value="${escapeAttribute(requirement.question_types.join(', '))}" />
+        </label>
+        <label class="span-2">
+          <span>Điều kiện tiết lộ</span>
+          <input data-draft-field="reveal_condition"
+            value="${escapeAttribute(requirement.reveal_condition)}" />
+        </label>
+        <label>
+          <span>Độ khó</span>
+          <select data-draft-field="reveal_difficulty">
+            <option value="Easy" ${requirement.reveal_difficulty === 'Easy' ? 'selected' : ''}>Easy</option>
+            <option value="Medium" ${requirement.reveal_difficulty === 'Medium' ? 'selected' : ''}>Medium</option>
+            <option value="Hard" ${requirement.reveal_difficulty === 'Hard' ? 'selected' : ''}>Hard</option>
+          </select>
+        </label>
+        <label>
+          <span>Phụ thuộc các mã</span>
+          <input data-draft-field="requires"
+            value="${escapeAttribute(requirement.requires.join(', '))}"
+            placeholder="Ví dụ: R1, R2" />
+        </label>
+      </div>
+    </article>
+  `).join('')
+
+  return `
+    <form id="admin-scenario-preview-form" class="scenario-draft-panel" novalidate>
+      <div class="scenario-draft-heading">
+        <div>
+          <p class="section-kicker">Bản nháp chưa publish</p>
+          <h3>Kiểm tra và chỉnh sửa scenario</h3>
+          <p>AI chỉ tạo bản nháp. Dữ liệu dưới đây chưa được đưa vào danh sách kịch bản.</p>
+          ${source ? `<small>Nguồn: ${escapeHtml(source)}</small>` : ''}
+        </div>
+        <span class="scenario-draft-count">${draft.requirements.length} yêu cầu</span>
+      </div>
+
+      <div class="scenario-draft-grid">
+        <label>
+          <span>Mã scenario *</span>
+          <input data-draft-field="scenario_key" value="${escapeAttribute(draft.scenario_key)}"
+            maxlength="100" pattern="[a-z0-9]+(?:_[a-z0-9]+)*" />
+          <small>Chữ thường, số và dấu gạch dưới.</small>
+        </label>
+        <label>
+          <span>Tên scenario *</span>
+          <input data-draft-field="scenario_title"
+            value="${escapeAttribute(draft.scenario_title)}" maxlength="200" />
+        </label>
+        <label class="span-2">
+          <span>Bối cảnh stakeholder *</span>
+          <textarea data-draft-field="context" rows="4">${escapeHtml(draft.context)}</textarea>
+        </label>
+        <label>
+          <span>Từ khóa chung</span>
+          <input data-draft-field="general_keywords"
+            value="${escapeAttribute(draft.general_keywords.join(', '))}" />
+        </label>
+        <label>
+          <span>Số yêu cầu mới tối đa mỗi lượt</span>
+          <input data-draft-field="max_new_reveals_per_turn" type="number" min="1" max="12"
+            step="1" value="${draft.max_new_reveals_per_turn}" />
+        </label>
+      </div>
+
+      <details class="scenario-draft-advanced">
+        <summary>Cấu hình Gate nâng cao</summary>
+        <div class="scenario-draft-grid">
+          <label>
+            <span>Nhóm từ khóa theo Gate (JSON)</span>
+            <textarea data-draft-field="gate_keyword_groups" rows="7">${escapeHtml(JSON.stringify(draft.gate_keyword_groups, null, 2))}</textarea>
+          </label>
+          <label>
+            <span>Ánh xạ loại câu hỏi → Gate (JSON)</span>
+            <textarea data-draft-field="question_type_gate_map" rows="7">${escapeHtml(JSON.stringify(draft.question_type_gate_map, null, 2))}</textarea>
+          </label>
+        </div>
+      </details>
+
+      <div class="scenario-draft-list-heading">
+        <div>
+          <h4>Danh sách yêu cầu ẩn</h4>
+          <p>Kiểm tra nội dung, Gate, điều kiện tiết lộ và quan hệ phụ thuộc.</p>
+        </div>
+        <button id="admin-add-requirement" class="ghost-button" type="button"
+          ${state.busy ? 'disabled' : ''}>+ Thêm yêu cầu</button>
+      </div>
+
+      <div class="scenario-draft-requirements">${requirementCards}</div>
+
+      <div class="scenario-draft-actions">
+        <button class="ghost-button" data-action="admin-cancel-preview" type="button"
+          ${state.busy ? 'disabled' : ''}>Hủy bản nháp</button>
+        <button class="primary-button" data-action="admin-publish-scenario" type="button"
+          ${state.busy ? 'disabled' : ''}>
+          ${state.busy ? '<span class="spinner-mini"></span> Đang publish...' : 'Xác nhận & Publish'}
+        </button>
+      </div>
+    </form>
+  `
+}
 function renderAdminOverviewSection(admin: AdminState) {
   const overview = admin.overview
   return `

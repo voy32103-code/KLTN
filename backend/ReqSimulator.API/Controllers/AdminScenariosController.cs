@@ -34,6 +34,82 @@ public class AdminScenariosController : ControllerBase
         _logger = logger;
     }
 
+    [HttpPost("crawl/preview")]
+    public async Task<IActionResult> PreviewCrawlScenario([FromBody] CrawlRequestDto dto)
+    {
+        if (!IsAllowedModel(dto.SelectedModel))
+            return BadRequest(new { message = "The selected AI model is not supported." });
+
+        _logger.LogInformation(
+            "Starting scenario preview generation from host {Host}.",
+            GetSafeHost(dto.Url));
+
+        var response = await _ai.CrawlScenario(dto.Url, dto.SelectedModel, persist: false);
+        if (!response.Success || response.Scenario is null)
+            return BadRequest(new { message = "Could not generate a preview from the supplied source." });
+
+        return Ok(new
+        {
+            message = "Preview generated. Review and edit it before publishing.",
+            scenario = response.Scenario
+        });
+    }
+
+    [HttpPost("upload-video/preview")]
+    public async Task<IActionResult> PreviewVideoScenario([FromBody] VideoRequestDto dto)
+    {
+        if (!AiModelCatalog.IsGemini(dto.SelectedModel))
+            return BadRequest(new { message = "The selected AI model is not supported." });
+
+        _logger.LogInformation(
+            "Starting scenario preview generation from video {FileName}.",
+            Path.GetFileName(dto.VideoPath));
+
+        var response = await _ai.UploadVideoScenario(
+            dto.VideoPath,
+            dto.SelectedModel,
+            persist: false);
+        if (!response.Success || response.Scenario is null)
+            return BadRequest(new { message = "Could not generate a preview from the supplied video." });
+
+        return Ok(new
+        {
+            message = "Preview generated. Review and edit it before publishing.",
+            scenario = response.Scenario
+        });
+    }
+
+    [HttpPost("publish")]
+    public async Task<IActionResult> PublishScenario(
+        [FromBody] ScenarioConfigJson scenario,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var published = await _publisher.PublishAsync(scenario, cancellationToken);
+            return Ok(new
+            {
+                message = "Scenario published successfully.",
+                scenarioId = published.Id,
+                published.ScenarioKey,
+                published.Version,
+                published.Title,
+                requirementsCount = published.HiddenRequirements.Count
+            });
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning(ex, "The admin-edited scenario failed validation.");
+            return BadRequest(new { message = "The scenario draft is invalid." });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Could not publish the admin-edited scenario.");
+            return StatusCode(
+                StatusCodes.Status500InternalServerError,
+                new { message = "Could not publish the scenario." });
+        }
+    }
     [HttpPost("crawl")]
     public async Task<IActionResult> CrawlScenario(
         [FromBody] CrawlRequestDto dto,
