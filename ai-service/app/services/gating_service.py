@@ -7,6 +7,8 @@ network access or API keys.
 from __future__ import annotations
 
 import json
+import re
+from difflib import SequenceMatcher
 from typing import Any
 
 from app.services.scenario_config_service import (
@@ -20,6 +22,11 @@ TECHNICAL_KEYWORDS = (
     "api", "apis", "database", "schema", "table", "sql", "endpoint",
     "backend", "frontend", "server", "algorithm", "code", "implementation",
     "microservice", "json", "jwt", "postgres", "prompt"
+)
+
+CONDITIONAL_CUES = (
+    "nếu", "khi", "trước", "sau", "bao lâu", "bao nhiêu", "điều kiện",
+    "ngoại lệ", "trường hợp", "what if", "when", "before", "after", "how long",
 )
 
 
@@ -68,24 +75,88 @@ def load_persona_state(req: Any) -> dict[str, Any]:
 
 
 def detect_question_type(message: str) -> str | None:
-    msg = message.lower().strip()
+    msg = normalize_text(message)
 
-    if any(phrase in msg for phrase in ["so that means", "so basically", "isn't it true", "right?", "correct?"]):
+    if any(phrase in msg for phrase in [
+        "so that means", "so basically", "isn't it true", "right?", "correct?",
+        "đúng không", "phải không", "có phải", "có đúng",
+    ]):
         return "Leading"
-    if any(phrase in msg for phrase in ["what if", "how about", "what happens when", "exception", "special case"]):
+    if any(phrase in msg for phrase in [
+        "what if", "how about", "what happens when", "exception", "special case",
+        "nếu", "trường hợp", "ngoại lệ", "sự cố", "lỗi xảy ra",
+    ]):
         return "ExceptionOriented"
-    if any(phrase in msg for phrase in ["can you explain", "what do you mean", "could you clarify", "clarify"]):
+    if any(phrase in msg for phrase in [
+        "can you explain", "what do you mean", "could you clarify", "clarify",
+        "giải thích", "làm rõ", "ý là gì", "cụ thể là gì",
+    ]):
         return "Clarifying"
-    if any(phrase in msg for phrase in ["why", "how exactly", "tell me more", "elaborate", "walk me through"]):
+    if any(phrase in msg for phrase in [
+        "why", "how exactly", "tell me more", "elaborate", "walk me through",
+        "tại sao", "như thế nào", "quy trình", "chi tiết", "nói rõ hơn",
+    ]):
         return "Probing"
-    if any(phrase in msg for phrase in ["must", "should", "require", "limit", "constraint", "rule", "blocked"]):
+    if any(phrase in msg for phrase in [
+        "must", "should", "require", "limit", "constraint", "rule", "blocked",
+        "bắt buộc", "yêu cầu", "giới hạn", "quy định", "ràng buộc", "chặn",
+    ]):
         return "ConstraintOriented"
-    if msg.endswith("?") and any(phrase in msg for phrase in ["is it", "do you", "are there", "does it", "can it", "will it"]):
+    if msg.endswith("?") and any(phrase in msg for phrase in [
+        "is it", "do you", "are there", "does it", "can it", "will it",
+        "có ", "được không", "hay không",
+    ]):
         return "Closed"
-    if msg.endswith("?") or any(phrase in msg for phrase in ["what", "how", "describe", "tell me about"]):
+    if msg.endswith("?") or any(phrase in msg for phrase in [
+        "what", "how", "describe", "tell me about", "gì", "mô tả", "cho biết",
+    ]):
         return "OpenEnded"
 
     return None
+
+
+def detect_topic(message: str, config: ScenarioConfig | None) -> str | None:
+    if config is None:
+        return None
+    normalized = normalize_text(message)
+    ranked = [
+        (sum(1 for keyword in rule.keywords if keyword in normalized), rule.requirement_id)
+        for rule in config.requirements
+    ]
+    score, topic = max(ranked, default=(0, None))
+    return topic if score > 0 else None
+
+
+def classify_question_quality(message: str, config: ScenarioConfig | None) -> str:
+    normalized = normalize_text(message)
+    question_type = detect_question_type(message)
+    keyword_hits = 0
+    if config is not None:
+        keyword_hits = max(
+            (sum(1 for keyword in rule.keywords if keyword in normalized) for rule in config.requirements),
+            default=0,
+        )
+    if any(cue in normalized for cue in CONDITIONAL_CUES) or question_type == "ExceptionOriented":
+        return "conditional"
+    if keyword_hits >= 2 or question_type in {"Probing", "Clarifying", "ConstraintOriented"}:
+        return "specific"
+    if keyword_hits == 1 or len(normalized.split()) >= 6:
+        return "on_topic"
+    return "vague"
+
+
+def disclosure_view(requirement: str, quality: str, config: ScenarioConfig | None) -> str:
+    if quality == "conditional" or config is None:
+        return requirement
+    rule = config.requirement_map.get(normalize_text(requirement))
+    if quality == "vague":
+        return "Có một nhu cầu nghiệp vụ liên quan, nhưng tôi cần câu hỏi cụ thể hơn để chia sẻ chi tiết."
+    if quality == "on_topic":
+        topic = ", ".join(rule.keywords[:2]) if rule and rule.keywords else "chủ đề này"
+        return f"Có một quy tắc nghiệp vụ liên quan đến {topic}; chi tiết phụ thuộc vào điều kiện cụ thể."
+    redacted = re.sub(r"\b\d+(?:[.,]\d+)?\b", "một ngưỡng cụ thể", requirement)
+    redacted = re.split(r"\b(?:nếu|khi|trước|sau|cho đến khi|if|when|before|after)\b", redacted, 1, flags=re.IGNORECASE)[0].strip()
+    return redacted.rstrip(". ") + ", với một số điều kiện nghiệp vụ cần được làm rõ."
 
 
 def is_overly_technical(message: str) -> bool:
@@ -100,7 +171,17 @@ def is_repeated_question(message: str, history) -> bool:
         for msg in history
         if msg.role == "Student"
     ]
-    return normalized in prior_student_messages
+    if normalized in prior_student_messages:
+        return True
+
+    # Catch superficial rephrases (punctuation, articles, small wording edits)
+    # without treating a merely related follow-up as a repeated question.
+    return any(
+        len(normalized) >= 20
+        and len(previous) >= 20
+        and SequenceMatcher(None, normalized, previous).ratio() >= 0.90
+        for previous in prior_student_messages
+    )
 
 
 def detect_triggered_gates(message: str, question_type: str | None, config: ScenarioConfig | None) -> set[int]:
@@ -179,6 +260,8 @@ def select_gated_requirements(
             revealed_ids.add(rule_item.requirement_id.strip().lower())
 
     triggered_gates = detect_triggered_gates(req.studentMessage, question_type, config)
+    quality = classify_question_quality(req.studentMessage, config)
+    max_gate = {"vague": 0, "on_topic": 1, "specific": 3, "conditional": 4}[quality]
     allowed_previous = filter_previously_revealed(known_requirements, revealed_norm)
 
     candidates: list[tuple[int, int, str]] = []
@@ -186,6 +269,8 @@ def select_gated_requirements(
         normalized = normalize_text(requirement)
         rule = rule_map.get(normalized)
         if rule is None or normalized in revealed_norm:
+            continue
+        if rule.gate > max_gate:
             continue
 
         if rule.gate == 0:

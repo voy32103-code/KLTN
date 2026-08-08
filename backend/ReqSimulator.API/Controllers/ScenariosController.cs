@@ -39,6 +39,7 @@ public class ScenariosController : ControllerBase
 
         var scenario = await _db.Scenarios
             .Include(s => s.Personas)
+                .ThenInclude(p => p.Stakeholder)
             .FirstOrDefaultAsync(s => s.Id == id && (s.IsActive || canViewInactive));
 
         if (scenario == null) return NotFound();
@@ -53,7 +54,14 @@ public class ScenariosController : ControllerBase
             Personas = scenario.Personas.Select(p => new
             {
                 p.Id, p.Name, p.RoleTitle, p.Difficulty,
-                p.CommunicationStyle, p.KnowledgeLevel
+                p.Label, p.CommunicationStyle, p.KnowledgeLevel,
+                Stakeholder = p.Stakeholder == null ? null : new
+                {
+                    p.Stakeholder.Id,
+                    p.Stakeholder.Name,
+                    p.Stakeholder.RoleTitle,
+                    p.Stakeholder.Department
+                }
             }),
             // Chỉ lecturer/admin mới thấy hidden requirements
             HiddenRequirements = role is "Lecturer" or "Admin"

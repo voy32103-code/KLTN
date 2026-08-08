@@ -95,23 +95,54 @@ public sealed partial class ScenarioVersionPublisher
             CreatedAt = now,
             PublishedAt = now,
             ConfigHash = configHash,
-            SerializedConfig = serializedConfig
+            SerializedConfig = serializedConfig,
+            SourceUrlsData = JsonSerializer.Serialize(
+                (config.SourceUrls ?? [])
+                    .Where(url => Uri.IsWellFormedUriString(url, UriKind.Absolute))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList())
         };
 
-        next.Personas.Add(new Persona
+        var stakeholderTemplates = new[]
         {
-            Id = Guid.NewGuid(),
-            ScenarioId = next.Id,
-            Name = "Khách Hàng (Stakeholder)",
-            RoleTitle = "Đại Diện Nghiệp Vụ",
-            PersonalityTraits = """{"traits":["busy","detail_oriented"],"jargon_level":"medium"}""",
-            CommunicationStyle = "professional",
-            KnowledgeLevel = "high",
-            Difficulty = PersonaDifficulty.Medium,
-            InitialMood = "neutral",
-            InitialPatience = 1.00m,
-            CreatedAt = now
-        });
+            ("Business Owner", "Decision Maker", "Management"),
+            ("Process Expert", "Domain Specialist", "Operations"),
+            ("End User", "Operational User", "Delivery")
+        };
+        var personaTemplates = new[]
+        {
+            ("Collaborative", "collaborative", "high", PersonaDifficulty.Easy, 1.00m),
+            ("Challenging", "concise", "medium", PersonaDifficulty.Hard, 0.70m)
+        };
+        foreach (var role in stakeholderTemplates)
+        {
+            var stakeholder = new Stakeholder
+            {
+                Id = Guid.NewGuid(), ScenarioId = next.Id, Name = role.Item1,
+                RoleTitle = role.Item2, Department = role.Item3,
+                Description = $"Represents the {role.Item3} viewpoint.", CreatedAt = now
+            };
+            next.Stakeholders.Add(stakeholder);
+            foreach (var profile in personaTemplates)
+            {
+                var persona = new Persona
+                {
+                    Id = Guid.NewGuid(), ScenarioId = next.Id, StakeholderId = stakeholder.Id,
+                    Name = $"{role.Item1} - {profile.Item1}", Label = profile.Item1,
+                    RoleTitle = role.Item2,
+                    PersonalityTraits = JsonSerializer.Serialize(new
+                    {
+                        traits = new[] { profile.Item1.ToLowerInvariant(), "detail_oriented" },
+                        jargon_level = profile.Item3
+                    }),
+                    CommunicationStyle = profile.Item2, KnowledgeLevel = profile.Item3,
+                    Difficulty = profile.Item4, InitialMood = "neutral",
+                    InitialPatience = profile.Item5, CreatedAt = now
+                };
+                stakeholder.Personas.Add(persona);
+                next.Personas.Add(persona);
+            }
+        }
 
         foreach (var rule in config.Requirements)
         {
@@ -127,6 +158,19 @@ public sealed partial class ScenarioVersionPublisher
                 RevealDifficulty = MapDifficulty(rule.RevealDifficulty),
                 RevealCondition = Limit(rule.RevealCondition?.Trim(), 1000),
                 GateOrder = Math.Clamp(rule.Gate, 0, 4),
+                Actor = Limit(rule.Actor?.Trim(), 160),
+                Action = Limit(rule.Action?.Trim(), 160),
+                Object = Limit(rule.Object?.Trim(), 240),
+                Condition = Limit(rule.Condition?.Trim(), 500),
+                RequirementType = NormalizeRequirementType(rule.Type),
+                Priority = NormalizePriority(rule.Priority),
+                NormalizedRequirementData = JsonSerializer.Serialize(new
+                {
+                    id = rule.Id, actor = rule.Actor, action = rule.Action,
+                    @object = rule.Object, condition = rule.Condition,
+                    type = NormalizeRequirementType(rule.Type),
+                    priority = NormalizePriority(rule.Priority)
+                }),
                 CreatedAt = now
             });
         }
@@ -176,6 +220,16 @@ public sealed partial class ScenarioVersionPublisher
             "hard" => PersonaDifficulty.Hard,
             _ => PersonaDifficulty.Medium
         };
+
+    private static string NormalizeRequirementType(string? value) =>
+        value?.Trim().ToUpperInvariant() is "FR" or "NFR" or "BR"
+            ? value.Trim().ToUpperInvariant()
+            : "FR";
+
+    private static string NormalizePriority(string? value) =>
+        value?.Trim().ToLowerInvariant() is "high" or "medium" or "low"
+            ? value.Trim().ToLowerInvariant()
+            : "medium";
 
     [GeneratedRegex("[^a-z0-9_-]+", RegexOptions.CultureInvariant)]
     private static partial Regex InvalidScenarioKeyCharacters();

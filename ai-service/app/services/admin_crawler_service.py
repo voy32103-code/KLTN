@@ -31,6 +31,13 @@ class ScenarioRequirementRuleSchema(BaseModel):
     reveal_difficulty: str = Field(description="Mức độ khó khi khai thác yêu cầu này ('Easy', 'Medium', hoặc 'Hard')")
     requires: Optional[List[str]] = Field(default=[], description="Danh sách các mã yêu cầu (trường id, ví dụ: ['R1']) tiên quyết cần mở khóa trước yêu cầu này (nếu có)")
 
+    actor: Optional[str] = None
+    action: Optional[str] = None
+    object: Optional[str] = None
+    condition: Optional[str] = None
+    type: Optional[str] = Field(default=None, description="FR, NFR or BR")
+    priority: Optional[str] = Field(default="medium", description="high, medium or low")
+
 class ScenarioConfigSchema(BaseModel):
     scenario_key: str = Field(
         min_length=1,
@@ -47,6 +54,8 @@ class ScenarioConfigSchema(BaseModel):
     requirements: List[ScenarioRequirementRuleSchema] = Field(description="Danh sách các yêu cầu ẩn của kịch bản")
 
 # Sub-components for Gemini schema compatibility (avoids dynamic dict validation errors in SDK)
+    source_urls: List[str] = Field(default_factory=list)
+
 class GateKeywordGroup(BaseModel):
     gate: str = Field(description="Số thứ tự cổng dưới dạng chuỗi (ví dụ: '1', '2')")
     keywords: List[str] = Field(description="Danh sách các từ khóa tương ứng với cổng này")
@@ -70,6 +79,8 @@ class ScenarioConfigGeminiSchema(BaseModel):
     max_new_reveals_per_turn: int = Field(default=1)
     requirements: List[ScenarioRequirementRuleSchema] = Field(description="Danh sách yêu cầu ẩn")
 
+    source_urls: List[str] = Field(default_factory=list)
+
 def map_gemini_to_standard_config(gemini_config: ScenarioConfigGeminiSchema) -> ScenarioConfigSchema:
     """Chuyển đổi từ Schema tương thích Gemini sang Schema chuẩn có chứa Dictionaries."""
     gate_kw_dict = {item.gate: item.keywords for item in gemini_config.gate_keyword_groups}
@@ -83,7 +94,8 @@ def map_gemini_to_standard_config(gemini_config: ScenarioConfigGeminiSchema) -> 
         gate_keyword_groups=gate_kw_dict,
         question_type_gate_map=q_type_dict,
         max_new_reveals_per_turn=gemini_config.max_new_reveals_per_turn,
-        requirements=gemini_config.requirements
+        requirements=gemini_config.requirements,
+        source_urls=gemini_config.source_urls,
     )
 
 def parse_and_validate_scenario_config(cleaned_json_text: str) -> ScenarioConfigSchema:
@@ -118,6 +130,8 @@ def parse_and_validate_scenario_config(cleaned_json_text: str) -> ScenarioConfig
         data["max_new_reveals_per_turn"] = 1
     if "requirements" not in data or not isinstance(data["requirements"], list):
         data["requirements"] = []
+    if "source_urls" not in data or not isinstance(data["source_urls"], list):
+        data["source_urls"] = []
 
     # Phòng vệ cho từng requirement rule
     for req in data["requirements"]:
@@ -280,6 +294,10 @@ Yêu cầu chi tiết:
    - Chỉ lấy từ 1-2 loại câu hỏi phù hợp nhất (trường 'question_types').
    - Mô tả điều kiện tiết lộ cực kỳ ngắn gọn (trường 'reveal_condition' dưới 80 ký tự).
    - Phân loại độ khó (reveal_difficulty): Dựa trên việc yêu cầu đó dễ phát hiện hay cần hỏi sâu ('Easy', 'Medium', 'Hard').
+   - Bắt buộc cấu trúc hóa mỗi yêu cầu theo Actor–Action–Object–Condition:
+     actor là tác nhân, action là động từ chuẩn, object là đối tượng nghiệp vụ,
+     condition là điều kiện/ràng buộc nếu có; type chỉ nhận FR/NFR/BR và priority
+     chỉ nhận high/medium/low. Không để trống actor/action/object.
    - Phân bổ Cổng (gate): 
      - Gate 0: Yêu cầu tổng quan, mục tiêu hệ thống.
      - Gate 1: Yêu cầu chức năng cơ bản cốt lõi.

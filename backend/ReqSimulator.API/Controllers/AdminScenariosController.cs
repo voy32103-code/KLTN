@@ -19,6 +19,9 @@ public class AdminScenariosController : ControllerBase
     public sealed record CrawlRequestDto(
         [Required, Url, StringLength(2048)] string Url,
         [StringLength(100)] string? SelectedModel);
+    public sealed record MultiSourceCrawlRequestDto(
+        [Required, MinLength(1), MaxLength(10)] List<string> Urls,
+        [StringLength(100)] string? SelectedModel);
 
     public sealed record VideoRequestDto(
         [Required, StringLength(1024)] string VideoPath,
@@ -39,7 +42,6 @@ public class AdminScenariosController : ControllerBase
     {
         if (!IsAllowedModel(dto.SelectedModel))
             return BadRequest(new { message = "The selected AI model is not supported." });
-
         _logger.LogInformation(
             "Starting scenario preview generation from host {Host}.",
             GetSafeHost(dto.Url));
@@ -51,7 +53,53 @@ public class AdminScenariosController : ControllerBase
         return Ok(new
         {
             message = "Preview generated. Review and edit it before publishing.",
-            scenario = response.Scenario
+            scenario = response.Scenario with { SourceUrls = [dto.Url] }
+        });
+    }
+
+    [HttpPost("crawl/preview-multiple")]
+    public async Task<IActionResult> PreviewMultipleSources(
+        [FromBody] MultiSourceCrawlRequestDto dto)
+    {
+        if (!IsAllowedModel(dto.SelectedModel))
+            return BadRequest(new { message = "The selected AI model is not supported." });
+        if (dto.Urls.Any(url => url.Length > 2048 ||
+            !Uri.TryCreate(url, UriKind.Absolute, out var uri) ||
+            (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps)))
+            return BadRequest(new { message = "Every source must be a valid HTTP(S) URL." });
+
+        var urls = dto.Urls.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        var responses = await Task.WhenAll(urls.Select(url =>
+            _ai.CrawlScenario(url, dto.SelectedModel, persist: false)));
+        var configs = responses
+            .Where(result => result.Success && result.Scenario is not null)
+            .Select(result => result.Scenario!)
+            .ToList();
+        if (configs.Count == 0)
+            return BadRequest(new { message = "No supplied source produced a valid preview." });
+
+        var first = configs[0];
+        var requirements = configs.SelectMany(config => config.Requirements)
+            .GroupBy(rule => string.Join("|",
+                rule.Type?.Trim().ToUpperInvariant(),
+                rule.Action?.Trim().ToLowerInvariant(),
+                rule.Object?.Trim().ToLowerInvariant(),
+                rule.Text.Trim().ToLowerInvariant()))
+            .Select(group => group.First())
+            .ToList();
+        var merged = first with
+        {
+            Context = string.Join("\n\n", configs.Select(config => config.Context)
+                .Where(value => !string.IsNullOrWhiteSpace(value)).Distinct()),
+            GeneralKeywords = configs.SelectMany(config => config.GeneralKeywords)
+                .Distinct(StringComparer.OrdinalIgnoreCase).ToList(),
+            Requirements = requirements,
+            SourceUrls = urls
+        };
+        return Ok(new
+        {
+            message = $"Merged {configs.Count} sources. Review before publishing.",
+            scenario = merged
         });
     }
 

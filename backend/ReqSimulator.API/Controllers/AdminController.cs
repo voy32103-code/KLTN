@@ -200,6 +200,47 @@ public class AdminController : ControllerBase
         return Ok(new { exact, semantic, partial, missed });
     }
 
+    [HttpGet("stats/feedback-experiment")]
+    public async Task<IActionResult> GetFeedbackExperimentStats()
+    {
+        const int target = 30;
+        var responses = await _db.FeedbackSurveyResponses
+            .AsNoTracking()
+            .Select(item => new
+            {
+                item.Variant,
+                item.Helpfulness,
+                item.Actionability,
+                item.NoAnswerLeak
+            })
+            .ToListAsync();
+        var rows = new[] { "A", "B" }.Select(variant =>
+        {
+            var group = responses.Where(item => item.Variant == variant).ToList();
+            return new
+            {
+                variant,
+                sampleSize = group.Count,
+                target,
+                remaining = Math.Max(0, target - group.Count),
+                quotaMet = group.Count >= target,
+                helpfulness = group.Count == 0 ? 0 : Math.Round(group.Average(item => item.Helpfulness), 2),
+                actionability = group.Count == 0 ? 0 : Math.Round(group.Average(item => item.Actionability), 2),
+                noAnswerLeak = group.Count == 0 ? 0 : Math.Round(group.Average(item => item.NoAnswerLeak), 2)
+            };
+        }).ToList();
+        return Ok(new
+        {
+            variants = rows,
+            targetPerVariant = target,
+            readyForAnalysis = rows.All(item => item.quotaMet),
+            totalRemaining = rows.Sum(item => item.remaining),
+            warning = rows.Any(item => !item.quotaMet)
+                ? "Do not draw a conclusion until both variants reach 30 genuine responses."
+                : null
+        });
+    }
+
     // ==================== 2. USER MANAGEMENT (CRUD) ENDPOINTS ====================
 
     /// <summary>Lấy danh sách tất cả người dùng</summary>

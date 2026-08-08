@@ -2,7 +2,9 @@
 Pydantic models — contract giữa ASP.NET Backend ↔ FastAPI AI Service.
 Phải khớp 1:1 với các DTOs trong AiServiceClient.cs.
 """
-from pydantic import BaseModel
+from typing import Literal
+
+from pydantic import BaseModel, ConfigDict, Field
 from datetime import datetime
 
 
@@ -44,6 +46,8 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     stakeholderReply: str
     detectedQuestionType: str | None = None
+    detectedTopic: str | None = None
+    questionQuality: Literal["vague", "on_topic", "specific", "conditional"] | None = None
     stateUpdate: PersonaStateUpdate | None = None
     isFallback: bool = False
 
@@ -56,13 +60,88 @@ class ExtractRequest(BaseModel):
 
 
 class ExtractedReq(BaseModel):
+    """Legacy simple extraction format - kept for backward compatibility"""
     text: str
     confidence: float
+    actor: str | None = None
+    action: str | None = None
+    object: str | None = None
+    condition: str | None = None
+    type: Literal["FR", "NFR", "BR"] | None = None
+    priority: Literal["high", "medium", "low"] | None = None
+
+
+# ===== NEW: Structured Requirement Extraction =====
+class StructuredRequirement(BaseModel):
+    """
+    Structured requirement với phân loại đầy đủ theo Actor-Action-Object-Condition.
+    Hỗ trợ phân loại FR/NFR/BR và confidence scoring.
+    """
+    model_config = ConfigDict(
+        extra="forbid",
+        str_strip_whitespace=True,
+        json_schema_extra={
+            "examples": [
+                {
+                    "id": "REQ001",
+                    "actor": "Khách hàng",
+                    "action": "Đặt",
+                    "object": "Phòng",
+                    "condition": "Còn phòng trống",
+                    "type": "FR",
+                    "priority": "high",
+                    "confidence": 0.95,
+                    "raw_text": "Khách hàng có thể đặt phòng nếu còn phòng trống"
+                },
+                {
+                    "id": "REQ002",
+                    "actor": "Hệ thống",
+                    "action": "Phản hồi",
+                    "object": "Yêu cầu đặt phòng",
+                    "condition": "Trong 2 giây",
+                    "type": "NFR",
+                    "priority": "medium",
+                    "confidence": 0.88,
+                    "raw_text": "Hệ thống cần phản hồi yêu cầu đặt phòng trong vòng 2 giây"
+                }
+            ]
+        },
+    )
+
+    id: str = Field(min_length=1, max_length=64, pattern=r"^[A-Za-z0-9_-]+$")
+    actor: str = Field(min_length=1, max_length=160)
+    action: str = Field(min_length=1, max_length=160)
+    object: str = Field(min_length=1, max_length=240)
+    condition: str | None = Field(default=None, max_length=500)
+    type: Literal["FR", "NFR", "BR"]
+    priority: Literal["high", "medium", "low"] = "medium"
+    confidence: float = Field(default=1.0, ge=0.0, le=1.0)
+    raw_text: str | None = Field(default=None, max_length=2000)
+
+class NormalizedRequirement(BaseModel):
+    """
+    Requirement sau khi chuẩn hóa - dùng cho matching với Ground Truth.
+    """
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    actorNormalized: str
+    actionNormalized: str
+    objectNormalized: str
+    conditionNormalized: str | None = None
+    type: Literal["FR", "NFR", "BR"]
+    priority: Literal["high", "medium", "low"] = "medium"
+    confidence: float = Field(ge=0.0, le=1.0)
+    canonicalKey: str
+    canonicalText: str
+    original: StructuredRequirement
 
 
 class ExtractResponse(BaseModel):
     requirements: list[ExtractedReq]
     isFallback: bool = False
+    structuredRequirements: list[StructuredRequirement] = Field(default_factory=list)
+    normalizedRequirements: list[NormalizedRequirement] = Field(default_factory=list)
 
 
 # ===== Evaluate =====
@@ -70,12 +149,20 @@ class HiddenReq(BaseModel):
     id: str
     text: str
     category: str
+    actor: str | None = None
+    action: str | None = None
+    object: str | None = None
+    condition: str | None = None
+    type: Literal["FR", "NFR", "BR"] | None = None
+    priority: Literal["high", "medium", "low"] | None = None
 
 
 class EvaluateRequest(BaseModel):
     extracted: list[ExtractedReq]
     hiddenRequirements: list[HiddenReq]
     selectedModel: str | None = None
+    scenarioDescription: str | None = None
+    feedbackVariant: Literal["A", "B"] = "A"
 
 
 class ReqMatch(BaseModel):
@@ -85,6 +172,7 @@ class ReqMatch(BaseModel):
     score: float
     matchType: str     # "exact" | "semantic" | "partial" | "missed"
     reason: str
+    componentScores: dict[str, float] | None = None
 
 
 class DesignSuggestionsData(BaseModel):
@@ -92,6 +180,8 @@ class DesignSuggestionsData(BaseModel):
     erdMermaid: str
     mainActors: list[str]
     mainEntities: list[str]
+    validationStatus: Literal["valid", "repaired", "fallback"] = "valid"
+    validationErrors: list[str] = Field(default_factory=list)
 
 
 class FeedbackData(BaseModel):
@@ -99,6 +189,8 @@ class FeedbackData(BaseModel):
     weaknesses: list[str]
     suggestions: list[str]
     designSuggestions: DesignSuggestionsData | None = None
+    extractionsToReview: list[str] = Field(default_factory=list)
+    experimentVariant: Literal["A", "B"] = "A"
 
 
 
@@ -109,6 +201,12 @@ class ScoringPolicyData(BaseModel):
     partialThreshold: float
     rubricPartialMatcher: bool
     embeddingModel: str
+    matchingMethod: str = "semantic_similarity"
+    actorWeight: float = 0.20
+    actionWeight: float = 0.30
+    objectWeight: float = 0.30
+    conditionWeight: float = 0.20
+    matchThreshold: float = 0.80
 
 
 class EvaluateResponse(BaseModel):
@@ -116,3 +214,4 @@ class EvaluateResponse(BaseModel):
     matches: list[ReqMatch]
     feedback: FeedbackData
     scoringPolicy: ScoringPolicyData | None = None
+    extraExtractedCount: int = Field(default=0, ge=0)

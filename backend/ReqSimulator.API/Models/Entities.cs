@@ -44,9 +44,26 @@ public class Scenario
     public DateTime? SupersededAt { get; set; }
     [MaxLength(64)] public string? ConfigHash { get; set; }
     public string? SerializedConfig { get; set; }
+    [Column(TypeName = "jsonb")] public string SourceUrlsData { get; set; } = "[]";
 
+    public ICollection<Stakeholder> Stakeholders { get; set; } = [];
     public ICollection<Persona> Personas { get; set; } = [];
     public ICollection<HiddenRequirement> HiddenRequirements { get; set; } = [];
+}
+
+/// <summary>Vai trò nghiệp vụ trong scenario; một stakeholder có nhiều persona.</summary>
+public class Stakeholder
+{
+    [Key] public Guid Id { get; set; }
+    public Guid ScenarioId { get; set; }
+    [MaxLength(100)] public string Name { get; set; } = "";
+    [MaxLength(100)] public string RoleTitle { get; set; } = "";
+    [MaxLength(100)] public string? Department { get; set; }
+    [MaxLength(500)] public string? Description { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    [ForeignKey(nameof(ScenarioId))] public Scenario Scenario { get; set; } = null!;
+    public ICollection<Persona> Personas { get; set; } = [];
 }
 
 /// <summary>Virtual stakeholder profile với personality traits</summary>
@@ -54,7 +71,9 @@ public class Persona
 {
     [Key] public Guid Id { get; set; }
     public Guid ScenarioId { get; set; }
+    public Guid? StakeholderId { get; set; }
     [MaxLength(100)] public string Name { get; set; } = "";
+    [MaxLength(100)] public string? Label { get; set; }
     [MaxLength(100)] public string? RoleTitle { get; set; }
 
     /// <summary>JSONB: {"traits": ["impatient", "organized"], "jargon_level": "high"}</summary>
@@ -68,6 +87,7 @@ public class Persona
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     [ForeignKey(nameof(ScenarioId))] public Scenario Scenario { get; set; } = null!;
+    [ForeignKey(nameof(StakeholderId))] public Stakeholder? Stakeholder { get; set; }
 }
 
 /// <summary>Ground-truth requirement (ẩn với student, dùng để đánh giá coverage)</summary>
@@ -80,6 +100,13 @@ public class HiddenRequirement
     public PersonaDifficulty RevealDifficulty { get; set; } = PersonaDifficulty.Medium;
     public string? RevealCondition { get; set; }
     public int GateOrder { get; set; } = 0;
+    [MaxLength(160)] public string? Actor { get; set; }
+    [MaxLength(160)] public string? Action { get; set; }
+    [MaxLength(240)] public string? Object { get; set; }
+    [MaxLength(500)] public string? Condition { get; set; }
+    [MaxLength(8)] public string? RequirementType { get; set; }
+    [MaxLength(16)] public string? Priority { get; set; }
+    [Column(TypeName = "jsonb")] public string? NormalizedRequirementData { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     [ForeignKey(nameof(ScenarioId))] public Scenario Scenario { get; set; } = null!;
@@ -120,6 +147,8 @@ public class Message
     public SenderType Sender { get; set; }
     public string Content { get; set; } = "";
     public QuestionType? DetectedQuestionType { get; set; }
+    [MaxLength(100)] public string? DetectedTopic { get; set; }
+    [MaxLength(20)] public string? QuestionQuality { get; set; }
     public DateTime Timestamp { get; set; } = DateTime.UtcNow;
 
     [ForeignKey(nameof(SessionId))] public SimulationSession Session { get; set; } = null!;
@@ -132,6 +161,12 @@ public class ExtractedRequirement
     public Guid SessionId { get; set; }
     public string RequirementText { get; set; } = "";
     public decimal? ConfidenceScore { get; set; }
+    /// <summary>Original structured extraction returned by the AI service.</summary>
+    [Column(TypeName = "jsonb")] public string? RawRequirementData { get; set; }
+    /// <summary>Canonical fields/key used for deterministic matching.</summary>
+    [Column(TypeName = "jsonb")] public string? NormalizedRequirementData { get; set; }
+    [MaxLength(20)] public string NormalizationStatus { get; set; } = "normalized";
+    [MaxLength(50)] public string NormalizationMethod { get; set; } = "deterministic_dictionary";
     public DateTime ExtractedAt { get; set; } = DateTime.UtcNow;
 
     [ForeignKey(nameof(SessionId))] public SimulationSession Session { get; set; } = null!;
@@ -150,6 +185,7 @@ public class EvaluationResult
 
     /// <summary>JSONB: {"strengths": [...], "weaknesses": [...], "suggestions": [...]}</summary>
     [Column(TypeName = "jsonb")] public string? Feedback { get; set; }
+    [MaxLength(1)] public string FeedbackVariant { get; set; } = "A";
 
     public DateTime EvaluatedAt { get; set; } = DateTime.UtcNow;
 
@@ -163,6 +199,23 @@ public class EvaluationResult
     [ForeignKey(nameof(OverriddenByLecturerId))] public User? OverriddenByLecturer { get; set; }
     public ICollection<RequirementMatch> Matches { get; set; } = [];
     public ICollection<LecturerOverride> LecturerOverrides { get; set; } = [];
+}
+
+/// <summary>Human outcome used to compare feedback experiment variants.</summary>
+public class FeedbackSurveyResponse
+{
+    [Key] public Guid Id { get; set; }
+    public Guid SessionId { get; set; }
+    public Guid StudentId { get; set; }
+    [MaxLength(1)] public string Variant { get; set; } = "A";
+    public int Helpfulness { get; set; }
+    public int Actionability { get; set; }
+    public int NoAnswerLeak { get; set; }
+    [MaxLength(1000)] public string? Comment { get; set; }
+    public DateTime SubmittedAt { get; set; } = DateTime.UtcNow;
+
+    [ForeignKey(nameof(SessionId))] public SimulationSession Session { get; set; } = null!;
+    [ForeignKey(nameof(StudentId))] public User Student { get; set; } = null!;
 }
 
 /// <summary>Chi tiết match giữa extracted requirement và hidden requirement</summary>
