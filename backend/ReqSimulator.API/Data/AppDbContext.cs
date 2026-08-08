@@ -13,6 +13,7 @@ public class AppDbContext : DbContext
 
     public DbSet<User> Users => Set<User>();
     public DbSet<Scenario> Scenarios => Set<Scenario>();
+    public DbSet<Stakeholder> Stakeholders => Set<Stakeholder>();
     public DbSet<Persona> Personas => Set<Persona>();
     public DbSet<HiddenRequirement> HiddenRequirements => Set<HiddenRequirement>();
     public DbSet<SimulationSession> SimulationSessions => Set<SimulationSession>();
@@ -21,6 +22,7 @@ public class AppDbContext : DbContext
     public DbSet<EvaluationResult> EvaluationResults => Set<EvaluationResult>();
     public DbSet<RequirementMatch> RequirementMatches => Set<RequirementMatch>();
     public DbSet<LecturerOverride> LecturerOverrides => Set<LecturerOverride>();
+    public DbSet<FeedbackSurveyResponse> FeedbackSurveyResponses => Set<FeedbackSurveyResponse>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -33,6 +35,7 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<User>().ToTable("users");
         modelBuilder.Entity<Scenario>().ToTable("scenarios");
+        modelBuilder.Entity<Stakeholder>().ToTable("stakeholders");
         modelBuilder.Entity<Persona>().ToTable("personas");
         modelBuilder.Entity<HiddenRequirement>().ToTable("hidden_requirements");
         modelBuilder.Entity<SimulationSession>().ToTable("simulation_sessions");
@@ -41,6 +44,7 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<EvaluationResult>().ToTable("evaluation_results");
         modelBuilder.Entity<RequirementMatch>().ToTable("requirement_matches");
         modelBuilder.Entity<LecturerOverride>().ToTable("lecturer_overrides");
+        modelBuilder.Entity<FeedbackSurveyResponse>().ToTable("feedback_survey_responses");
 
         modelBuilder.Entity<User>()
             .Property(u => u.Role)
@@ -51,6 +55,11 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<Persona>()
             .Property(p => p.Difficulty)
             .HasColumnType("persona_difficulty");
+        modelBuilder.Entity<Stakeholder>()
+            .HasMany(s => s.Personas)
+            .WithOne(p => p.Stakeholder)
+            .HasForeignKey(p => p.StakeholderId)
+            .OnDelete(DeleteBehavior.SetNull);
         modelBuilder.Entity<HiddenRequirement>()
             .Property(r => r.Category)
             .HasColumnType("requirement_category");
@@ -86,6 +95,11 @@ public class AppDbContext : DbContext
             .HasIndex(m => new { m.SessionId, m.Timestamp })
             .HasDatabaseName("idx_messages_session_time");
 
+        modelBuilder.Entity<Stakeholder>()
+            .HasIndex(s => new { s.ScenarioId, s.Name })
+            .IsUnique()
+            .HasDatabaseName("uq_stakeholders_scenario_name");
+
         modelBuilder.Entity<SimulationSession>()
             .HasIndex(s => new { s.FinalizationStatus, s.FinalizationExpiresAt })
             .HasDatabaseName("idx_sessions_finalization_state");
@@ -112,6 +126,10 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<LecturerOverride>()
             .HasIndex(o => o.EvaluationId)
             .HasDatabaseName("idx_lecturer_overrides_evaluation");
+        modelBuilder.Entity<FeedbackSurveyResponse>()
+            .HasIndex(item => item.SessionId)
+            .IsUnique()
+            .HasDatabaseName("uq_feedback_survey_session");
     }
 
     private static string ToSnakeCase(string name)

@@ -3,6 +3,7 @@ from types import SimpleNamespace
 
 from app.services.gating_service import (
     detect_question_type,
+    is_repeated_question,
     load_persona_state,
     select_gated_requirements,
 )
@@ -59,6 +60,33 @@ class ScenarioConfigTests(unittest.TestCase):
         self.assertEqual(len(inventory.requirements), 9)
         self.assertTrue(all(rule.reveal_condition for rule in hospital.requirements))
         self.assertTrue(all(rule.reveal_condition for rule in inventory.requirements))
+
+
+class VietnameseQuestionClassificationTests(unittest.TestCase):
+    def test_vietnamese_question_types_are_classified(self):
+        self.assertEqual(
+            detect_question_type("Nếu lớp đã đầy thì hệ thống xử lý thế nào?"),
+            "ExceptionOriented",
+        )
+        self.assertEqual(
+            detect_question_type("Bạn có thể giải thích cụ thể quy trình đăng ký không?"),
+            "Clarifying",
+        )
+        self.assertEqual(
+            detect_question_type("Hệ thống có bắt buộc kiểm tra môn tiên quyết không?"),
+            "ConstraintOriented",
+        )
+
+    def test_near_duplicate_question_is_treated_as_repeated(self):
+        history = [SimpleNamespace(
+            role="Student",
+            content="What is the complete online registration process for students?",
+        )]
+
+        self.assertTrue(is_repeated_question(
+            "What is the complete online registration process for student?",
+            history,
+        ))
 
 
 class GatingSelectionTests(unittest.TestCase):

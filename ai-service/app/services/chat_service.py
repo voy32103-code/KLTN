@@ -17,7 +17,10 @@ from app.services.consistency_checker import (
 )
 from app.services.gating_service import (
     build_state_update,
+    classify_question_quality,
     detect_question_type,
+    detect_topic,
+    disclosure_view,
     is_overly_technical,
     load_persona_state,
     select_gated_requirements,
@@ -38,6 +41,8 @@ def build_system_prompt(
     previously_revealed: list[str],
     newly_revealed: list[str],
     config: ScenarioConfig | None,
+    question_quality: str = "vague",
+    detected_topic: str | None = None,
 ) -> str:
     traits = req.persona.traits
     scenario_title = config.scenario_title if config else (req.scenarioTitle or "Unknown scenario")
@@ -108,6 +113,8 @@ Disclosure rules:
 
 === LAYER 6: TURN CONTROL ===
 Detected student question type: {question_type or "Unknown"}
+Detected topic: {detected_topic or "Unknown"}
+Question quality: {question_quality}
 Overly technical question: {technical_question}
 
 Response guidelines:
@@ -155,20 +162,27 @@ async def chat(req: ChatRequest):
         if config is None:
             config = get_scenario_config(req.scenarioTitle, req.availableRequirements)
 
+        question_quality = classify_question_quality(req.studentMessage, config)
+        detected_topic = detect_topic(req.studentMessage, config)
+
         allowed_requirements, previously_revealed, newly_revealed = select_gated_requirements(
             req,
             state,
             question_type,
             config,
         )
+        displayed_allowed = [disclosure_view(item, question_quality, config) for item in allowed_requirements]
+        displayed_new = [disclosure_view(item, question_quality, config) for item in newly_revealed]
         system_prompt = build_system_prompt(
             req,
             state,
             question_type,
-            allowed_requirements,
+            displayed_allowed,
             previously_revealed,
-            newly_revealed,
+            displayed_new,
             config,
+            question_quality,
+            detected_topic,
         )
 
         contents = []
@@ -192,7 +206,7 @@ async def chat(req: ChatRequest):
             req,
             question_type,
             allowed_requirements,
-            newly_revealed,
+            displayed_new,
             config,
         )
         state_update = build_state_update(req, state, question_type, newly_revealed, config)
@@ -200,6 +214,8 @@ async def chat(req: ChatRequest):
         return ChatResponse(
             stakeholderReply=reply,
             detectedQuestionType=question_type,
+            detectedTopic=detected_topic,
+            questionQuality=question_quality,
             stateUpdate=state_update,
         )
 
@@ -219,21 +235,28 @@ async def chat(req: ChatRequest):
             if config is None:
                 config = get_scenario_config(req.scenarioTitle, req.availableRequirements)
 
+            question_quality = classify_question_quality(req.studentMessage, config)
+            detected_topic = detect_topic(req.studentMessage, config)
+
             allowed_requirements, previously_revealed, newly_revealed = select_gated_requirements(
                 req,
                 state,
                 question_type,
                 config,
             )
+            displayed_allowed = [disclosure_view(item, question_quality, config) for item in allowed_requirements]
+            displayed_new = [disclosure_view(item, question_quality, config) for item in newly_revealed]
             state_update = build_state_update(req, state, question_type, newly_revealed, config)
             return ChatResponse(
                 stakeholderReply=build_fallback_reply(
                     req,
                     question_type,
-                    allowed_requirements,
-                    newly_revealed,
+                    displayed_allowed,
+                    displayed_new,
                 ),
                 detectedQuestionType=question_type,
+                detectedTopic=detected_topic,
+                questionQuality=question_quality,
                 stateUpdate=state_update,
                 isFallback=True,
             )

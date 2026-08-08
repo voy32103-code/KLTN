@@ -413,7 +413,7 @@ function renderChat(state: AppState) {
         <button class="danger-button" data-action="open-end-session-modal" type="button" ${state.busy || Boolean(state.evaluation) ? 'disabled' : ''}>
           ${state.busy ? 'Đang xử lý...' : state.evaluation ? 'Đã kết thúc phiên' : 'Kết thúc & Chấm điểm'}
         </button>
-        ${state.evaluation ? renderEvaluation(state.evaluation) : ''}
+        ${state.evaluation ? renderEvaluation(state.evaluation, true) : ''}
       </aside>
       <section class="faux-chrome chat-panel" data-animate="fade-up" style="--index: 1">
         <div class="chrome-bar">
@@ -686,6 +686,8 @@ function renderMessage(message: ChatMessage, index?: number) {
         <small>${message.pending ? 'Đang gửi' : formatTime(message.timestamp)}</small>
       </div>
       ${message.detectedQuestionType ? `<div class="question-chip">${escapeHtml(message.detectedQuestionType)}</div>` : ''}
+      ${message.detectedTopic ? `<div class="question-chip">Topic: ${escapeHtml(message.detectedTopic)}</div>` : ''}
+      ${message.questionQuality ? `<div class="question-chip">Quality: ${escapeHtml(message.questionQuality)}</div>` : ''}
       <p class="${own ? '' : 'font-serif'}">${escapeHtml(message.content)}</p>
     </article>
   `
@@ -706,16 +708,23 @@ function formatNullablePercent(value?: number | null) {
   return typeof value === 'number' ? formatScore(value * 100) : 'N/A'
 }
 
-function renderEvaluation(evaluation: EvaluationResult) {
+function renderEvaluation(evaluation: EvaluationResult, showSurvey = false) {
   const feedback = evaluation.feedback
   const total = evaluation.matchedCount + evaluation.partialCount + evaluation.missedCount
   const design = feedback?.designSuggestions
+  const extractionReviewHtml = feedback?.extractionsToReview?.length ? `
+    <div class="feedback-list" style="margin-top: 16px;">
+      <strong>Requirements to review (${evaluation.extraExtractedCount ?? feedback.extractionsToReview.length})</strong>
+      <ul>${feedback.extractionsToReview.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul>
+    </div>
+  ` : ''
   
   const designTabHtml = design ? `
     <div class="design-suggestions-card" style="display: flex; flex-direction: column; gap: 16px; margin-top: 8px;">
       <div class="subsection-heading">
         <h3>Gợi ý Mô hình thiết kế sơ bộ (Gợi ý từ AI)</h3>
         <span style="font-size: 11px; opacity: 0.7;">Được sinh tự động dựa trên các yêu cầu thu thập được</span>
+        <span class="view-pill">Mermaid: ${escapeHtml(design.validationStatus ?? 'valid')}</span>
       </div>
       
       <div class="design-meta-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 8px;">
@@ -782,12 +791,24 @@ function renderEvaluation(evaluation: EvaluationResult) {
  
       <div class="eval-tab-content active" id="tab-feedback">
         ${evaluation.scoringPolicy ? renderScoringPolicy(evaluation.scoringPolicy) : ''}
+        ${extractionReviewHtml}
         ${feedback ? `
           <div class="feedback-block" style="margin-top: 16px;">
+            <small>Feedback experiment: variant ${escapeHtml(feedback.experimentVariant ?? 'A')}</small>
             ${renderFeedbackList('Điểm mạnh', feedback.strengths)}
             ${renderFeedbackList('Cần cải thiện', feedback.weaknesses)}
             ${renderFeedbackList('Gợi ý tiếp theo', feedback.suggestions)}
           </div>
+          ${showSurvey ? `
+            <form id="feedback-survey-form" class="feedback-block" style="margin-top:16px;">
+              <strong>Đánh giá feedback này</strong>
+              <label>Hữu ích (1–5)<select name="helpfulness">${[1,2,3,4,5].map(value => `<option value="${value}" ${value === 4 ? 'selected' : ''}>${value}</option>`).join('')}</select></label>
+              <label>Dễ hành động (1–5)<select name="actionability">${[1,2,3,4,5].map(value => `<option value="${value}" ${value === 4 ? 'selected' : ''}>${value}</option>`).join('')}</select></label>
+              <label>Không làm lộ đáp án (1–5)<select name="noAnswerLeak">${[1,2,3,4,5].map(value => `<option value="${value}" ${value === 5 ? 'selected' : ''}>${value}</option>`).join('')}</select></label>
+              <textarea name="comment" maxlength="1000" rows="2" placeholder="Nhận xét thêm (không bắt buộc)"></textarea>
+              <button class="ghost-button" data-action="submit-feedback-survey" type="button">Gửi đánh giá feedback</button>
+            </form>
+          ` : ''}
         ` : ''}
       </div>
  
@@ -950,7 +971,7 @@ function renderAdminScenarioSection(state: AppState) {
         
         <div class="form-group" style="display: flex; flex-direction: column; gap: 8px;">
           <label style="font-size: 13px; color: var(--text-secondary); font-weight: 500;">Đường dẫn URL chứa tài liệu:</label>
-          <input id="admin-crawl-url-input" type="text" placeholder="https://example.com/spec.html hoặc URL raw text..." style="background: var(--surface-raised); color: var(--text-primary); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; font-size: 13px; outline: none; width: 100%;" />
+          <textarea id="admin-crawl-url-input" rows="4" placeholder="Mỗi dòng một URL (tối đa 10 nguồn)..." style="background: var(--surface-raised); color: var(--text-primary); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; font-size: 13px; outline: none; width: 100%; resize: vertical;"></textarea>
         </div>
 
         <div class="form-group" style="display: flex; flex-direction: column; gap: 8px;">
@@ -1045,6 +1066,34 @@ function renderAdminScenarioPreview(state: AppState) {
           <textarea data-draft-field="text" rows="2">${escapeHtml(requirement.text)}</textarea>
         </label>
         <label>
+          <span>Actor *</span>
+          <input data-draft-field="actor" value="${escapeAttribute(requirement.actor ?? '')}" />
+        </label>
+        <label>
+          <span>Action *</span>
+          <input data-draft-field="action" value="${escapeAttribute(requirement.action ?? '')}" />
+        </label>
+        <label>
+          <span>Object *</span>
+          <input data-draft-field="object" value="${escapeAttribute(requirement.object ?? '')}" />
+        </label>
+        <label>
+          <span>Condition</span>
+          <input data-draft-field="condition" value="${escapeAttribute(requirement.condition ?? '')}" />
+        </label>
+        <label>
+          <span>Type *</span>
+          <select data-draft-field="type">
+            ${['FR', 'NFR', 'BR'].map(value => `<option value="${value}" ${requirement.type === value ? 'selected' : ''}>${value}</option>`).join('')}
+          </select>
+        </label>
+        <label>
+          <span>Priority *</span>
+          <select data-draft-field="priority">
+            ${['high', 'medium', 'low'].map(value => `<option value="${value}" ${requirement.priority === value ? 'selected' : ''}>${value}</option>`).join('')}
+          </select>
+        </label>
+        <label>
           <span>Từ khóa (phân cách bằng dấu phẩy)</span>
           <input data-draft-field="keywords"
             value="${escapeAttribute(requirement.keywords.join(', '))}" />
@@ -1134,7 +1183,7 @@ function renderAdminScenarioPreview(state: AppState) {
       <div class="scenario-draft-list-heading">
         <div>
           <h4>Danh sách yêu cầu ẩn</h4>
-          <p>Kiểm tra nội dung, Gate, điều kiện tiết lộ và quan hệ phụ thuộc.</p>
+          <p>Kiểm tra AAOC, Type/Priority, Gate, điều kiện tiết lộ và quan hệ phụ thuộc.</p>
         </div>
         <button id="admin-add-requirement" class="ghost-button" type="button"
           ${state.busy ? 'disabled' : ''}>+ Thêm yêu cầu</button>
@@ -1179,6 +1228,18 @@ function renderAdminOverviewSection(admin: AdminState) {
           <strong style="font-size: 28px; color: var(--pastel-yellow-text); display: block; margin-top: 4px;">${overview?.averageCoverage ?? 0}%</strong>
           <small style="font-size: 11px; color: var(--muted);">Trung bình toàn hệ thống</small>
         </div>
+      </div>
+
+      <div class="top-students-card" style="background: var(--surface); padding: 20px; border-radius: 10px; border: 1px solid var(--line);">
+        <h3>Thử nghiệm A/B Learning Feedback</h3>
+        <div class="score-grid">
+          ${(admin.feedbackExperiment?.variants ?? []).map(item => `
+            <span>Variant ${escapeHtml(item.variant)} · n=${item.sampleSize}/${item.target} · còn ${item.remaining}<br/>
+              <strong>Hữu ích ${item.helpfulness.toFixed(2)} · Hành động ${item.actionability.toFixed(2)} · Không rò ${item.noAnswerLeak.toFixed(2)}</strong>
+            </span>
+          `).join('') || '<span>Chưa có phản hồi khảo sát.</span>'}
+        </div>
+        ${admin.feedbackExperiment?.warning ? `<small>${escapeHtml(admin.feedbackExperiment.warning)}</small>` : ''}
       </div>
 
       <!-- Charts 2x2 Grid -->
@@ -1385,13 +1446,25 @@ document.addEventListener('click', (e) => {
 
   // Tự động kích hoạt Mermaid render khi chuyển sang tab design
   if (tabName === 'design' && (window as any).mermaid) {
-    try {
-      (window as any).mermaid.run({
-        nodes: targetContent.querySelectorAll('.mermaid')
-      });
-    } catch (err) {
-      console.error('Mermaid render error:', err);
-    }
+    void validateAndRenderMermaid(targetContent)
   }
 })
 
+async function validateAndRenderMermaid(container: HTMLElement) {
+  const mermaid = (window as any).mermaid
+  const nodes = Array.from(container.querySelectorAll<HTMLElement>('.mermaid'))
+  for (const node of nodes) {
+    try {
+      await mermaid.parse(node.textContent ?? '')
+    } catch (error) {
+      node.classList.remove('mermaid')
+      node.textContent = 'Diagram không vượt qua Mermaid parser. Vui lòng dùng bản requirement để kiểm tra.'
+      node.dataset.validationStatus = 'invalid'
+      console.error('Mermaid validation error:', error)
+    }
+  }
+  const validNodes = nodes.filter(node => node.dataset.validationStatus !== 'invalid')
+  if (validNodes.length > 0) {
+    await mermaid.run({ nodes: validNodes })
+  }
+}

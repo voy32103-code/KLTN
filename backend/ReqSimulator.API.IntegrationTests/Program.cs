@@ -728,8 +728,8 @@ internal static class Program
             var stateUpdate = sendJson.RootElement.GetProperty("stateUpdate");
             Assert(stateUpdate.GetProperty("TurnCount").GetInt32() >= 1,
                 "chat state update should advance turn count");
-            Assert(stateUpdate.GetProperty("NewlyRevealed").GetArrayLength() >= 1,
-                "chat state update should reveal at least one requirement");
+            Assert(!stateUpdate.TryGetProperty("NewlyRevealed", out _),
+                "chat response must not expose newly revealed ground-truth requirements");
 
             await using (var afterSendScope = provider.CreateAsyncScope())
             {

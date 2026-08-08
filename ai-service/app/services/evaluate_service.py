@@ -22,6 +22,14 @@ from app.services.evaluation_policy import (
     generate_feedback,
 )
 from app.services.design_service import generate_design_models
+from app.services.learning_feedback_service import generate_learning_feedback
+from app.services.matching_service import assign_one_to_one
+from app.services.aaoc_matching_service import (
+    assign_weighted_one_to_one,
+    classify_aaoc,
+    explain_aaoc,
+    has_aaoc,
+)
 
 
 import threading
@@ -113,6 +121,10 @@ async def evaluate(req: EvaluateRequest):
         hidden_texts = [r.text for r in req.hiddenRequirements]
 
         matches: list[ReqMatch] = []
+        assigned_extracted_indexes: set[int] = set()
+        use_aaoc = bool(extracted_texts and req.hiddenRequirements) and all(
+            has_aaoc(item) for item in [*req.extracted, *req.hiddenRequirements]
+        )
 
         if not extracted_texts:
             # Student không extract được gì
@@ -125,19 +137,66 @@ async def evaluate(req: EvaluateRequest):
                     matchType="missed",
                     reason=explain_match(hr.text, None, 0.0, "missed"),
                 ))
+        elif use_aaoc:
+            assignments = assign_weighted_one_to_one(req.extracted, req.hiddenRequirements)
+            for hidden_index, hidden in enumerate(req.hiddenRequirements):
+                assignment = assignments.get(hidden_index)
+                if assignment is None:
+                    matches.append(ReqMatch(
+                        hiddenId=hidden.id,
+                        hiddenText=hidden.text,
+                        extractedText=None,
+                        score=0.0,
+                        matchType="missed",
+                        reason="Không có ứng viên cùng Type, Action và Object đạt ngưỡng Partial 60%.",
+                    ))
+                    continue
+                extracted = req.extracted[assignment.extracted_index]
+                match_type = classify_aaoc(assignment.score)
+                assigned_extracted_indexes.add(assignment.extracted_index)
+                matches.append(ReqMatch(
+                    hiddenId=hidden.id,
+                    hiddenText=hidden.text,
+                    extractedText=extracted.text,
+                    score=assignment.score,
+                    matchType=match_type,
+                    reason=explain_aaoc(assignment.component_scores, assignment.score, match_type),
+                    componentScores=assignment.component_scores,
+                ))
         else:
             sim_matrix = await compute_similarity_matrix(extracted_texts, hidden_texts)
 
+            assignments = assign_one_to_one(
+                sim_matrix,
+                lambda extracted_index, hidden_index, score: classify_match(
+                    score,
+                    req.hiddenRequirements[hidden_index].text,
+                    extracted_texts[extracted_index],
+                ) != "missed",
+            )
+
             for j, hr in enumerate(req.hiddenRequirements):
-                # Tìm extracted requirement giống nhất
-                best_idx = int(np.argmax(sim_matrix[:, j]))
+                best_idx = assignments.get(j)
+                if best_idx is None:
+                    nearest_idx = int(np.argmax(sim_matrix[:, j]))
+                    nearest_score = float(sim_matrix[nearest_idx, j])
+                    matches.append(ReqMatch(
+                        hiddenId=hr.id,
+                        hiddenText=hr.text,
+                        extractedText=None,
+                        score=round(nearest_score, 3),
+                        matchType="missed",
+                        reason=explain_match(hr.text, None, nearest_score, "missed"),
+                    ))
+                    continue
+
                 best_score = float(sim_matrix[best_idx, j])
                 match_type = classify_match(best_score, hr.text, extracted_texts[best_idx])
-
+                assigned_extracted_indexes.add(best_idx)
                 matches.append(ReqMatch(
                     hiddenId=hr.id,
                     hiddenText=hr.text,
-                    extractedText=extracted_texts[best_idx] if match_type != "missed" else None,
+                    extractedText=extracted_texts[best_idx],
                     score=round(best_score, 3),
                     matchType=match_type,
                     reason=explain_match(
@@ -149,13 +208,35 @@ async def evaluate(req: EvaluateRequest):
                 ))
 
         coverage, _, _, _ = calculate_coverage(matches)
+        extractions_to_review = [
+            text
+            for index, text in enumerate(extracted_texts)
+            if index not in assigned_extracted_indexes
+        ]
         strengths, weaknesses, suggestions = generate_feedback(matches, req.hiddenRequirements)
-        design_suggestions = generate_design_models(extracted_texts)
+        strengths, weaknesses, suggestions = await generate_learning_feedback(
+            matches,
+            req.hiddenRequirements,
+            req.selectedModel,
+            req.feedbackVariant,
+            (strengths, weaknesses, suggestions),
+        )
+        if extractions_to_review:
+            suggestions.append(
+                "Có yêu cầu được trích xuất nhưng chưa đối chiếu được với ground truth; "
+                "hãy để giảng viên xem lại trước khi dùng làm kết luận."
+            )
+        design_suggestions = generate_design_models(
+            req.extracted,
+            req.scenarioDescription,
+        )
         feedback = FeedbackData(
             strengths=strengths,
             weaknesses=weaknesses,
             suggestions=suggestions,
             designSuggestions=design_suggestions,
+            extractionsToReview=extractions_to_review,
+            experimentVariant=req.feedbackVariant,
         )
 
         meta = build_scoring_policy_metadata(ACTUAL_EMBEDDING_MODEL)
@@ -166,6 +247,7 @@ async def evaluate(req: EvaluateRequest):
             partialThreshold=float(meta["partialThreshold"]),
             rubricPartialMatcher=bool(meta["rubricPartialMatcher"]),
             embeddingModel=str(meta["embeddingModel"]),
+            matchingMethod="aaoc_weighted_one_to_one" if use_aaoc else "semantic_similarity_one_to_one",
         )
 
         return EvaluateResponse(
@@ -173,6 +255,7 @@ async def evaluate(req: EvaluateRequest):
             matches=matches,
             feedback=feedback,
             scoringPolicy=scoring_policy,
+            extraExtractedCount=len(extractions_to_review),
         )
 
     except Exception as e:

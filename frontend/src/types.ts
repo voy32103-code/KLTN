@@ -19,6 +19,13 @@ export type Persona = {
   difficulty: string
   communicationStyle?: string | null
   knowledgeLevel?: string | null
+  label?: string | null
+  stakeholder?: {
+    id: string
+    name: string
+    roleTitle: string
+    department?: string | null
+  } | null
 }
 
 export type ScenarioDetail = ScenarioSummary & {
@@ -29,6 +36,8 @@ export type ChatMessage = {
   sender: Sender
   content: string
   detectedQuestionType?: string | null
+  detectedTopic?: string | null
+  questionQuality?: 'vague' | 'on_topic' | 'specific' | 'conditional' | null
   timestamp: string
   pending?: boolean
 }
@@ -38,6 +47,8 @@ export type DesignSuggestions = {
   erdMermaid: string
   mainActors: string[]
   mainEntities: string[]
+  validationStatus?: 'valid' | 'repaired' | 'fallback'
+  validationErrors?: string[]
 }
 
 export type EvaluationFeedback = {
@@ -45,6 +56,8 @@ export type EvaluationFeedback = {
   weaknesses: string[]
   suggestions: string[]
   designSuggestions?: DesignSuggestions | null
+  extractionsToReview?: string[]
+  experimentVariant?: 'A' | 'B'
 }
 
 export type EvaluationResult = {
@@ -56,6 +69,7 @@ export type EvaluationResult = {
   partialCount: number
   missedCount: number
   extractedCount: number
+  extraExtractedCount?: number
   feedback?: EvaluationFeedback | null
   matches?: RequirementMatchReport[]
   scoringPolicy?: ScoringPolicy | null
@@ -128,6 +142,8 @@ export type ReviewExtractedRequirement = {
   id: string
   requirementText: string
   confidenceScore?: number | null
+  rawRequirementData?: string | null
+  normalizedRequirementData?: string | null
   extractedAt: string
 }
 
@@ -224,6 +240,12 @@ export type ScenarioRequirementDraft = {
   reveal_condition: string
   reveal_difficulty: 'Easy' | 'Medium' | 'Hard'
   requires: string[]
+  actor: string
+  action: string
+  object: string
+  condition?: string | null
+  type: 'FR' | 'NFR' | 'BR'
+  priority: 'high' | 'medium' | 'low'
 }
 
 export type ScenarioDraft = {
@@ -235,6 +257,7 @@ export type ScenarioDraft = {
   question_type_gate_map: Record<string, number[]>
   max_new_reveals_per_turn: number
   requirements: ScenarioRequirementDraft[]
+  source_urls?: string[]
 }
 
 export type ScenarioPreviewResponse = {
@@ -256,6 +279,22 @@ export type AdminState = {
   isCreatingUser: boolean
   scenarioDraft: ScenarioDraft | null
   scenarioDraftSource: string | null
+  feedbackExperiment: {
+    variants: Array<{
+      variant: string
+      sampleSize: number
+      target: number
+      remaining: number
+      quotaMet: boolean
+      helpfulness: number
+      actionability: number
+      noAnswerLeak: number
+    }>
+    warning?: string | null
+    targetPerVariant?: number
+    readyForAnalysis?: boolean
+    totalRemaining?: number
+  } | null
 }
 
 export type Notice = {

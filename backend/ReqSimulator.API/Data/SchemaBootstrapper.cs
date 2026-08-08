@@ -33,6 +33,67 @@ public static class SchemaBootstrapper
         ALTER TABLE scenarios
         ADD COLUMN IF NOT EXISTS superseded_at timestamp with time zone NULL;
 
+        ALTER TABLE scenarios
+        ADD COLUMN IF NOT EXISTS source_urls_data jsonb NOT NULL DEFAULT '[]'::jsonb;
+
+        CREATE TABLE IF NOT EXISTS stakeholders (
+            id uuid PRIMARY KEY,
+            scenario_id uuid NOT NULL REFERENCES scenarios(id) ON DELETE CASCADE,
+            name character varying(100) NOT NULL,
+            role_title character varying(100) NOT NULL,
+            department character varying(100) NULL,
+            description character varying(500) NULL,
+            created_at timestamp with time zone NOT NULL DEFAULT NOW()
+        );
+
+        ALTER TABLE personas ADD COLUMN IF NOT EXISTS stakeholder_id uuid NULL;
+        ALTER TABLE personas ADD COLUMN IF NOT EXISTS label character varying(100) NULL;
+
+        DO $$ BEGIN
+            IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_personas_stakeholder') THEN
+                ALTER TABLE personas ADD CONSTRAINT fk_personas_stakeholder
+                    FOREIGN KEY (stakeholder_id) REFERENCES stakeholders(id) ON DELETE SET NULL;
+            END IF;
+        END $$;
+
+        ALTER TABLE hidden_requirements ADD COLUMN IF NOT EXISTS actor character varying(160) NULL;
+        ALTER TABLE hidden_requirements ADD COLUMN IF NOT EXISTS action character varying(160) NULL;
+        ALTER TABLE hidden_requirements ADD COLUMN IF NOT EXISTS object character varying(240) NULL;
+        ALTER TABLE hidden_requirements ADD COLUMN IF NOT EXISTS condition character varying(500) NULL;
+        ALTER TABLE hidden_requirements ADD COLUMN IF NOT EXISTS requirement_type character varying(8) NULL;
+        ALTER TABLE hidden_requirements ADD COLUMN IF NOT EXISTS priority character varying(16) NULL;
+        ALTER TABLE hidden_requirements ADD COLUMN IF NOT EXISTS normalized_requirement_data jsonb NULL;
+
+        ALTER TABLE messages ADD COLUMN IF NOT EXISTS detected_topic character varying(100) NULL;
+        ALTER TABLE messages ADD COLUMN IF NOT EXISTS question_quality character varying(20) NULL;
+
+        ALTER TABLE extracted_requirements
+        ADD COLUMN IF NOT EXISTS raw_requirement_data jsonb NULL;
+
+        ALTER TABLE extracted_requirements
+        ADD COLUMN IF NOT EXISTS normalized_requirement_data jsonb NULL;
+
+        ALTER TABLE extracted_requirements
+        ADD COLUMN IF NOT EXISTS normalization_status character varying(20) NOT NULL DEFAULT 'normalized';
+
+        ALTER TABLE extracted_requirements
+        ADD COLUMN IF NOT EXISTS normalization_method character varying(50) NOT NULL DEFAULT 'deterministic_dictionary';
+
+        ALTER TABLE evaluation_results
+        ADD COLUMN IF NOT EXISTS feedback_variant character varying(1) NOT NULL DEFAULT 'A';
+
+        CREATE TABLE IF NOT EXISTS feedback_survey_responses (
+            id uuid PRIMARY KEY,
+            session_id uuid NOT NULL REFERENCES simulation_sessions(id) ON DELETE CASCADE,
+            student_id uuid NOT NULL REFERENCES users(id),
+            variant character varying(1) NOT NULL,
+            helpfulness integer NOT NULL CHECK (helpfulness BETWEEN 1 AND 5),
+            actionability integer NOT NULL CHECK (actionability BETWEEN 1 AND 5),
+            no_answer_leak integer NOT NULL CHECK (no_answer_leak BETWEEN 1 AND 5),
+            comment character varying(1000) NULL,
+            submitted_at timestamp with time zone NOT NULL DEFAULT NOW()
+        );
+
         UPDATE scenarios
         SET scenario_key = 'legacy_' || replace(id::text, '-', '')
         WHERE scenario_key IS NULL OR btrim(scenario_key) = '';
@@ -53,6 +114,12 @@ public static class SchemaBootstrapper
 
         CREATE UNIQUE INDEX IF NOT EXISTS uq_scenarios_one_active
             ON scenarios (scenario_key) WHERE is_active;
+
+        CREATE UNIQUE INDEX IF NOT EXISTS uq_stakeholders_scenario_name
+            ON stakeholders (scenario_id, name);
+
+        CREATE UNIQUE INDEX IF NOT EXISTS uq_feedback_survey_session
+            ON feedback_survey_responses (session_id);
         """;
 
     private const string UpdateSessionsSql = """

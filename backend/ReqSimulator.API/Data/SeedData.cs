@@ -40,9 +40,58 @@ public static class SeedData
         await SeedHiddenRequirements(db, scenario.Id);
         await SeedScenarioAsync(db, HospitalScenario, HospitalPersona, HospitalRequirements);
         await SeedScenarioAsync(db, InventoryScenario, InventoryPersona, InventoryRequirements);
+        await EnsureStakeholderPersonas(
+            db,
+            [scenario.Id, HospitalScenario.Id, InventoryScenario.Id]);
         await db.SaveChangesAsync();
 
         logger.LogInformation("Seeded baseline scenarios: university registration, hospital appointment, inventory management.");
+    }
+
+    private static async Task EnsureStakeholderPersonas(
+        AppDbContext db,
+        IReadOnlyList<Guid> scenarioIds)
+    {
+        var templates = new[]
+        {
+            ("Business Owner", "Decision Maker", "Management"),
+            ("Process Expert", "Domain Specialist", "Operations"),
+            ("End User", "Operational User", "Delivery")
+        };
+        foreach (var scenarioId in scenarioIds)
+        {
+            if (await db.Stakeholders.AnyAsync(item => item.ScenarioId == scenarioId) ||
+                db.Stakeholders.Local.Any(item => item.ScenarioId == scenarioId))
+                continue;
+            foreach (var role in templates)
+            {
+                var stakeholder = new Stakeholder
+                {
+                    Id = Guid.NewGuid(), ScenarioId = scenarioId, Name = role.Item1,
+                    RoleTitle = role.Item2, Department = role.Item3,
+                    Description = $"Represents the {role.Item3} viewpoint."
+                };
+                db.Stakeholders.Add(stakeholder);
+                foreach (var profile in new[]
+                {
+                    ("Collaborative", "collaborative", PersonaDifficulty.Easy, 1.00m),
+                    ("Challenging", "concise", PersonaDifficulty.Hard, 0.70m)
+                })
+                {
+                    db.Personas.Add(new Persona
+                    {
+                        Id = Guid.NewGuid(), ScenarioId = scenarioId,
+                        StakeholderId = stakeholder.Id,
+                        Name = $"{role.Item1} - {profile.Item1}", Label = profile.Item1,
+                        RoleTitle = role.Item2,
+                        PersonalityTraits = """{"traits":["detail_oriented"],"jargon_level":"medium"}""",
+                        CommunicationStyle = profile.Item2, KnowledgeLevel = "medium",
+                        Difficulty = profile.Item3, InitialMood = "neutral",
+                        InitialPatience = profile.Item4
+                    });
+                }
+            }
+        }
     }
 
     private static async Task SeedPersona(AppDbContext db, Guid scenarioId)

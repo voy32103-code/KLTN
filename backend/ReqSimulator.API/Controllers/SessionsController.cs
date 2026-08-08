@@ -47,6 +47,11 @@ public class SessionsController : ControllerBase
 
     public record CreateSessionDto(Guid ScenarioId, Guid PersonaId, string? SelectedModel);
     public record SendMessageDto([Required, StringLength(4000)] string Content);
+    public record FeedbackSurveyDto(
+        [Range(1, 5)] int Helpfulness,
+        [Range(1, 5)] int Actionability,
+        [Range(1, 5)] int NoAnswerLeak,
+        [StringLength(1000)] string? Comment);
 
     private record RequirementMatchReport(
         string MatchId,
@@ -355,6 +360,8 @@ public class SessionsController : ControllerBase
                 m.Sender,
                 m.Content,
                 m.DetectedQuestionType,
+                m.DetectedTopic,
+                m.QuestionQuality,
                 m.Timestamp
             })
             .ToListAsync();
@@ -364,6 +371,8 @@ public class SessionsController : ControllerBase
             Sender = m.Sender.ToString(),
             m.Content,
             DetectedQuestionType = m.DetectedQuestionType?.ToString(),
+            m.DetectedTopic,
+            m.QuestionQuality,
             m.Timestamp
         }).ToList();
 
@@ -377,6 +386,8 @@ public class SessionsController : ControllerBase
                 r.Id,
                 r.RequirementText,
                 r.ConfidenceScore,
+                r.RawRequirementData,
+                r.NormalizedRequirementData,
                 r.ExtractedAt
             })
             .ToListAsync();
@@ -709,6 +720,8 @@ public class SessionsController : ControllerBase
 
         if (Enum.TryParse<QuestionType>(aiResponse.DetectedQuestionType, true, out var questionType))
             studentMsg.DetectedQuestionType = questionType;
+        studentMsg.DetectedTopic = aiResponse.DetectedTopic;
+        studentMsg.QuestionQuality = aiResponse.QuestionQuality;
 
         if (aiResponse.StateUpdate is not null)
         {
@@ -733,8 +746,56 @@ public class SessionsController : ControllerBase
         {
             reply = aiResponse.StakeholderReply,
             questionType = aiResponse.DetectedQuestionType,
-            stateUpdate = aiResponse.StateUpdate
+            topic = aiResponse.DetectedTopic,
+            questionQuality = aiResponse.QuestionQuality,
+            // Revealed requirement texts are internal ground truth. Persist them
+            // server-side, but never expose them in the student's chat response.
+            stateUpdate = aiResponse.StateUpdate is null
+                ? null
+                : new
+                {
+                    aiResponse.StateUpdate.Mood,
+                    aiResponse.StateUpdate.Patience,
+                    aiResponse.StateUpdate.TurnCount
+                }
         });
+    }
+
+    [HttpPost("{sessionId}/feedback-survey")]
+    public async Task<IActionResult> SubmitFeedbackSurvey(
+        Guid sessionId,
+        [FromBody] FeedbackSurveyDto dto)
+    {
+        var userId = GetCurrentUserId();
+        if (userId is null) return Unauthorized();
+        var session = await _db.SimulationSessions
+            .Include(item => item.EvaluationResult)
+            .FirstOrDefaultAsync(item => item.Id == sessionId);
+        if (session is null) return NotFound();
+        if (session.StudentId != userId.Value) return Forbid();
+        if (session.EvaluationResult is null)
+            return BadRequest(new { message = "Complete the evaluation before submitting feedback." });
+
+        var response = await _db.FeedbackSurveyResponses
+            .FirstOrDefaultAsync(item => item.SessionId == sessionId);
+        if (response is null)
+        {
+            response = new FeedbackSurveyResponse
+            {
+                Id = Guid.NewGuid(),
+                SessionId = sessionId,
+                StudentId = userId.Value,
+                Variant = session.EvaluationResult.FeedbackVariant
+            };
+            _db.FeedbackSurveyResponses.Add(response);
+        }
+        response.Helpfulness = dto.Helpfulness;
+        response.Actionability = dto.Actionability;
+        response.NoAnswerLeak = dto.NoAnswerLeak;
+        response.Comment = dto.Comment?.Trim();
+        response.SubmittedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+        return Ok(new { message = "Feedback survey saved.", response.Variant });
     }
 
     [HttpPost("{sessionId}/end")]
@@ -817,8 +878,17 @@ public class SessionsController : ControllerBase
                 hiddenRequirements.Select(r => new HiddenReq(
                     r.Id.ToString(),
                     r.RequirementText,
-                    r.Category.ToString())).ToList(),
-                selectedModel
+                    r.Category.ToString(),
+                    r.Actor,
+                    r.Action,
+                    r.Object,
+                    r.Condition,
+                    r.RequirementType,
+                    r.Priority)).ToList(),
+                selectedModel,
+                await _db.Scenarios.Where(s => s.Id == session.ScenarioId)
+                    .Select(s => s.Description).FirstOrDefaultAsync(),
+                FeedbackVariantFor(sessionId)
             ));
 
             if (extractResult.IsFallback || evaluateResult.IsFallback)
@@ -841,7 +911,8 @@ public class SessionsController : ControllerBase
                     ParseMatchType(m.MatchType) == RequirementMatchType.Partial),
                 MissedCount = evaluateResult.Matches.Count(m =>
                     ParseMatchType(m.MatchType) == RequirementMatchType.Missed),
-                Feedback = JsonSerializer.Serialize(evaluateResult.Feedback)
+                Feedback = JsonSerializer.Serialize(evaluateResult.Feedback),
+                FeedbackVariant = evaluateResult.Feedback.ExperimentVariant
             };
 
             try
@@ -866,11 +937,24 @@ public class SessionsController : ControllerBase
                 _db.ExtractedRequirements.RemoveRange(oldExtracted);
 
                 // 3. Add new extracted requirements
-                var extractedEntities = extractResult.Requirements.Select(req => new ExtractedRequirement
+                var normalizedByText = (extractResult.NormalizedRequirements ?? [])
+                    .GroupBy(item => NormalizeRequirementText(item.CanonicalText))
+                    .ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal);
+                var extractedEntities = extractResult.Requirements.Select(req =>
                 {
-                    SessionId = sessionId,
-                    RequirementText = req.Text,
-                    ConfidenceScore = req.Confidence
+                    normalizedByText.TryGetValue(NormalizeRequirementText(req.Text), out var normalized);
+                    return new ExtractedRequirement
+                    {
+                        SessionId = sessionId,
+                        RequirementText = req.Text,
+                        ConfidenceScore = req.Confidence,
+                        RawRequirementData = normalized is null
+                            ? null
+                            : JsonSerializer.Serialize(normalized.Original),
+                        NormalizedRequirementData = normalized is null
+                            ? null
+                            : JsonSerializer.Serialize(normalized)
+                    };
                 }).ToList();
 
                 _db.ExtractedRequirements.AddRange(extractedEntities);
@@ -924,7 +1008,8 @@ public class SessionsController : ControllerBase
                     evaluateResult.Feedback,
                     extractedEntities.Count,
                     matchReports,
-                    evaluateResult.ScoringPolicy));
+                    evaluateResult.ScoringPolicy,
+                    evaluateResult.ExtraExtractedCount));
             }
             catch (DbUpdateException ex) when (IsEvaluationAlreadyPersisted(ex))
             {
@@ -965,6 +1050,8 @@ public class SessionsController : ControllerBase
                 m.Sender,
                 m.Content,
                 m.DetectedQuestionType,
+                m.DetectedTopic,
+                m.QuestionQuality,
                 m.Timestamp
             })
             .ToListAsync();
@@ -974,6 +1061,8 @@ public class SessionsController : ControllerBase
             Sender = m.Sender.ToString(),
             m.Content,
             DetectedQuestionType = m.DetectedQuestionType?.ToString(),
+            m.DetectedTopic,
+            m.QuestionQuality,
             m.Timestamp
         }).ToList();
 
@@ -1040,6 +1129,9 @@ public class SessionsController : ControllerBase
             TurnCount = 0
         };
     }
+
+    private static string FeedbackVariantFor(Guid sessionId) =>
+        sessionId.ToByteArray()[0] % 2 == 0 ? "A" : "B";
 
     private static RequirementMatchType ParseMatchType(string matchType) =>
         Enum.TryParse<RequirementMatchType>(matchType, true, out var parsed)
@@ -1114,7 +1206,8 @@ public class SessionsController : ControllerBase
         FeedbackData? feedback,
         int extractedCount,
         IEnumerable<RequirementMatchReport>? matches = null,
-        ScoringPolicyData? scoringPolicy = null) => new
+        ScoringPolicyData? scoringPolicy = null,
+        int? extraExtractedCount = null) => new
         {
             evaluation.CoverageScore,
             evaluation.OverriddenCoverageScore,
@@ -1125,6 +1218,7 @@ public class SessionsController : ControllerBase
             evaluation.MissedCount,
             Feedback = feedback,
             ExtractedCount = extractedCount,
+            ExtraExtractedCount = extraExtractedCount ?? feedback?.ExtractionsToReview?.Count ?? 0,
             Matches = matches ?? [],
             ScoringPolicy = scoringPolicy
         };

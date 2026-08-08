@@ -249,23 +249,31 @@ public record AiChatResponse(
     string StakeholderReply,
     string? DetectedQuestionType,
     PersonaStateUpdate? StateUpdate,
-    bool IsFallback = false
+    bool IsFallback = false,
+    string? DetectedTopic = null,
+    string? QuestionQuality = null
 );
 
 public record AiExtractRequest(string SessionId, List<ChatMessage> History, string? SelectedModel);
-public record AiExtractResponse(List<ExtractedReq> Requirements, bool IsFallback = false);
+public record AiExtractResponse(
+    List<ExtractedReq> Requirements,
+    bool IsFallback = false,
+    List<NormalizedRequirementData>? NormalizedRequirements = null);
 
 public record AiEvaluateRequest(
     List<ExtractedReq> Extracted,
     List<HiddenReq> HiddenRequirements,
-    string? SelectedModel
+    string? SelectedModel,
+    string? ScenarioDescription = null,
+    string FeedbackVariant = "A"
 );
 public record AiEvaluateResponse(
     decimal CoverageScore,
     List<ReqMatch> Matches,
     FeedbackData Feedback,
     ScoringPolicyData? ScoringPolicy,
-    bool IsFallback = false
+    bool IsFallback = false,
+    int ExtraExtractedCount = 0
 );
 
 // Admin DTOs
@@ -277,7 +285,13 @@ public record ScenarioRequirementRuleJson(
     [property: JsonPropertyName("question_types")] List<string> QuestionTypes,
     [property: JsonPropertyName("reveal_condition")] string RevealCondition,
     [property: JsonPropertyName("reveal_difficulty")] string RevealDifficulty,
-    [property: JsonPropertyName("requires")] List<string>? Requires
+    [property: JsonPropertyName("requires")] List<string>? Requires,
+    [property: JsonPropertyName("actor")] string? Actor = null,
+    [property: JsonPropertyName("action")] string? Action = null,
+    [property: JsonPropertyName("object")] string? Object = null,
+    [property: JsonPropertyName("condition")] string? Condition = null,
+    [property: JsonPropertyName("type")] string? Type = null,
+    [property: JsonPropertyName("priority")] string? Priority = null
 );
 
 public record ScenarioConfigJson(
@@ -288,7 +302,8 @@ public record ScenarioConfigJson(
     [property: JsonPropertyName("gate_keyword_groups")] Dictionary<string, List<string>> GateKeywordGroups,
     [property: JsonPropertyName("question_type_gate_map")] Dictionary<string, List<int>> QuestionTypeGateMap,
     [property: JsonPropertyName("max_new_reveals_per_turn")] int MaxNewRevealsPerTurn,
-    [property: JsonPropertyName("requirements")] List<ScenarioRequirementRuleJson> Requirements
+    [property: JsonPropertyName("requirements")] List<ScenarioRequirementRuleJson> Requirements,
+    [property: JsonPropertyName("source_urls")] List<string>? SourceUrls = null
 );
 
 public record AiAdminScenarioResponse(
@@ -302,21 +317,71 @@ public record AiAdminScenarioResponse(
 public record ChatMessage(string Role, string Content, DateTime Timestamp);
 public record PersonaProfile(string Name, string RoleTitle, string Traits, string Style, string Mood, decimal Patience);
 public record PersonaStateUpdate(string Mood, decimal Patience, int TurnCount, List<string> NewlyRevealed);
-public record ExtractedReq(string Text, decimal Confidence);
-public record HiddenReq(string Id, string Text, string Category);
-public record ReqMatch(string HiddenId, string? HiddenText, string? ExtractedText, decimal Score, string MatchType, string Reason);
+public record ExtractedReq(
+    string Text,
+    decimal Confidence,
+    string? Actor = null,
+    string? Action = null,
+    string? Object = null,
+    string? Condition = null,
+    string? Type = null,
+    string? Priority = null);
+public record StructuredRequirementData(
+    string Id,
+    string Actor,
+    string Action,
+    string Object,
+    string? Condition,
+    string Type,
+    string Priority,
+    decimal Confidence,
+    string? RawText);
+public record NormalizedRequirementData(
+    string Id,
+    string ActorNormalized,
+    string ActionNormalized,
+    string ObjectNormalized,
+    string? ConditionNormalized,
+    string Type,
+    string Priority,
+    decimal Confidence,
+    string CanonicalKey,
+    string CanonicalText,
+    StructuredRequirementData Original);
+public record HiddenReq(
+    string Id,
+    string Text,
+    string Category,
+    string? Actor = null,
+    string? Action = null,
+    string? Object = null,
+    string? Condition = null,
+    string? Type = null,
+    string? Priority = null);
+public record ReqMatch(
+    string HiddenId,
+    string? HiddenText,
+    string? ExtractedText,
+    decimal Score,
+    string MatchType,
+    string Reason,
+    Dictionary<string, decimal>? ComponentScores = null);
 public record DesignSuggestionsData(
     string UseCaseMermaid,
     string ErdMermaid,
     List<string> MainActors,
-    List<string> MainEntities
+    List<string> MainEntities,
+    string ValidationStatus = "valid",
+    List<string>? ValidationErrors = null
 );
 
 public record FeedbackData(
     List<string> Strengths,
     List<string> Weaknesses,
     List<string> Suggestions,
-    DesignSuggestionsData? DesignSuggestions
+    DesignSuggestionsData? DesignSuggestions,
+    List<string>? ExtractionsToReview = null,
+    string ExperimentVariant = "A"
 );
 
 public record ScoringPolicyData(
@@ -325,4 +390,10 @@ public record ScoringPolicyData(
     decimal SemanticThreshold,
     decimal PartialThreshold,
     bool RubricPartialMatcher,
-    string EmbeddingModel);
+    string EmbeddingModel,
+    string MatchingMethod = "semantic_similarity",
+    decimal ActorWeight = 0.20m,
+    decimal ActionWeight = 0.30m,
+    decimal ObjectWeight = 0.30m,
+    decimal ConditionWeight = 0.20m,
+    decimal MatchThreshold = 0.80m);

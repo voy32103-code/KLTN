@@ -16,7 +16,15 @@ from collections.abc import Iterable
 from fastapi import APIRouter, HTTPException
 from google import genai
 
-from app.models.schemas import ExtractRequest, ExtractResponse, ExtractedReq
+from app.models.schemas import (
+    ExtractRequest,
+    ExtractResponse,
+    ExtractedReq,
+    StructuredRequirement,
+)
+from app.prompts.structured_extraction_prompt import build_extraction_prompt
+from app.services.normalization_service import normalize_and_deduplicate
+from app.utils.retry_handler import JSONParsingError, parse_json_with_retry
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -79,7 +87,9 @@ REQUIREMENT_CUES = (
 async def extract_requirements(req: ExtractRequest):
     try:
         conversation_text = _format_conversation(req.history)
-        requirements = []
+        requirements: list[ExtractedReq] = []
+        structured_requirements: list[StructuredRequirement] = []
+        normalized_requirements = []
         used_fallback = False
         max_retries = 3
 
@@ -88,11 +98,30 @@ async def extract_requirements(req: ExtractRequest):
                 selected_model = req.selectedModel or MODEL
                 response = await client_manager.generate_content(
                     model=selected_model,
-                    contents=f"{EXTRACT_PROMPT}\n\n--- CONVERSATION ---\n{conversation_text}",
+                    contents=build_extraction_prompt([
+                        {"role": message.role, "content": message.content}
+                        for message in req.history
+                    ]),
                     temperature=0.2,
                     max_output_tokens=2000,
                 )
-                requirements = _parse_extraction_json(getattr(response, "text", "") or "")
+                structured_requirements = await _parse_structured_extraction_json(
+                    getattr(response, "text", "") or ""
+                )
+                normalized_requirements = normalize_and_deduplicate(structured_requirements)
+                requirements = [
+                    ExtractedReq(
+                        text=requirement.canonicalText,
+                        confidence=requirement.confidence,
+                        actor=requirement.actorNormalized,
+                        action=requirement.actionNormalized,
+                        object=requirement.objectNormalized,
+                        condition=requirement.conditionNormalized,
+                        type=requirement.type,
+                        priority=requirement.priority,
+                    )
+                    for requirement in normalized_requirements
+                ]
                 break
             except Exception as e:
                 if attempt == max_retries - 1:
@@ -105,7 +134,12 @@ async def extract_requirements(req: ExtractRequest):
                 else:
                     await asyncio.sleep(1 * (attempt + 1))
 
-        return ExtractResponse(requirements=requirements, isFallback=used_fallback)
+        return ExtractResponse(
+            requirements=requirements,
+            isFallback=used_fallback,
+            structuredRequirements=structured_requirements,
+            normalizedRequirements=normalized_requirements,
+        )
     except Exception as e:
         logger.exception("Requirement extraction error.")
         raise HTTPException(status_code=500, detail="An error occurred during requirement extraction.")
@@ -137,6 +171,19 @@ def _parse_extraction_json(raw_text: str) -> list[ExtractedReq]:
         requirements.append(ExtractedReq(**item))
 
     return requirements
+
+
+async def _parse_structured_extraction_json(raw_text: str) -> list[StructuredRequirement]:
+    """Parse and validate the structured contract returned by the extraction model."""
+    try:
+        parsed = await parse_json_with_retry(raw_text)
+    except JSONParsingError as exc:
+        raise ValueError("Extraction response was not valid JSON.") from exc
+
+    if not isinstance(parsed, list):
+        raise ValueError("Extraction response must be a JSON array.")
+
+    return [StructuredRequirement.model_validate(item) for item in parsed]
 
 
 def _fallback_extract_requirements(history: Iterable) -> list[ExtractedReq]:

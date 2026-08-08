@@ -26,6 +26,12 @@ class ScenarioRequirementRule:
     reveal_condition: str
     reveal_difficulty: str
     requires: tuple[str, ...] = ()
+    actor: str | None = None
+    action: str | None = None
+    object: str | None = None
+    condition: str | None = None
+    requirement_type: str | None = None
+    priority: str | None = None
 
     @property
     def normalized_text(self) -> str:
@@ -42,6 +48,7 @@ class ScenarioConfig:
     question_type_gate_map: dict[str, tuple[int, ...]]
     max_new_reveals_per_turn: int
     requirements: tuple[ScenarioRequirementRule, ...]
+    source_urls: tuple[str, ...] = ()
 
     @property
     def normalized_title(self) -> str:
@@ -105,6 +112,12 @@ def _parse_requirement(raw: dict, file_path: Path) -> ScenarioRequirementRule:
         reveal_condition=str(raw["reveal_condition"]),
         reveal_difficulty=str(raw["reveal_difficulty"]),
         requires=_as_tuple(requires),
+        actor=str(raw.get("actor") or "").strip() or None,
+        action=str(raw.get("action") or "").strip() or None,
+        object=str(raw.get("object") or "").strip() or None,
+        condition=str(raw.get("condition") or "").strip() or None,
+        requirement_type=str(raw.get("type") or "").strip().upper() or None,
+        priority=str(raw.get("priority") or "").strip().lower() or None,
     )
 
 
@@ -131,6 +144,7 @@ def _parse_config(file_path: Path) -> ScenarioConfig:
         question_type_gate_map=question_type_gate_map,
         max_new_reveals_per_turn=int(raw.get("max_new_reveals_per_turn", 1)),
         requirements=requirements,
+        source_urls=_as_tuple(raw.get("source_urls") or []),
     )
 
 
@@ -214,4 +228,5 @@ def parse_config_from_dict(raw: dict) -> ScenarioConfig:
         question_type_gate_map=question_type_gate_map,
         max_new_reveals_per_turn=int(raw_snake.get("max_new_reveals_per_turn", 1)),
         requirements=requirements,
+        source_urls=_as_tuple(raw_snake.get("source_urls") or []),
     )

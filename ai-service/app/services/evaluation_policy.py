@@ -198,6 +198,33 @@ def generate_feedback(matches: list[Any], hidden_reqs: list[Any]) -> tuple[list[
 
     req_map = {r.id: r for r in hidden_reqs}
 
+    # Learning feedback intentionally uses only IDs/categories and AAOC prompts.
+    # Ground-truth wording is never copied into student-facing feedback.
+    for match in matches:
+        hidden = req_map.get(match.hiddenId)
+        if hidden is None:
+            continue
+        if match.matchType in ("exact", "semantic"):
+            strengths.append(
+                f"Đã xác định thành công yêu cầu {hidden.id} thuộc nhóm {hidden.category} "
+                f"(điểm khớp {match.score:.0%})."
+            )
+        elif match.matchType == "partial":
+            weaknesses.append(
+                f"Yêu cầu {hidden.id} thuộc nhóm {hidden.category} mới được làm rõ một phần."
+            )
+            suggestions.append(
+                f"Hãy hỏi thêm về tác nhân, hành động, đối tượng và điều kiện của nhóm {hidden.category}."
+            )
+        else:
+            weaknesses.append(f"Bỏ sót yêu cầu thuộc nhóm {hidden.category}.")
+            suggestions.append(
+                f"Hãy dùng câu hỏi tình huống hoặc ngoại lệ để khám phá thêm nhóm {hidden.category}."
+            )
+    if not strengths:
+        strengths.append("Bạn đã hoàn thành phiên phỏng vấn; hãy mở rộng câu hỏi trước khi đi sâu.")
+    return strengths, weaknesses, suggestions
+
     for match in matches:
         hidden = req_map.get(match.hiddenId)
         if hidden is None:

@@ -4,6 +4,7 @@ import { API_BASE_URL, EXPIRED_SESSION_NOTICE, TOKEN_KEY } from './constants'
 import { buildLecturerOverridePayload } from './contracts'
 import type {
   AdminOverview,
+  AdminState,
   AdminUserItem,
   AppState,
   ChatMessage,
@@ -342,6 +343,9 @@ async function handleAction(action: string, options: { tab?: string; userId?: st
     case 'submit-override':
       await submitLecturerOverride()
       break
+    case 'submit-feedback-survey':
+      await submitFeedbackSurvey()
+      break
     case 'open-create-user-modal':
       if (state.adminState) {
         state.adminState.isCreatingUser = true
@@ -526,7 +530,12 @@ async function sendMessage(form: FormData) {
 
   await withBusy(async () => {
     try {
-      const response = await api.request<{ reply: string; questionType?: string | null }>(
+      const response = await api.request<{
+        reply: string
+        questionType?: string | null
+        topic?: string | null
+        questionQuality?: ChatMessage['questionQuality']
+      }>(
         `/api/Sessions/${state.session?.id}/messages`,
         {
           method: 'POST',
@@ -538,6 +547,8 @@ async function sendMessage(form: FormData) {
         {
           ...optimisticMessage,
           detectedQuestionType: response.questionType,
+          detectedTopic: response.topic,
+          questionQuality: response.questionQuality,
           pending: false,
         },
         {
@@ -563,6 +574,25 @@ async function endSession() {
       method: 'POST',
     })
     setNotice('success', 'Đã kết thúc phiên phỏng vấn và nhận kết quả đánh giá.')
+  })
+}
+
+async function submitFeedbackSurvey() {
+  if (!state.session) return
+  const form = document.querySelector<HTMLFormElement>('#feedback-survey-form')
+  if (!form) return
+  const data = new FormData(form)
+  await withBusy(async () => {
+    await api.request(`/api/Sessions/${state.session?.id}/feedback-survey`, {
+      method: 'POST',
+      body: {
+        helpfulness: Number(data.get('helpfulness')),
+        actionability: Number(data.get('actionability')),
+        noAnswerLeak: Number(data.get('noAnswerLeak')),
+        comment: String(data.get('comment') ?? '').trim() || null,
+      },
+    })
+    setNotice('success', 'Đã lưu đánh giá feedback cho thử nghiệm A/B.')
   })
 }
 
@@ -620,11 +650,12 @@ async function openAdminDashboard() {
       isCreatingUser: false,
       scenarioDraft: null,
       scenarioDraftSource: null,
+      feedbackExperiment: null,
     }
     clearNotice()
 
     // Fetch Overview metrics & charts in parallel
-    const [ov, distResp, time, scen, top, breakdown, userList] = await Promise.all([
+    const [ov, distResp, time, scen, top, breakdown, userList, feedbackExperiment] = await Promise.all([
       api.request<AdminOverview>('/api/Admin/stats/overview'),
       api.request<{ bins: CoverageDistributionBin[] } | CoverageDistributionBin[]>('/api/Admin/stats/coverage-distribution'),
       api.request<SessionsOverTimeData>('/api/Admin/stats/sessions-over-time'),
@@ -632,6 +663,7 @@ async function openAdminDashboard() {
       api.request<TopStudentItem[]>('/api/Admin/stats/top-students'),
       api.request<MatchTypeBreakdownData>('/api/Admin/stats/match-type-breakdown'),
       api.request<AdminUserItem[]>('/api/Admin/users'),
+      api.request<NonNullable<AdminState['feedbackExperiment']>>('/api/Admin/stats/feedback-experiment'),
     ])
 
     state.adminState.overview = ov
@@ -639,6 +671,7 @@ async function openAdminDashboard() {
     state.adminState.sessionsOverTime = time
     state.adminState.scenarioStats = Array.isArray(scen) ? scen : []
     state.adminState.topStudents = Array.isArray(top) ? top : []
+    state.adminState.feedbackExperiment = feedbackExperiment
     state.adminState.matchTypeBreakdown = breakdown
     state.adminState.users = Array.isArray(userList) ? userList : []
   })
@@ -834,6 +867,12 @@ function createEmptyRequirement(index: number): ScenarioDraft['requirements'][nu
     reveal_condition: '',
     reveal_difficulty: 'Medium',
     requires: [],
+    actor: '',
+    action: '',
+    object: '',
+    condition: '',
+    type: 'FR',
+    priority: 'medium',
   }
 }
 
@@ -857,6 +896,12 @@ function readScenarioDraftForm(): ScenarioDraft {
       reveal_condition: getDraftField(row, 'reveal_condition'),
       reveal_difficulty: difficulty,
       requires: splitDraftList(getDraftField(row, 'requires')),
+      actor: getDraftField(row, 'actor'),
+      action: getDraftField(row, 'action'),
+      object: getDraftField(row, 'object'),
+      condition: getDraftField(row, 'condition'),
+      type: getDraftField(row, 'type') as 'FR' | 'NFR' | 'BR',
+      priority: getDraftField(row, 'priority') as 'high' | 'medium' | 'low',
     }
   })
 
@@ -877,6 +922,7 @@ function readScenarioDraftForm(): ScenarioDraft {
     ),
     max_new_reveals_per_turn: Number(getDraftField(form, 'max_new_reveals_per_turn')),
     requirements,
+    source_urls: state.adminState.scenarioDraft.source_urls ?? [],
   }
 
   validateScenarioDraft(draft)
@@ -903,6 +949,15 @@ function validateScenarioDraft(draft: ScenarioDraft) {
     if (ids.has(normalizedId)) throw new Error(`Mã yêu cầu "${requirement.id}" bị trùng.`)
     ids.add(normalizedId)
     if (!requirement.text) throw new Error(`Nội dung yêu cầu ${requirement.id} không được để trống.`)
+    if (!requirement.actor || !requirement.action || !requirement.object) {
+      throw new Error(`Yêu cầu ${requirement.id} phải có đủ Actor, Action và Object.`)
+    }
+    if (!['FR', 'NFR', 'BR'].includes(requirement.type)) {
+      throw new Error(`Type của yêu cầu ${requirement.id} không hợp lệ.`)
+    }
+    if (!['high', 'medium', 'low'].includes(requirement.priority)) {
+      throw new Error(`Priority của yêu cầu ${requirement.id} không hợp lệ.`)
+    }
     if (!Number.isInteger(requirement.gate) || requirement.gate < 0 || requirement.gate > 4) {
       throw new Error(`Gate của yêu cầu ${requirement.id} phải từ 0 đến 4.`)
     }
@@ -959,24 +1014,28 @@ async function publishAdminScenario() {
 }
 
 async function runAdminCrawl() {
-  const urlInput = document.querySelector('#admin-crawl-url-input') as HTMLInputElement | null
+  const urlInput = document.querySelector('#admin-crawl-url-input') as HTMLTextAreaElement | null
   const modelSelect = document.querySelector('#admin-crawl-model-select') as HTMLSelectElement | null
   if (!urlInput || !urlInput.value.trim()) {
     setNotice('error', 'Vui lòng nhập đường dẫn URL tài liệu!')
     return
   }
-  const url = urlInput.value.trim()
+  const urls = urlInput.value.split(/\r?\n/).map(value => value.trim()).filter(Boolean)
+  const url = urls[0]
   const selectedModel = modelSelect?.value || 'gemini-2.5-flash'
 
   await withBusy(async () => {
     clearNotice()
-    const result = await api.request<ScenarioPreviewResponse>('/api/AdminScenarios/crawl/preview', {
+    const endpoint = urls.length > 1
+      ? '/api/AdminScenarios/crawl/preview-multiple'
+      : '/api/AdminScenarios/crawl/preview'
+    const result = await api.request<ScenarioPreviewResponse>(endpoint, {
       method: 'POST',
-      body: { url, selectedModel }
+      body: urls.length > 1 ? { urls, selectedModel } : { url, selectedModel }
     })
     if (!state.adminState) return
     state.adminState.scenarioDraft = result.scenario
-    state.adminState.scenarioDraftSource = url
+    state.adminState.scenarioDraftSource = urls.join(', ')
     setNotice('success', 'Đã tạo bản preview. Hãy kiểm tra, chỉnh sửa và xác nhận publish.')
   })
 }
@@ -1172,4 +1231,3 @@ function initAnimations() {
   }, { threshold: 0.05 })
   elements.forEach((el) => observer.observe(el))
 }
-
