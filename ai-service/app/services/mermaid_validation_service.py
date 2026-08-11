@@ -5,7 +5,7 @@ import re
 
 from app.models.schemas import DesignSuggestionsData
 
-FORBIDDEN = ("%%{", "<script", "javascript:", "click ")
+FORBIDDEN = ("%%{", "<script", "javascript:", "click ", " include ", " extend ")
 
 
 def validate_mermaid(source: str, expected: str) -> list[str]:
@@ -69,8 +69,9 @@ def deterministic_design(functional: list[dict], original_errors: list[str]) -> 
             "        string name",
             "    }",
         ])
-    for left, right in zip(entity_ids, entity_ids[1:]):
-        erd_lines.append(f'    {left} ||--o{{ {right} : "relates to"')
+    # Do not invent cardinality or include/extend semantics. Requirements that
+    # only mention an object can support an entity inventory, not a defensible
+    # relationship. A lecturer can refine the ERD after reviewing the evidence.
 
     return DesignSuggestionsData(
         useCaseMermaid="\n".join(use_case_lines) + "\n",

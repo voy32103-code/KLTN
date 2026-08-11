@@ -1077,6 +1077,11 @@ function renderAdminScenarioPreview(state: AppState) {
   if (!draft) return ''
 
   const source = state.adminState?.scenarioDraftSource
+  const personaTemplates = state.adminState?.personaTemplates ?? []
+  const selectedPersonaTemplateKeys = new Set(draft.persona_template_keys ?? [])
+  const glossary = draft.normalization_glossary ?? {
+    actor: {}, action: {}, object: {}, condition: {},
+  }
   const requirementCards = draft.requirements.map((requirement, index) => `
     <article class="scenario-draft-requirement" data-requirement-row="${index}">
       <div class="scenario-draft-requirement-header">
@@ -1203,6 +1208,36 @@ function renderAdminScenarioPreview(state: AppState) {
         </label>
       </div>
 
+      <section class="scenario-draft-advanced" aria-labelledby="persona-template-title">
+        <h4 id="persona-template-title">Persona templates tái sử dụng</h4>
+        <p>Chọn 2–3 template để tạo snapshot cho mỗi stakeholder. Thay đổi template sau này không ảnh hưởng phiên phỏng vấn đã phát hành.</p>
+        ${personaTemplates.length === 0 ? `
+          <p><small>Chưa tải được thư viện persona; hệ thống sẽ dùng bộ mặc định Collaborative và Challenging.</small></p>
+        ` : `
+          <div class="scenario-draft-grid compact">
+            ${personaTemplates.map(template => `
+              <label>
+                <span><input type="checkbox" data-persona-template-key value="${escapeAttribute(template.templateKey)}"
+                  ${selectedPersonaTemplateKeys.size === 0
+                    ? template.isSystemDefault ? 'checked' : ''
+                    : selectedPersonaTemplateKeys.has(template.templateKey) ? 'checked' : ''} />
+                  ${escapeHtml(template.label)}</span>
+                <small>${escapeHtml(template.communicationStyle)} · ${escapeHtml(template.knowledgeLevel)} · ${escapeHtml(template.difficulty)}</small>
+              </label>
+            `).join('')}
+          </div>
+        `}
+      </section>
+
+      <section class="scenario-draft-advanced" aria-labelledby="ground-truth-review-title">
+        <h4 id="ground-truth-review-title">Review Ground Truth</h4>
+        <p>Ghi lại kiểm tra của admin trước khi publish. Thông tin này được lưu vào audit trail của phiên bản scenario.</p>
+        <label>
+          <span>Ghi chú review (tùy chọn)</span>
+          <textarea data-draft-field="review_notes" rows="3" maxlength="1000" placeholder="Ví dụ: Đã kiểm tra nguồn, AAOC, type/priority, gate và điều kiện tiết lộ.">${escapeHtml(draft.review_notes ?? '')}</textarea>
+        </label>
+      </section>
+
       <details class="scenario-draft-advanced">
         <summary>Cấu hình Gate nâng cao</summary>
         <div class="scenario-draft-grid">
@@ -1213,6 +1248,11 @@ function renderAdminScenarioPreview(state: AppState) {
           <label>
             <span>Ánh xạ loại câu hỏi → Gate (JSON)</span>
             <textarea data-draft-field="question_type_gate_map" rows="7">${escapeHtml(JSON.stringify(draft.question_type_gate_map, null, 2))}</textarea>
+          </label>
+          <label>
+            <span>Glossary chuẩn hóa theo scenario (JSON)</span>
+            <textarea data-draft-field="normalization_glossary" rows="7" spellcheck="false">${escapeHtml(JSON.stringify(glossary, null, 2))}</textarea>
+            <small>Ví dụ: { "action": { "reserve": "book" }, "object": { "desk pass": "study desk" } }.</small>
           </label>
         </div>
       </details>

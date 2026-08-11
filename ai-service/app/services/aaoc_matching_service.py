@@ -22,17 +22,25 @@ def _field(item: Any, name: str) -> str | None:
     return getattr(item, name, None)
 
 
-def _norm(item: Any, name: str) -> str | None:
-    return normalize_component(_field(item, name), name)
+def _norm(
+    item: Any,
+    name: str,
+    glossary: dict[str, dict[str, str]] | None = None,
+) -> str | None:
+    return normalize_component(_field(item, name), name, glossary)
 
 
 def has_aaoc(item: Any) -> bool:
     return bool(_field(item, 'type') and _field(item, 'action') and _field(item, 'object'))
 
 
-def _condition_score(left: str | None, right: str | None) -> float:
-    left = normalize_component(left, 'condition')
-    right = normalize_component(right, 'condition')
+def _condition_score(
+    left: str | None,
+    right: str | None,
+    glossary: dict[str, dict[str, str]] | None = None,
+) -> float:
+    left = normalize_component(left, 'condition', glossary)
+    right = normalize_component(right, 'condition', glossary)
     if not left and not right:
         return 1.0
     if not left or not right:
@@ -45,30 +53,38 @@ def _condition_score(left: str | None, right: str | None) -> float:
     return round(max(jaccard, SequenceMatcher(None, left, right).ratio()), 4)
 
 
-def score_pair(extracted: Any, hidden: Any) -> AaocPairScore | None:
+def score_pair(
+    extracted: Any,
+    hidden: Any,
+    glossary: dict[str, dict[str, str]] | None = None,
+) -> AaocPairScore | None:
     extracted_type = str(_field(extracted, 'type') or '').upper()
     hidden_type = str(_field(hidden, 'type') or '').upper()
     if not extracted_type or extracted_type != hidden_type:
         return None
-    if not _norm(extracted, 'action') or _norm(extracted, 'action') != _norm(hidden, 'action'):
+    if not _norm(extracted, 'action', glossary) or _norm(extracted, 'action', glossary) != _norm(hidden, 'action', glossary):
         return None
-    if not _norm(extracted, 'object') or _norm(extracted, 'object') != _norm(hidden, 'object'):
+    if not _norm(extracted, 'object', glossary) or _norm(extracted, 'object', glossary) != _norm(hidden, 'object', glossary):
         return None
     components = {
-        'actor': float(bool(_norm(extracted, 'actor')) and _norm(extracted, 'actor') == _norm(hidden, 'actor')),
+        'actor': float(bool(_norm(extracted, 'actor', glossary)) and _norm(extracted, 'actor', glossary) == _norm(hidden, 'actor', glossary)),
         'action': 1.0,
         'object': 1.0,
-        'condition': _condition_score(_field(extracted, 'condition'), _field(hidden, 'condition')),
+        'condition': _condition_score(_field(extracted, 'condition'), _field(hidden, 'condition'), glossary),
     }
     score = sum(components[name] * weight for name, weight in WEIGHTS.items())
     return AaocPairScore(-1, -1, round(score, 4), components)
 
 
-def assign_weighted_one_to_one(extracted: list[Any], hidden: list[Any]) -> dict[int, AaocPairScore]:
+def assign_weighted_one_to_one(
+    extracted: list[Any],
+    hidden: list[Any],
+    glossary: dict[str, dict[str, str]] | None = None,
+) -> dict[int, AaocPairScore]:
     candidates = []
     for extracted_index, extracted_item in enumerate(extracted):
         for hidden_index, hidden_item in enumerate(hidden):
-            pair = score_pair(extracted_item, hidden_item)
+            pair = score_pair(extracted_item, hidden_item, glossary)
             if pair and pair.score >= PARTIAL_THRESHOLD:
                 candidates.append(AaocPairScore(extracted_index, hidden_index, pair.score, pair.component_scores))
     candidates.sort(key=lambda item: (-item.score, item.extracted_index, item.hidden_index))

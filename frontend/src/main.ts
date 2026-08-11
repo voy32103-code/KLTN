@@ -17,6 +17,7 @@ import type {
   ScenarioDetail,
   ScenarioDraft,
   IngestionJob,
+  PersonaTemplate,
   ScenarioPreviewResponse,
   ScenarioStatItem,
   ScenarioSummary,
@@ -708,12 +709,13 @@ async function openAdminDashboard() {
       scenarioDraftSource: null,
       ingestionJob: null,
       ingestionJobs: [],
+      personaTemplates: [],
       feedbackExperiment: null,
     }
     clearNotice()
 
     // Fetch Overview metrics & charts in parallel
-    const [ov, distResp, time, scen, top, breakdown, userList, feedbackExperiment, ingestionJobs] = await Promise.all([
+    const [ov, distResp, time, scen, top, breakdown, userList, feedbackExperiment, ingestionJobs, personaTemplates] = await Promise.all([
       api.request<AdminOverview>('/api/Admin/stats/overview'),
       api.request<{ bins: CoverageDistributionBin[] } | CoverageDistributionBin[]>('/api/Admin/stats/coverage-distribution'),
       api.request<SessionsOverTimeData>('/api/Admin/stats/sessions-over-time'),
@@ -723,6 +725,7 @@ async function openAdminDashboard() {
       api.request<AdminUserItem[]>('/api/Admin/users'),
       api.request<NonNullable<AdminState['feedbackExperiment']>>('/api/Admin/stats/feedback-experiment'),
       api.request<IngestionJob[]>('/api/admin-ingestion/jobs').catch(() => []),
+      api.request<PersonaTemplate[]>('/api/admin-persona-templates').catch(() => []),
     ])
 
     state.adminState.overview = ov
@@ -734,6 +737,7 @@ async function openAdminDashboard() {
     state.adminState.matchTypeBreakdown = breakdown
     state.adminState.users = Array.isArray(userList) ? userList : []
     state.adminState.ingestionJobs = ingestionJobs
+    state.adminState.personaTemplates = personaTemplates.filter(template => template.isActive)
   })
 }
 
@@ -909,6 +913,40 @@ function parseDraftMap<T extends string | number>(
   return result
 }
 
+function parseNormalizationGlossary(raw: string): Record<string, Record<string, string>> {
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(raw.trim() || '{}')
+  } catch {
+    throw new Error('Glossary chuẩn hóa phải là JSON hợp lệ.')
+  }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new Error('Glossary chuẩn hóa phải là một JSON object.')
+  }
+  const allowedComponents = new Set(['actor', 'action', 'object', 'condition'])
+  const result: Record<string, Record<string, string>> = {}
+  for (const [component, aliases] of Object.entries(parsed)) {
+    if (!allowedComponents.has(component)) {
+      throw new Error(`Glossary chỉ hỗ trợ actor, action, object và condition (nhận được ${component}).`)
+    }
+    if (!aliases || typeof aliases !== 'object' || Array.isArray(aliases)) {
+      throw new Error(`Glossary.${component} phải là object dạng "từ đồng nghĩa": "thuật ngữ chuẩn".`)
+    }
+    const normalizedAliases: Record<string, string> = {}
+    for (const [source, target] of Object.entries(aliases)) {
+      if (typeof target !== 'string' || !source.trim() || !target.trim()) {
+        throw new Error(`Glossary.${component} chỉ nhận các cặp chuỗi không rỗng.`)
+      }
+      if (source.length > 160 || target.length > 240) {
+        throw new Error(`Glossary.${component} có thuật ngữ vượt quá giới hạn độ dài.`)
+      }
+      normalizedAliases[source.trim()] = target.trim()
+    }
+    result[component] = normalizedAliases
+  }
+  return result
+}
+
 function getDraftField(root: ParentNode, field: string): string {
   const element = root.querySelector<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(
     `[data-draft-field="${field}"]`
@@ -965,6 +1003,10 @@ function readScenarioDraftForm(): ScenarioDraft {
     }
   })
 
+  const personaTemplateKeys = Array.from(
+    form.querySelectorAll<HTMLInputElement>('[data-persona-template-key]:checked')
+  ).map(input => input.value)
+
   const draft: ScenarioDraft = {
     scenario_key: getDraftField(form, 'scenario_key'),
     scenario_title: getDraftField(form, 'scenario_title'),
@@ -983,6 +1025,9 @@ function readScenarioDraftForm(): ScenarioDraft {
     max_new_reveals_per_turn: Number(getDraftField(form, 'max_new_reveals_per_turn')),
     requirements,
     source_urls: state.adminState.scenarioDraft.source_urls ?? [],
+    persona_template_keys: personaTemplateKeys,
+    normalization_glossary: parseNormalizationGlossary(getDraftField(form, 'normalization_glossary')),
+    review_notes: getDraftField(form, 'review_notes') || null,
   }
 
   validateScenarioDraft(draft)
@@ -1001,6 +1046,14 @@ function validateScenarioDraft(draft: ScenarioDraft) {
     throw new Error('Số yêu cầu tiết lộ mỗi lượt phải là số nguyên từ 1 đến 12.')
   }
   if (draft.requirements.length === 0) throw new Error('Scenario phải có ít nhất một yêu cầu.')
+
+  if (draft.persona_template_keys && draft.persona_template_keys.length > 0 &&
+      (draft.persona_template_keys.length < 2 || draft.persona_template_keys.length > 3)) {
+    throw new Error('Hãy chọn từ 2 đến 3 persona template cho mỗi stakeholder.')
+  }
+  if ((draft.review_notes?.length ?? 0) > 1000) {
+    throw new Error('Ghi chú review không được vượt quá 1.000 ký tự.')
+  }
 
   const ids = new Set<string>()
   for (const [index, requirement] of draft.requirements.entries()) {

@@ -81,12 +81,38 @@ def _comparison_text(value: str | None) -> str:
     return " ".join(normalized.split())
 
 
-def normalize_component(value: str | None, component: str) -> str | None:
+def _scenario_aliases(
+    glossary: dict[str, dict[str, str]] | None,
+    component: str,
+) -> dict[str, str]:
+    """Return only reviewable, well-formed aliases supplied for this scenario."""
+    raw = (glossary or {}).get(component, {})
+    if not isinstance(raw, dict):
+        return {}
+    aliases: dict[str, str] = {}
+    for source, target in raw.items():
+        if not isinstance(source, str) or not isinstance(target, str):
+            continue
+        normalized_source = _comparison_text(source)
+        normalized_target = _comparison_text(target)
+        if normalized_source and normalized_target:
+            aliases[normalized_source] = normalized_target
+    return aliases
+
+
+def normalize_component(
+    value: str | None,
+    component: str,
+    glossary: dict[str, dict[str, str]] | None = None,
+) -> str | None:
     """Return a canonical component value, or ``None`` for an empty condition."""
     clean = _comparison_text(value)
     if not clean:
         return None
-    return _ALIASES.get(component, {}).get(clean, clean)
+    return _scenario_aliases(glossary, component).get(
+        clean,
+        _ALIASES.get(component, {}).get(clean, clean),
+    )
 
 
 def canonical_text(requirement: NormalizedRequirement) -> str:
@@ -97,11 +123,14 @@ def canonical_text(requirement: NormalizedRequirement) -> str:
     return f"{text} when {requirement.conditionNormalized}." if requirement.conditionNormalized else f"{text}."
 
 
-def normalize_requirement(requirement: StructuredRequirement) -> NormalizedRequirement:
-    actor = normalize_component(requirement.actor, "actor")
-    action = normalize_component(requirement.action, "action")
-    object_ = normalize_component(requirement.object, "object")
-    condition = normalize_component(requirement.condition, "condition")
+def normalize_requirement(
+    requirement: StructuredRequirement,
+    glossary: dict[str, dict[str, str]] | None = None,
+) -> NormalizedRequirement:
+    actor = normalize_component(requirement.actor, "actor", glossary)
+    action = normalize_component(requirement.action, "action", glossary)
+    object_ = normalize_component(requirement.object, "object", glossary)
+    condition = normalize_component(requirement.condition, "condition", glossary)
     if not actor or not action or not object_:
         raise ValueError("A structured requirement needs actor, action, and object after normalization.")
 
@@ -124,11 +153,12 @@ def normalize_requirement(requirement: StructuredRequirement) -> NormalizedRequi
 
 def normalize_and_deduplicate(
     requirements: Iterable[StructuredRequirement],
+    glossary: dict[str, dict[str, str]] | None = None,
 ) -> list[NormalizedRequirement]:
     """Normalize requirements and retain the highest-confidence item per key."""
     by_key: dict[str, NormalizedRequirement] = {}
     for requirement in requirements:
-        normalized = normalize_requirement(requirement)
+        normalized = normalize_requirement(requirement, glossary)
         existing = by_key.get(normalized.canonicalKey)
         if existing is None or normalized.confidence > existing.confidence:
             by_key[normalized.canonicalKey] = normalized

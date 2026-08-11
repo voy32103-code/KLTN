@@ -25,6 +25,8 @@ public class AppDbContext : DbContext
     public DbSet<FeedbackSurveyResponse> FeedbackSurveyResponses => Set<FeedbackSurveyResponse>();
     public DbSet<SourceArtifact> SourceArtifacts => Set<SourceArtifact>();
     public DbSet<IngestionJob> IngestionJobs => Set<IngestionJob>();
+    public DbSet<PersonaTemplate> PersonaTemplates => Set<PersonaTemplate>();
+    public DbSet<ScenarioReviewAudit> ScenarioReviewAudits => Set<ScenarioReviewAudit>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -49,6 +51,8 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<FeedbackSurveyResponse>().ToTable("feedback_survey_responses");
         modelBuilder.Entity<SourceArtifact>().ToTable("source_artifacts");
         modelBuilder.Entity<IngestionJob>().ToTable("ingestion_jobs");
+        modelBuilder.Entity<PersonaTemplate>().ToTable("persona_templates");
+        modelBuilder.Entity<ScenarioReviewAudit>().ToTable("scenario_review_audits");
 
         modelBuilder.Entity<User>()
             .Property(u => u.Role)
@@ -59,11 +63,29 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<Persona>()
             .Property(p => p.Difficulty)
             .HasColumnType("persona_difficulty");
+        modelBuilder.Entity<PersonaTemplate>()
+            .Property(p => p.Difficulty)
+            .HasColumnType("persona_difficulty");
         modelBuilder.Entity<Stakeholder>()
             .HasMany(s => s.Personas)
             .WithOne(p => p.Stakeholder)
             .HasForeignKey(p => p.StakeholderId)
             .OnDelete(DeleteBehavior.SetNull);
+        modelBuilder.Entity<Persona>()
+            .HasOne(item => item.Template)
+            .WithMany()
+            .HasForeignKey(item => item.TemplateId)
+            .OnDelete(DeleteBehavior.SetNull);
+        modelBuilder.Entity<ScenarioReviewAudit>()
+            .HasOne(item => item.Scenario)
+            .WithMany(item => item.ReviewAudits)
+            .HasForeignKey(item => item.ScenarioId)
+            .OnDelete(DeleteBehavior.Cascade);
+        modelBuilder.Entity<ScenarioReviewAudit>()
+            .HasOne(item => item.Reviewer)
+            .WithMany()
+            .HasForeignKey(item => item.ReviewerId)
+            .OnDelete(DeleteBehavior.Restrict);
         modelBuilder.Entity<HiddenRequirement>()
             .Property(r => r.Category)
             .HasColumnType("requirement_category");
@@ -148,6 +170,16 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<IngestionJob>()
             .HasIndex(item => item.SourceArtifactId)
             .HasDatabaseName("idx_ingestion_jobs_artifact");
+        modelBuilder.Entity<PersonaTemplate>()
+            .HasIndex(item => item.TemplateKey)
+            .IsUnique()
+            .HasDatabaseName("uq_persona_templates_key");
+        modelBuilder.Entity<PersonaTemplate>()
+            .HasIndex(item => new { item.IsActive, item.IsSystemDefault })
+            .HasDatabaseName("idx_persona_templates_active_default");
+        modelBuilder.Entity<ScenarioReviewAudit>()
+            .HasIndex(item => new { item.ScenarioId, item.ReviewedAt })
+            .HasDatabaseName("idx_scenario_review_audits_scenario_time");
     }
 
     private static string ToSnakeCase(string name)

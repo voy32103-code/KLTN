@@ -57,6 +57,7 @@ class ExtractRequest(BaseModel):
     sessionId: str
     history: list[ChatMessage]
     selectedModel: str | None = None
+    normalizationGlossary: dict[str, dict[str, str]] | None = None
 
 
 class ExtractedReq(BaseModel):
@@ -163,6 +164,7 @@ class EvaluateRequest(BaseModel):
     selectedModel: str | None = None
     scenarioDescription: str | None = None
     feedbackVariant: Literal["A", "B"] = "A"
+    normalizationGlossary: dict[str, dict[str, str]] | None = None
 
 
 class ReqMatch(BaseModel):

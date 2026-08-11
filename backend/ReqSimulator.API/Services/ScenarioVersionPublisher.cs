@@ -24,6 +24,7 @@ public sealed partial class ScenarioVersionPublisher
 
     public async Task<Scenario> PublishAsync(
         ScenarioConfigJson config,
+        Guid? reviewerId = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(config);
@@ -36,7 +37,11 @@ public sealed partial class ScenarioVersionPublisher
         if (config.Requirements is null || config.Requirements.Count == 0)
             throw new InvalidOperationException("A scenario must contain at least one requirement.");
 
-        var serializedConfig = JsonSerializer.Serialize(config);
+        // Review notes are evidence about this publication, not scenario behavior.
+        // Excluding them from the snapshot prevents a comment-only change from
+        // creating a duplicate scenario version.
+        var persistedConfig = config with { ReviewNotes = null };
+        var serializedConfig = JsonSerializer.Serialize(persistedConfig);
         var configHash = ComputeHash(serializedConfig);
         var now = DateTime.UtcNow;
 
@@ -48,6 +53,8 @@ public sealed partial class ScenarioVersionPublisher
         await _db.Database.ExecuteSqlInterpolatedAsync(
             $"SELECT pg_advisory_xact_lock(hashtext({scenarioKey}))",
             cancellationToken);
+
+        var personaTemplates = await ResolvePersonaTemplatesAsync(config, cancellationToken);
 
         var current = await _db.Scenarios
             .Include(s => s.Personas)
@@ -62,6 +69,25 @@ public sealed partial class ScenarioVersionPublisher
              (!string.IsNullOrWhiteSpace(current.SerializedConfig) &&
               string.Equals(ComputeHash(current.SerializedConfig), configHash, StringComparison.OrdinalIgnoreCase))))
         {
+            // Publishing an unchanged scenario is idempotent, but an admin review is still
+            // material evidence. Record it rather than silently dropping the review notes.
+            if (reviewerId is Guid previousReviewer)
+            {
+                current.ReviewedByUserId = previousReviewer;
+                current.ReviewedAt = now;
+                current.ReviewNotes = Limit(config.ReviewNotes, 1000);
+                _db.ScenarioReviewAudits.Add(new ScenarioReviewAudit
+                {
+                    Id = Guid.NewGuid(),
+                    ScenarioId = current.Id,
+                    ReviewerId = previousReviewer,
+                    Notes = current.ReviewNotes,
+                    SourceUrlsData = current.SourceUrlsData,
+                    RequirementCount = current.HiddenRequirements.Count,
+                    ReviewedAt = now
+                });
+                await _db.SaveChangesAsync(cancellationToken);
+            }
             await transaction.CommitAsync(cancellationToken);
             return current;
         }
@@ -96,6 +122,9 @@ public sealed partial class ScenarioVersionPublisher
             PublishedAt = now,
             ConfigHash = configHash,
             SerializedConfig = serializedConfig,
+            ReviewedByUserId = reviewerId,
+            ReviewedAt = reviewerId is null ? null : now,
+            ReviewNotes = Limit(config.ReviewNotes, 1000),
             SourceUrlsData = JsonSerializer.Serialize(
                 (config.SourceUrls ?? [])
                     .Where(url => Uri.IsWellFormedUriString(url, UriKind.Absolute))
@@ -108,11 +137,6 @@ public sealed partial class ScenarioVersionPublisher
             ("Business Owner", "Decision Maker", "Management"),
             ("Process Expert", "Domain Specialist", "Operations"),
             ("End User", "Operational User", "Delivery")
-        };
-        var personaTemplates = new[]
-        {
-            ("Collaborative", "collaborative", "high", PersonaDifficulty.Easy, 1.00m),
-            ("Challenging", "concise", "medium", PersonaDifficulty.Hard, 0.70m)
         };
         foreach (var role in stakeholderTemplates)
         {
@@ -128,16 +152,13 @@ public sealed partial class ScenarioVersionPublisher
                 var persona = new Persona
                 {
                     Id = Guid.NewGuid(), ScenarioId = next.Id, StakeholderId = stakeholder.Id,
-                    Name = $"{role.Item1} - {profile.Item1}", Label = profile.Item1,
+                    TemplateId = profile.Id == Guid.Empty ? null : profile.Id,
+                    Name = $"{role.Item1} - {profile.Label}", Label = profile.Label,
                     RoleTitle = role.Item2,
-                    PersonalityTraits = JsonSerializer.Serialize(new
-                    {
-                        traits = new[] { profile.Item1.ToLowerInvariant(), "detail_oriented" },
-                        jargon_level = profile.Item3
-                    }),
-                    CommunicationStyle = profile.Item2, KnowledgeLevel = profile.Item3,
-                    Difficulty = profile.Item4, InitialMood = "neutral",
-                    InitialPatience = profile.Item5, CreatedAt = now
+                    PersonalityTraits = profile.PersonalityTraits,
+                    CommunicationStyle = profile.CommunicationStyle, KnowledgeLevel = profile.KnowledgeLevel,
+                    Difficulty = profile.Difficulty, InitialMood = profile.InitialMood,
+                    InitialPatience = profile.InitialPatience, CreatedAt = now
                 };
                 stakeholder.Personas.Add(persona);
                 next.Personas.Add(persona);
@@ -176,6 +197,19 @@ public sealed partial class ScenarioVersionPublisher
         }
 
         _db.Scenarios.Add(next);
+        if (reviewerId is Guid reviewer)
+        {
+            _db.ScenarioReviewAudits.Add(new ScenarioReviewAudit
+            {
+                Id = Guid.NewGuid(),
+                ScenarioId = next.Id,
+                ReviewerId = reviewer,
+                Notes = Limit(config.ReviewNotes, 1000),
+                SourceUrlsData = next.SourceUrlsData,
+                RequirementCount = next.HiddenRequirements.Count,
+                ReviewedAt = now
+            });
+        }
         await _db.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
         return next;
@@ -196,6 +230,55 @@ public sealed partial class ScenarioVersionPublisher
         string.IsNullOrWhiteSpace(value)
             ? null
             : value.Length <= maxLength ? value : value[..maxLength];
+
+    private async Task<List<PersonaTemplate>> ResolvePersonaTemplatesAsync(
+        ScenarioConfigJson config,
+        CancellationToken cancellationToken)
+    {
+        var requestedKeys = (config.PersonaTemplateKeys ?? [])
+            .Select(value => value.Trim().ToLowerInvariant())
+            .Where(value => value.Length > 0)
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+        if (requestedKeys.Count > 0 && (requestedKeys.Count < 2 || requestedKeys.Count > 3))
+            throw new InvalidOperationException("Select between two and three reusable persona templates.");
+
+        var query = _db.PersonaTemplates.AsNoTracking().Where(item => item.IsActive);
+        var templates = requestedKeys.Count == 0
+            ? await query.Where(item => item.IsSystemDefault)
+                .OrderBy(item => item.TemplateKey)
+                .ToListAsync(cancellationToken)
+            : await query.Where(item => requestedKeys.Contains(item.TemplateKey))
+                .OrderBy(item => item.TemplateKey)
+                .ToListAsync(cancellationToken);
+
+        if (requestedKeys.Count > 0 && templates.Count != requestedKeys.Count)
+            throw new InvalidOperationException("One or more selected persona templates are unavailable.");
+
+        // Tests and a newly provisioned database can publish before the migration
+        // seeds the catalog; keep the existing safe defaults as a non-persistent fallback.
+        return templates.Count >= 2 && templates.Count <= 3 ? templates : DefaultPersonaTemplates();
+    }
+
+    private static List<PersonaTemplate> DefaultPersonaTemplates() =>
+    [
+        new PersonaTemplate
+        {
+            TemplateKey = "collaborative", Label = "Collaborative",
+            PersonalityTraits = "{\"traits\":[\"collaborative\",\"detail_oriented\"]}",
+            CommunicationStyle = "collaborative", KnowledgeLevel = "high",
+            Difficulty = PersonaDifficulty.Easy, InitialMood = "neutral", InitialPatience = 1.00m,
+            IsActive = true, IsSystemDefault = true
+        },
+        new PersonaTemplate
+        {
+            TemplateKey = "challenging", Label = "Challenging",
+            PersonalityTraits = "{\"traits\":[\"challenging\",\"detail_oriented\"]}",
+            CommunicationStyle = "concise", KnowledgeLevel = "medium",
+            Difficulty = PersonaDifficulty.Hard, InitialMood = "neutral", InitialPatience = 0.70m,
+            IsActive = true, IsSystemDefault = true
+        }
+    ];
 
     private static RequirementCategory MapCategory(int gate, string text)
     {

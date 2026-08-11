@@ -56,6 +56,46 @@ flowchart LR
 | **Quản trị học phần** | Role `Student` / `Lecturer` / `Admin`, scenario versioning, lecturer override và audit trail. |
 | **Knowledge ingestion** | Crawler URL công khai có Playwright fallback cho SPA; upload video/audio với private R2 và worker bất đồng bộ. |
 
+## 🔁 Pipeline nghiệp vụ v2
+
+Pipeline v2 chuyển nguồn nghiệp vụ thành một vòng lặp học tập có thể review,
+đo lường và cải tiến. Mỗi mũi tên là một contract dữ liệu rõ ràng, không phải
+một lần gọi AI "hộp đen".
+
+```mermaid
+flowchart TB
+    subgraph A["1–3 · Xây dựng scenario"]
+        S1["1. Source governance"] --> S2["2. Scenario draft & review"] --> S3["3. Stakeholder × persona"]
+    end
+    subgraph B["4–7 · Phỏng vấn và chuẩn hóa"]
+        S4["4. Multi-turn interview"] --> S5["5. Conversation history"] --> S6["6. Structured extraction"] --> S7["7. Normalize & de-duplicate"]
+    end
+    subgraph C["8–11 · Đánh giá học tập"]
+        S8["8. Ground truth review"] --> S9["9. AAOC one-to-one matching"] --> S10["10. Coverage"] --> S11["11. Learning feedback"]
+    end
+    subgraph D["12–13 · Trực quan và kiểm chứng"]
+        S12["12. Use case / ERD"] --> S13["13. Evaluation study"]
+    end
+    S3 --> S4
+    S2 --> S8
+    S7 --> S9
+    S8 --> S9
+    S11 --> S12
+```
+
+| Chặng | Input → Output | Cơ chế chính |
+| --- | --- | --- |
+| 1–2 | URL/video/audio → scenario draft | Private R2 hoặc crawler public, schema validation và Admin review trước publish. |
+| 3–5 | Scenario → transcript | 3 stakeholder × 2 persona; disclosure dựa vào mức độ cụ thể của câu hỏi, không dựa đơn thuần vào số lượt. |
+| 6–7 | Transcript → normalized requirements | JSON Actor–Action–Object–Condition–Type, canonical key và loại trùng lặp. |
+| 8–10 | Ground truth + requirements → score | Type/Action/Object là điều kiện lọc; AAOC 20/30/30/20, one-to-one matching và `coverage = (match + 0.5 × partial) / total`. |
+| 11–13 | Evaluation → feedback/diagram/evidence | Gợi ý không lộ đáp án, Mermaid Use Case/ERD và dataset/survey cho đánh giá thực nghiệm. |
+
+> [!TIP]
+> Ground truth là kết quả của **nguồn có provenance → AI draft → chuẩn hóa →
+> loại trùng → giảng viên/Admin review**, không phải dữ liệu Internet được đưa
+> thẳng vào điểm số.
+
 ## 🎬 Nạp tri thức từ nguồn nghiệp vụ
 
 ### URL công khai
