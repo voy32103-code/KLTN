@@ -1,4 +1,4 @@
-"""Render background worker entrypoint: python -m app.ingestion_worker."""
+"""Queue worker entrypoint for local execution or one GitHub Actions run."""
 import asyncio
 import logging
 import os
@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 BACKEND_URL = os.getenv("INGESTION_BACKEND_URL", "").rstrip("/")
 WORKER_KEY = os.getenv("INGESTION_WORKER_KEY", "")
 POLL_SECONDS = max(1, int(os.getenv("INGESTION_WORKER_POLL_SECONDS", "3")))
+RUN_ONCE = os.getenv("INGESTION_WORKER_RUN_ONCE", "false").lower() in {"1", "true", "yes"}
 MAX_DOWNLOAD_BYTES = 250 * 1024 * 1024
 
 
@@ -87,27 +88,44 @@ def _safe_error_code(error: Exception) -> str:
     return "processing_failed"
 
 
+async def process_one_job(client: httpx.AsyncClient) -> bool:
+    """Claim, process, and complete a single job. Returns False when the queue is empty."""
+    claim = await client.post(f"{BACKEND_URL}/api/admin-ingestion/worker/claim")
+    if claim.status_code == 204:
+        logger.info("No queued ingestion job was available.")
+        return False
+    claim.raise_for_status()
+
+    job = claim.json()
+    completion: dict = {"leaseId": job["leaseId"]}
+    try:
+        completion["scenario"] = await _process_job(client, job)
+        logger.info("Ingestion job %s produced a scenario draft.", job["jobId"])
+    except Exception as error:
+        logger.exception("Ingestion job %s failed.", job["jobId"])
+        completion["errorCode"] = _safe_error_code(error)
+
+    response = await client.post(
+        f"{BACKEND_URL}/api/admin-ingestion/worker/jobs/{job['jobId']}/complete",
+        json=completion,
+    )
+    response.raise_for_status()
+    return True
+
+
 async def run() -> None:
     _require_configuration()
     headers = {"X-Ingestion-Worker-Key": WORKER_KEY}
     async with httpx.AsyncClient(headers=headers, timeout=30.0) as client:
+        if RUN_ONCE:
+            await process_one_job(client)
+            return
+
         while True:
             try:
-                claim = await client.post(f"{BACKEND_URL}/api/admin-ingestion/worker/claim")
-                if claim.status_code == 204:
+                processed = await process_one_job(client)
+                if not processed:
                     await asyncio.sleep(POLL_SECONDS)
-                    continue
-                claim.raise_for_status()
-                job = claim.json()
-                completion: dict = {"leaseId": job["leaseId"]}
-                try:
-                    completion["scenario"] = await _process_job(client, job)
-                    logger.info("Ingestion job %s produced a scenario draft.", job["jobId"])
-                except Exception as error:
-                    logger.exception("Ingestion job %s failed.", job["jobId"])
-                    completion["errorCode"] = _safe_error_code(error)
-                response = await client.post(f"{BACKEND_URL}/api/admin-ingestion/worker/jobs/{job['jobId']}/complete", json=completion)
-                response.raise_for_status()
             except asyncio.CancelledError:
                 raise
             except Exception:
