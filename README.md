@@ -1,120 +1,130 @@
 # ReqSimulator
 
-**ReqSimulator** là hệ thống web mô phỏng phỏng vấn stakeholder ảo hỗ trợ giảng dạy và thực hành kỹ thuật khai thác yêu cầu phần mềm (Requirement Elicitation) trong học phần Kỹ nghệ yêu cầu (Requirement Engineering). 
+ReqSimulator là hệ thống web hỗ trợ giảng dạy và thực hành **khai thác yêu
+cầu phần mềm** (*Requirements Elicitation*). Sinh viên phỏng vấn stakeholder
+ảo; hệ thống áp dụng progressive disclosure/gating, trích xuất yêu cầu và đánh
+giá coverage. Giảng viên/Admin có thể review kết quả, điều chỉnh đánh giá và
+tạo scenario mới từ nguồn được kiểm soát.
 
-Hệ thống cho phép sinh viên trực tiếp phỏng vấn stakeholder được điều khiển bởi AI (có tính cách, cảm xúc, độ kiên nhẫn riêng), tự động trích xuất các yêu cầu sinh viên đã khai thác và so khớp với tập yêu cầu ẩn (ground truth) để chấm điểm độ bao phủ (Coverage Score) chi tiết.
+Trạng thái tài liệu: **11/08/2026**. Hệ thống phù hợp cho demo, pilot học phần
+và dữ liệu do Admin kiểm duyệt; chưa được thiết kế cho tải lớn hoặc tự động
+publish nội dung AI.
 
----
+## Kiến trúc đang chạy
 
-## 1. Kiến trúc Hệ thống
+```text
+Vercel frontend (Vite + TypeScript)
+  -> Render backend (ASP.NET Core 9, JWT, API, PostgreSQL queue)
+     -> Neon PostgreSQL (sessions, scenarios, jobs, artifacts metadata)
+     -> Render AI service (FastAPI, persona/evaluation/provider adapters)
+     -> private Cloudflare R2 (video/audio artifacts)
+  -> GitHub Actions run-once worker (Playwright, FFmpeg, Gemini)
+```
 
-Hệ thống được thiết kế theo kiến trúc 3 thành phần tách biệt (Decoupled 3-Service Architecture):
+Backend là ranh giới công khai: xác thực, phân quyền và dữ liệu nằm ở đây. AI
+service chỉ nhận request có `X-AI-Service-Key`. GitHub Action có worker key
+riêng; không có Render Background Worker trả phí.
 
-*   **Frontend (TypeScript / Vite / Vanilla CSS):** Giao diện tương tác gọn nhẹ của Sinh viên (Chat, Dashboard báo cáo) và Giảng viên (Bảng điều khiển review session, xem transcript).
-*   **Backend (ASP.NET Core 9 / PostgreSQL / EF Core):** Quản lý xác thực JWT, phân quyền (Student/Lecturer), lưu trữ phiên phỏng vấn, tin nhắn, và điều phối quy trình chấm điểm (Lease-based finalization).
-*   **AI Service (FastAPI / Python / PyTorch / Gemini):** Trực tiếp điều phối máy trạng thái của stakeholder, kiểm soát việc tiết lộ thông tin qua các cổng (Information Gating), hậu kiểm rò rỉ thông tin (Consistency Checker) và thực hiện pipeline chấm điểm ngữ nghĩa (Sentence-Transformers).
+## Chức năng chính
 
----
+- JWT và role `Student`, `Lecturer`, `Admin`.
+- Scenario versioning, stakeholder/persona, hidden requirements và gating
+  chống lộ ground truth cho sinh viên.
+- Chat mô phỏng stakeholder, extraction/normalization Actor–Action–Object–
+  Condition, matching một-một, coverage và learning feedback.
+- Lecturer review/override có audit trail; Admin tạo, review và publish
+  scenario.
+- Nạp tri thức từ URL công khai: HTTP trước, Playwright fallback cho SPA,
+  giới hạn SSRF/redirect/kích thước/thời gian.
+- Nạp tri thức từ video/audio do Admin upload: private R2, PostgreSQL queue,
+  GitHub Actions, FFmpeg **audio-only**, Gemini structured output, rồi Admin
+  review trước khi publish.
 
-## 2. Hướng dẫn Khởi chạy Hệ thống (Local Development)
+## Video/audio ingestion
 
-### Yêu cầu hệ thống:
-*   Windows / macOS / Linux
-*   PostgreSQL 15+
-*   .NET SDK 9.0+
-*   Python 3.12+ (kèm pip)
-*   Node.js 20+ (kèm npm hoặc pnpm)
+Đây là **trích xuất tri thức nghiệp vụ qua audio**, không phải fine-tuning và
+không phải hiểu toàn bộ hình ảnh trong video.
 
----
+```text
+Admin upload -> presigned R2 PUT -> Queued in Neon
+-> GitHub Action claims one job -> FFmpeg extracts MP3 audio
+-> Gemini Files API + JSON schema -> AwaitingReview -> Admin publish
+```
 
-### Bước 1: Cấu hình Cơ sở dữ liệu (PostgreSQL)
-1. Khởi tạo một cơ sở dữ liệu trống trên PostgreSQL (ví dụ đặt tên là `req_simulator`).
-2. Mở file cấu hình environment của Backend tại thư mục `backend/ReqSimulator.API/.env` (hoặc tạo từ `.env.example`) và cập nhật chuỗi kết nối:
-   ```env
-   ConnectionStrings__DefaultConnection="Host=localhost;Database=req_simulator;Username=your_user;Password=your_password"
-   Jwt__Secret="YourSuperSecretSecurityKeyThatIsAtLeast32BytesLong"
-   Jwt__Issuer="ReqSimulator"
-   Jwt__Audience="ReqSimulator"
-   ```
+Video/audio tối đa 250 MB; worker chuẩn hóa audio thành MP3 128 kbps/44.1 kHz,
+giới hạn FFmpeg 180 giây và giới hạn audio 128 MB. Video ingestion chỉ hỗ trợ
+model Gemini vì dùng Gemini Files API. Workflow xử lý một job mỗi run; Admin
+có thể chạy thủ công hoặc chờ lịch hằng ngày lúc 10:17 (giờ Việt Nam).
 
----
+Tài liệu giải thích để demo/bảo vệ: [luồng video và Q&A phản biện](docs/VIDEO-KNOWLEDGE-INGESTION-DEFENSE-GUIDE.md).
 
-### Bước 2: Chạy AI Service (FastAPI)
-AI Service chịu trách nhiệm xử lý logic mô phỏng stakeholder và chấm điểm ngữ nghĩa.
+## Triển khai và secrets
 
-1. Di chuyển vào thư mục `ai-service`:
-   ```bash
-   cd ai-service
-   ```
-2. Tạo môi trường ảo Python và kích hoạt:
-   ```bash
-   # Windows
-   python -m venv .venv
-   .venv\Scripts\activate
+| Thành phần | Nền tảng | Cấu hình quan trọng |
+| --- | --- | --- |
+| Frontend | Vercel | `VITE_API_BASE_URL` |
+| Backend | Render | Neon connection string, JWT, AI internal key, `R2__*`, `Ingestion__WorkerKey` |
+| AI service | Render | `AI_SERVICE_INTERNAL_KEY`, Gemini/provider keys |
+| Database | Neon PostgreSQL | `ConnectionStrings__DefaultConnection` |
+| Worker | GitHub Actions | `INGESTION_BACKEND_URL`, `INGESTION_WORKER_KEY`, `GEMINI_API_KEY` |
 
-   # Linux/macOS
-   python3 -m venv .venv
-   source .venv/bin/activate
-   ```
-3. Cài đặt các thư viện dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-4. Tạo tệp `.env` dựa trên `.env.example` và cấu hình khóa API Gemini:
-   ```env
-   GEMINI_API_KEY="AIzaSyYourGeminiApiKeyHere"
-   EMBEDDING_MODEL="all-MiniLM-L6-v2"
-   PORT=8000
-   ```
-5. Khởi động AI Service:
-   ```bash
-   uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
-   ```
+R2 bucket phải là private. Không commit access key, secret key, JWT key, worker
+key, Gemini key hay database URL. Xem [deployment status](docs/INGESTION-DEPLOYMENT.md)
+để biết cách chạy ingestion thủ công và xử lý `Queued`.
 
----
+## Chạy local
 
-### Bước 3: Chạy Backend Web API (.NET 9)
-Backend sẽ tự động kiểm tra cấu trúc cơ sở dữ liệu và tự vá schema (seed data) khi khởi chạy lần đầu.
+Yêu cầu: .NET SDK 9, Node 20+, pnpm, Python **3.12** và PostgreSQL test riêng.
+Sao chép `.env.example` tương ứng cho backend, AI service và frontend; không
+dùng secret production trên máy local.
 
-1. Di chuyển vào thư mục `backend/ReqSimulator.API`:
-   ```bash
-   cd backend/ReqSimulator.API
-   ```
-2. Khôi phục gói tin và chạy ứng dụng:
-   ```bash
-   dotnet restore
-   dotnet run
-   ```
-   *Mặc định API sẽ lắng nghe tại cổng `http://localhost:5242` hoặc `https://localhost:7142`.*
+```powershell
+# Backend (mặc định http://localhost:5206)
+dotnet restore .\KLTN.sln
+dotnet run --project .\backend\ReqSimulator.API
 
----
+# Frontend (terminal khác)
+Set-Location .\frontend
+pnpm.cmd install --frozen-lockfile
+pnpm.cmd run dev
 
-### Bước 4: Chạy Frontend (Vite + TS)
-1. Di chuyển vào thư mục `frontend`:
-   ```bash
-   cd frontend
-   ```
-2. Cài đặt các node packages:
-   ```bash
-   npm install
-   ```
-3. Tạo tệp `.env` cấu hình API URL trỏ về cổng của Backend:
-   ```env
-   VITE_API_BASE_URL="http://localhost:5242"
-   ```
-4. Khởi chạy ở chế độ phát triển (dev):
-   ```bash
-   npm run dev
-   ```
-   *Mở trình duyệt truy cập vào địa chỉ hiển thị trên terminal (thông thường là `http://localhost:5173`).*
+# AI service (terminal khác)
+Set-Location ..\ai-service
+py -3.12 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+```
 
----
+## Kiểm tra local
 
-## 3. Các kịch bản Baseline sẵn có (Scenarios)
+```powershell
+# .NET build và unit runner
+dotnet build .\KLTN.sln -c Release --no-restore
+dotnet run --project .\backend\ReqSimulator.API.UnitTests\ReqSimulator.API.UnitTests.csproj -c Release --no-build
 
-Hệ thống cung cấp sẵn 3 kịch bản phỏng vấn mẫu đã được seed tự động vào database:
-1.  **Đăng ký học phần (University Course Registration System):** Stakeholder là bà Nguyễn (Quản lý đào tạo) - Độ khó: Trung bình (10 yêu cầu ẩn).
-2.  **Đặt lịch khám bệnh (Hospital Appointment System):** Stakeholder là bà Trần (Điều phối viên phòng khám) - Độ khó: Khó (12 yêu cầu ẩn).
-3.  **Quản lý kho hàng tạp hóa (Small Business Inventory Management):** Stakeholder là ông Lâm (Chủ cửa hàng) - Độ khó: Dễ (9 yêu cầu ẩn).
+# Frontend
+Set-Location .\frontend
+pnpm.cmd run build
+pnpm.cmd test
+pnpm.cmd exec playwright install chromium  # chỉ cần lần đầu cho E2E/a11y
+pnpm.cmd exec playwright test
 
-*Lưu ý quan trọng:* Để hệ thống phân loại câu hỏi và kích hoạt mở khóa thông tin nghiệp vụ chính xác, quy trình phỏng vấn (chat) cần được thực hiện bằng **tiếng Anh (English-only)**.
+# AI service, sau khi đã cài requirements bằng Python 3.12
+Set-Location ..\ai-service
+.\.venv\Scripts\python.exe -m unittest discover -s tests -v
+```
+
+Backend integration suite ghi vào PostgreSQL, nên chỉ chạy khi đã cấu hình một
+database riêng có tên `test` hoặc `integration`; tuyệt đối không dùng Neon
+production.
+
+## Tài liệu hiện hành
+
+- [Kết quả audit kiến trúc và rủi ro còn mở](docs/AUDIT-2026-08-11.md)
+- [Trạng thái deployment/ingestion](docs/INGESTION-DEPLOYMENT.md)
+- [Nạp tri thức từ video và câu trả lời phản biện](docs/VIDEO-KNOWLEDGE-INGESTION-DEFENSE-GUIDE.md)
+- [Đánh giá MediaCrawler và video test](docs/MEDIACRAWLER-ADOPTION-AND-VIDEO-TESTING.md)
+- [Trạng thái implementation ngày 08/08](docs/IMPLEMENTATION-80-PERCENT-STATUS.md)
+
+Các tài liệu status cũ là bằng chứng lịch sử theo ngày ghi trên tài liệu; audit
+mới nhất và code hiện tại có ưu tiên cao hơn nếu có mâu thuẫn.
