@@ -173,7 +173,7 @@ Yêu cầu chi tiết:
         try:
             return parse_and_validate_scenario_config(cleaned_json_text)
         except Exception as e:
-            logger.error(f"Pydantic validation failed for ScenarioConfigGeminiSchema (video). Error: {e}. Raw response (truncated): {raw_response_text[:3000]}")
+            logger.error("Scenario response validation failed for media ingestion: %s (response length=%s).", e, len(raw_response_text))
             raise e
 
     finally:

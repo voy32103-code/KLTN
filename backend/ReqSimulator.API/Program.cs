@@ -1,4 +1,5 @@
 using System.Text;
+using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -354,6 +355,9 @@ app.UseExceptionHandler(exceptionHandlerApp =>
 {
     exceptionHandlerApp.Run(async context =>
     {
+        var exception = context.Features.Get<IExceptionHandlerFeature>()?.Error;
+        var logger = context.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger("UnhandledException");
+        logger.LogError(exception, "Unhandled request failure for {Method} {Path}.", context.Request.Method, context.Request.Path);
         var origin = context.Request.Headers["Origin"].ToString();
 
         if (!string.IsNullOrEmpty(origin) && allowedOrigins.Contains(origin))
