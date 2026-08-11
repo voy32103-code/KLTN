@@ -1003,14 +1003,14 @@ function renderAdminScenarioSection(state: AppState) {
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>
           </div>
           <div>
-            <h3 style="font-size: 18px; font-weight: 600; color: var(--text-primary); margin: 0;">Nạp Tri thức Nghiệp vụ từ Video</h3>
-            <p style="font-size: 13px; color: var(--text-secondary); margin: 4px 0 0 0;">Sử dụng Multimodal AI để trích xuất kịch bản từ video/audio cuộc họp</p>
+            <h3 style="font-size: 18px; font-weight: 600; color: var(--text-primary); margin: 0;">Nạp Tri thức Nghiệp vụ từ Audio</h3>
+            <p style="font-size: 13px; color: var(--text-secondary); margin: 4px 0 0 0;">Tải audio cuộc họp trực tiếp lên kho riêng để tạo bản nháp scenario</p>
           </div>
         </div>
 
         <div class="form-group" style="display: flex; flex-direction: column; gap: 8px;">
-          <label style="font-size: 13px; color: var(--text-secondary); font-weight: 500;">Đường dẫn tệp video tuyệt đối (Local Path):</label>
-          <input id="admin-video-path-input" type="text" placeholder="Ví dụ: d:\\KLTN\\tools\\meeting_recording.mp4" style="background: var(--surface-raised); color: var(--text-primary); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; font-size: 13px; outline: none; width: 100%;" />
+          <label style="font-size: 13px; color: var(--text-secondary); font-weight: 500;">Tệp audio cuộc họp (MP3, WAV, M4A, AAC, OGG hoặc WebM; tối đa 250 MB):</label>
+          <input id="admin-video-path-input" type="file" accept="audio/mpeg,audio/wav,audio/x-wav,audio/mp4,audio/aac,audio/ogg,audio/webm" style="background: var(--surface-raised); color: var(--text-primary); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; font-size: 13px; outline: none; width: 100%;" />
         </div>
 
         <div class="form-group" style="display: flex; flex-direction: column; gap: 8px;">
@@ -1023,11 +1023,11 @@ function renderAdminScenarioSection(state: AppState) {
 
         <div style="background: rgba(217, 119, 87, 0.08); border: 1px solid rgba(217, 119, 87, 0.2); border-radius: 6px; padding: 10px 12px; display: flex; gap: 8px; align-items: flex-start;">
           <span style="color: var(--accent-indigo); font-weight: bold; font-size: 14px;">⚠️</span>
-          <span style="font-size: 11px; color: var(--text-secondary); line-height: 1.4;">Hệ thống sẽ tự động sử dụng <strong>FFmpeg</strong> cục bộ để tối ưu dung lượng (tách âm thanh mp3) trước khi gửi lên Gemini File API xử lý đa phương tiện.</span>
+          <span style="font-size: 11px; color: var(--text-secondary); line-height: 1.4;">Chỉ quản trị viên có thể nạp nguồn. Audio được đưa vào private storage, worker xử lý nền và gửi dữ liệu đã chọn đến Gemini.</span>
         </div>
 
         <button class="primary-button" data-action="admin-video" type="button" ${state.busy ? 'disabled' : ''} style="margin-top: 4px; background: linear-gradient(135deg, var(--accent-indigo), #c96b4b); border: none; display: flex; align-items: center; justify-content: center; gap: 8px;">
-          ${state.busy ? '<span class="spinner-mini"></span> Đang xử lý...' : 'Tạo bản preview từ video'}
+          ${state.busy ? '<span class="spinner-mini"></span> Đang xử lý...' : 'Tạo bản preview từ audio'}
         </button>
       </div>
 
