@@ -111,12 +111,11 @@ class VideoFileRegressionTests(unittest.IsolatedAsyncioTestCase):
             with self.assertRaises(ValueError):
                 validate_media_signature(fake_video)
 
-    async def test_audio_only_pipeline_rejects_video_extension_before_provider_call(self):
+    async def test_media_signature_accepts_iso_video_container(self):
         with tempfile.TemporaryDirectory() as directory:
             video = Path(directory) / "meeting.mp4"
             video.write_bytes(b"\x00\x00\x00\x18ftypmp42")
-            with self.assertRaises(ValueError):
-                await generate_scenario_from_video(str(video))
+            validate_media_signature(video)
 
     async def test_audio_extraction_never_overwrites_adjacent_user_file(self):
         class CompletedProcess:

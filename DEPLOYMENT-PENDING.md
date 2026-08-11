@@ -12,4 +12,7 @@ external actions are intentionally deferred:
    worker key, the existing Gemini key, and
    `INGESTION_BACKEND_URL=https://req-simulator-backend.onrender.com`.
 
+The ingestion UI accepts video and audio. The worker extracts an MP3 audio
+track from video before sending it to Gemini.
+
 No credentials belong in this file or in source control.
