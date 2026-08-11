@@ -56,7 +56,8 @@ giới hạn FFmpeg 180 giây và giới hạn audio 128 MB. Video ingestion ch�
 model Gemini vì dùng Gemini Files API. Workflow xử lý một job mỗi run; Admin
 có thể chạy thủ công hoặc chờ lịch hằng ngày lúc 10:17 (giờ Việt Nam).
 
-Tài liệu giải thích để demo/bảo vệ: [luồng video và Q&A phản biện](docs/VIDEO-KNOWLEDGE-INGESTION-DEFENSE-GUIDE.md).
+Luồng giải thích để demo/bảo vệ được lưu trong tài liệu nội bộ, không công bố
+trong repository.
 
 ## Triển khai và secrets
 
@@ -69,8 +70,8 @@ Tài liệu giải thích để demo/bảo vệ: [luồng video và Q&A phản b
 | Worker | GitHub Actions | `INGESTION_BACKEND_URL`, `INGESTION_WORKER_KEY`, `GEMINI_API_KEY` |
 
 R2 bucket phải là private. Không commit access key, secret key, JWT key, worker
-key, Gemini key hay database URL. Xem [deployment status](docs/INGESTION-DEPLOYMENT.md)
-để biết cách chạy ingestion thủ công và xử lý `Queued`.
+key, Gemini key hay database URL. Runbook triển khai và xử lý `Queued` được
+lưu nội bộ, không công bố trong repository.
 
 ## Chạy local
 
@@ -118,13 +119,9 @@ Backend integration suite ghi vào PostgreSQL, nên chỉ chạy khi đã cấu 
 database riêng có tên `test` hoặc `integration`; tuyệt đối không dùng Neon
 production.
 
-## Tài liệu hiện hành
+## Tài liệu nội bộ
 
-- [Kết quả audit kiến trúc và rủi ro còn mở](docs/AUDIT-2026-08-11.md)
-- [Trạng thái deployment/ingestion](docs/INGESTION-DEPLOYMENT.md)
-- [Nạp tri thức từ video và câu trả lời phản biện](docs/VIDEO-KNOWLEDGE-INGESTION-DEFENSE-GUIDE.md)
-- [Đánh giá MediaCrawler và video test](docs/MEDIACRAWLER-ADOPTION-AND-VIDEO-TESTING.md)
-- [Trạng thái implementation ngày 08/08](docs/IMPLEMENTATION-80-PERCENT-STATUS.md)
-
-Các tài liệu status cũ là bằng chứng lịch sử theo ngày ghi trên tài liệu; audit
-mới nhất và code hiện tại có ưu tiên cao hơn nếu có mâu thuẫn.
+Audit, runbook deployment, video-ingestion guide và tài liệu nghiên cứu được
+giữ trong thư mục `docs/` trên môi trường nội bộ. Thư mục này bị Git ignore và
+không được công bố trong repository; không đưa secret hay dữ liệu vận hành vào
+GitHub.

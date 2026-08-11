@@ -44,5 +44,5 @@ URL workflow: <https://github.com/voy32103-code/KLTN/actions/workflows/ingestion
 ## Rủi ro vận hành còn lại
 
 GitHub Actions run-once là lựa chọn phù hợp gói miễn phí nhưng có độ trễ và
-xử lý một job mỗi lần chạy. Xem [audit hiện hành](docs/AUDIT-2026-08-11.md)
-trước khi mở rộng thời lượng video, số người dùng hoặc mức độ tự động hóa.
+xử lý một job mỗi lần chạy. Xem audit nội bộ trước khi mở rộng thời lượng video,
+số người dùng hoặc mức độ tự động hóa.
