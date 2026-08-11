@@ -94,7 +94,35 @@ public sealed class AdminIngestionController : ControllerBase
     {
         var job = await _db.IngestionJobs.AsNoTracking().SingleOrDefaultAsync(item => item.Id == jobId && item.CreatedByUserId == GetUserId(), cancellationToken);
         if (job is null) return NotFound();
-        return Ok(ToClientJob(job));
+        var artifactName = job.SourceArtifactId is Guid artifactId
+            ? await _db.SourceArtifacts.AsNoTracking().Where(item => item.Id == artifactId).Select(item => item.OriginalFileName).SingleOrDefaultAsync(cancellationToken)
+            : null;
+        return Ok(ToClientJob(job, artifactName));
+    }
+
+    [HttpGet("jobs")]
+    public async Task<IActionResult> ListJobs([FromQuery] int limit = 25, CancellationToken cancellationToken = default)
+    {
+        var take = Math.Clamp(limit, 1, 50);
+        var jobs = await _db.IngestionJobs
+            .AsNoTracking()
+            .Where(item => item.CreatedByUserId == GetUserId())
+            .OrderByDescending(item => item.UpdatedAt)
+            .Take(take)
+            .ToListAsync(cancellationToken);
+
+        var artifactIds = jobs
+            .Where(item => item.SourceArtifactId.HasValue)
+            .Select(item => item.SourceArtifactId!.Value)
+            .ToArray();
+        var artifactNames = artifactIds.Length == 0
+            ? new Dictionary<Guid, string>()
+            : await _db.SourceArtifacts
+                .AsNoTracking()
+                .Where(item => artifactIds.Contains(item.Id))
+                .ToDictionaryAsync(item => item.Id, item => item.OriginalFileName, cancellationToken);
+
+        return Ok(jobs.Select(job => ToClientJob(job, artifactNames.GetValueOrDefault(job.SourceArtifactId ?? Guid.Empty), includeDraft: false)));
     }
 
     [AllowAnonymous, HttpPost("worker/claim")]
@@ -160,7 +188,39 @@ public sealed class AdminIngestionController : ControllerBase
         return Ok(ToClientJob(job));
     }
 
-    private object ToClientJob(IngestionJob job) => new { jobId = job.Id, job.Status, job.ErrorCode, job.Attempts, draft = job.DraftData is null ? null : JsonSerializer.Deserialize<ScenarioConfigJson>(job.DraftData) };
+    private object ToClientJob(IngestionJob job, string? artifactName = null, bool includeDraft = true) => new
+    {
+        jobId = job.Id,
+        job.Status,
+        job.ErrorCode,
+        job.Attempts,
+        job.CreatedAt,
+        job.UpdatedAt,
+        job.SelectedModel,
+        sourceLabel = GetSourceLabel(job, artifactName),
+        hasDraft = job.DraftData is not null,
+        draft = includeDraft && job.DraftData is not null ? JsonSerializer.Deserialize<ScenarioConfigJson>(job.DraftData) : null,
+    };
+
+    private static string GetSourceLabel(IngestionJob job, string? artifactName)
+    {
+        if (!string.IsNullOrWhiteSpace(artifactName)) return artifactName;
+        if (job.SourceKind != IngestionSourceKind.Url) return "Video/audio upload";
+        try
+        {
+            var urls = JsonSerializer.Deserialize<List<string>>(job.SourceUrlsData) ?? [];
+            return urls.Count switch
+            {
+                0 => "Public URL",
+                1 => urls[0],
+                _ => $"{urls[0]} (+{urls.Count - 1})",
+            };
+        }
+        catch (JsonException)
+        {
+            return "Public URL";
+        }
+    }
     private Guid GetUserId() => Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? throw new UnauthorizedAccessException());
     private bool IsWorkerRequest()
     {

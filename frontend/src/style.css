@@ -2,6 +2,7 @@
   /* Taste-Skill High-Agency Design System Tokens */
   --font-heading: 'Outfit', 'Inter', -apple-system, sans-serif;
   --font-body: 'Inter', -apple-system, sans-serif;
+  --font-sans: 'Inter', -apple-system, sans-serif;
   --font-serif: 'Newsreader', Georgia, serif;
   --font-mono: 'JetBrains Mono', 'Geist Mono', monospace;
 
@@ -18,7 +19,7 @@
   --text: #383530;
   --text-primary: #191816;
   --text-secondary: #5C5850;
-  --muted: #858076;
+  --muted: #6B675F;
   --muted-strong: #4A4742;
   
   --line: rgba(217, 119, 87, 0.1);
@@ -26,22 +27,22 @@
   --line-strong: rgba(217, 119, 87, 0.18);
 
   /* Claude Terracotta Accent & Muted Semantic Colors */
-  --accent-indigo: #D97757;
+  --accent-indigo: #9A3F25;
   --accent-indigo-glow: rgba(217, 119, 87, 0.15);
-  --accent-emerald: #3E8E7E;
+  --accent-emerald: #27695E;
   --accent-emerald-glow: rgba(62, 142, 126, 0.15);
-  --accent-amber: #D99857;
+  --accent-amber: #8A521A;
   --accent-amber-glow: rgba(217, 152, 87, 0.15);
-  --accent-rose: #C95A64;
+  --accent-rose: #9B3341;
 
   --pastel-red-bg: rgba(201, 90, 100, 0.08);
-  --pastel-red-text: #C95A64;
+  --pastel-red-text: #9B3341;
   --pastel-blue-bg: rgba(217, 119, 87, 0.08);
-  --pastel-blue-text: #D97757;
+  --pastel-blue-text: #9A3F25;
   --pastel-green-bg: rgba(62, 142, 126, 0.08);
-  --pastel-green-text: #3E8E7E;
+  --pastel-green-text: #27695E;
   --pastel-yellow-bg: rgba(217, 152, 87, 0.08);
-  --pastel-yellow-text: #D99857;
+  --pastel-yellow-text: #8A521A;
 
   --radius: 12px;
   --radius-xl: 16px;
@@ -440,7 +441,8 @@ textarea {
 }
 
 input:focus,
-textarea:focus {
+textarea:focus,
+select:focus {
   border-color: var(--accent-indigo);
   box-shadow: 0 0 0 3px var(--accent-indigo-glow);
   background: var(--surface);
@@ -517,6 +519,16 @@ textarea:focus {
 
 .danger-button:active:not(:disabled) {
   transform: scale(0.98);
+}
+
+:where(button, a[href], input, textarea, select, [tabindex]):focus-visible {
+  outline: 3px solid var(--accent-indigo);
+  outline-offset: 3px;
+}
+
+.primary-button:focus-visible,
+.danger-button:focus-visible {
+  outline-color: #191816;
 }
 
 /* Bento Box Grids & Layout Panels */
@@ -1407,6 +1419,7 @@ kbd {
 
   .topbar-actions {
     justify-content: flex-start;
+    flex-wrap: wrap;
   }
 
   .user-pill,
@@ -1416,6 +1429,31 @@ kbd {
 
   .auth-copy h2 {
     font-size: 32px;
+  }
+
+  .admin-header {
+    align-items: flex-start !important;
+    flex-direction: column;
+    gap: 12px;
+    max-width: 100%;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .admin-nav-tabs {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+  }
+
+  .admin-nav-tabs .ghost-button {
+    flex: 0 0 auto;
+  }
+
+  .admin-scenarios-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 16px !important;
   }
 
   .auth-proof-grid,
@@ -1892,7 +1930,64 @@ kbd {
 }
 
 .danger-button {
-  color: #dc6b6b;
+  color: var(--accent-rose);
+}
+
+.ingestion-history {
+  margin-bottom: 24px;
+  padding: 18px;
+}
+
+.ingestion-history-heading,
+.ingestion-job-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  justify-content: space-between;
+}
+
+.ingestion-history-heading h3 {
+  margin: 0;
+}
+
+.ingestion-history-empty {
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.ingestion-job-list {
+  display: grid;
+  gap: 10px;
+  list-style: none;
+  margin: 16px 0 0;
+  padding: 0;
+}
+
+.ingestion-job-item {
+  border: 1px solid var(--line-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+  padding: 12px;
+}
+
+.ingestion-job-main {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.ingestion-job-main strong,
+.ingestion-job-main span,
+.ingestion-job-main small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ingestion-job-main span,
+.ingestion-job-main small {
+  color: var(--text-secondary);
+  font-size: 12px;
 }
 
 .scenario-draft-actions {
@@ -1924,5 +2019,53 @@ kbd {
 
   .scenario-draft-actions button {
     width: 100%;
+  }
+
+  .ingestion-history-heading,
+  .ingestion-job-item {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .ingestion-job-item .primary-button,
+  .ingestion-history-heading .ghost-button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 400px) {
+  .workspace,
+  .topbar {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media (prefers-contrast: more) {
+  :root {
+    --bg: #FFFFFF;
+    --surface: #FFFFFF;
+    --surface-raised: #FFFFFF;
+    --text: #111111;
+    --text-primary: #000000;
+    --text-secondary: #333333;
+    --muted: #444444;
+    --line: #555555;
+    --line-subtle: #777777;
+  }
+
+  :where(button, input, textarea, select) {
+    border-width: 2px;
   }
 }

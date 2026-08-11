@@ -269,6 +269,11 @@ export type IngestionJob = {
   status: 'AwaitingUpload' | 'Queued' | 'Processing' | 'AwaitingReview' | 'Failed'
   errorCode?: string | null
   attempts: number
+  createdAt?: string
+  updatedAt?: string
+  selectedModel?: string | null
+  sourceLabel?: string
+  hasDraft?: boolean
   draft?: ScenarioDraft | null
 }
 export type AdminState = {
@@ -287,6 +292,7 @@ export type AdminState = {
   scenarioDraft: ScenarioDraft | null
   scenarioDraftSource: string | null
   ingestionJob: IngestionJob | null
+  ingestionJobs: IngestionJob[]
   feedbackExperiment: {
     variants: Array<{
       variant: string
