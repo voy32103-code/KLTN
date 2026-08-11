@@ -15,7 +15,7 @@ from app.services.admin_crawler_service import (
 )
 from app.services.admin_service import CrawlScenarioRequest
 from app.services.api_client_manager import ApiClientManager, GroqResponseShim
-from app.services.video_processing_service import extract_audio_from_video
+from app.services.video_processing_service import extract_audio_from_video, validate_media_signature
 
 
 def valid_scenario_data(scenario_key: str) -> dict:
@@ -104,6 +104,13 @@ class ProviderConfigRegressionTests(unittest.IsolatedAsyncioTestCase):
 
 
 class VideoFileRegressionTests(unittest.IsolatedAsyncioTestCase):
+    def test_media_signature_rejects_renamed_text_file(self):
+        with tempfile.TemporaryDirectory() as directory:
+            fake_video = Path(directory) / "meeting.mp4"
+            fake_video.write_text("not media", encoding="utf-8")
+            with self.assertRaises(ValueError):
+                validate_media_signature(fake_video)
+
     async def test_audio_extraction_never_overwrites_adjacent_user_file(self):
         class CompletedProcess:
             returncode = 0

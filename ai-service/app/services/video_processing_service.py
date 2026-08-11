@@ -18,6 +18,18 @@ def is_ffmpeg_available() -> bool:
     """Kiểm tra xem ffmpeg có sẵn trong hệ thống không."""
     return shutil.which("ffmpeg") is not None
 
+
+def validate_media_signature(video_path: Path) -> None:
+    """Reject renamed arbitrary files before invoking FFmpeg or a cloud provider."""
+    header = video_path.read_bytes()[:16]
+    is_mp3 = header.startswith(b"ID3") or (len(header) >= 2 and header[0] == 0xFF and header[1] & 0xE0 == 0xE0)
+    is_wave = header.startswith(b"RIFF") and header[8:12] == b"WAVE"
+    is_ogg = header.startswith(b"OggS")
+    is_webm = header.startswith(b"\x1a\x45\xdf\xa3")
+    is_iso_media = len(header) >= 8 and header[4:8] == b"ftyp"
+    if not any((is_mp3, is_wave, is_ogg, is_webm, is_iso_media)):
+        raise ValueError("Tệp media không khớp chữ ký định dạng được hỗ trợ.")
+
 async def extract_audio_from_video(video_path: Path) -> Path:
     """
     Sử dụng FFmpeg để trích xuất âm thanh từ video sang tệp mp3 bất đồng bộ.
@@ -74,6 +86,7 @@ async def generate_scenario_from_video(
     allowed_extensions = {".mp4", ".mov", ".mkv", ".webm", ".mp3", ".wav", ".m4a", ".aac", ".ogg"}
     if video_path.suffix.lower() not in allowed_extensions:
         raise ValueError("Định dạng tệp media không được hỗ trợ.")
+    validate_media_signature(video_path)
 
     model_name = selected_model or MODEL
     if not model_name.lower().startswith("gemini-"):

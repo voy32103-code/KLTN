@@ -12,6 +12,7 @@ public enum MatchType { Exact, Semantic, Partial, Missed }
 public enum QuestionType { OpenEnded, Closed, Clarifying, Probing, Leading, ConstraintOriented, ExceptionOriented }
 public enum PersonaDifficulty { Easy, Medium, Hard }
 public enum SessionFinalizationStatus { Idle, InProgress, Completed, Failed }
+public enum IngestionSourceKind { Url, Audio }
 
 // ===== ENTITIES =====
 
@@ -49,6 +50,46 @@ public class Scenario
     public ICollection<Stakeholder> Stakeholders { get; set; } = [];
     public ICollection<Persona> Personas { get; set; } = [];
     public ICollection<HiddenRequirement> HiddenRequirements { get; set; } = [];
+}
+
+/// <summary>Private R2 object used as an ingestion source. It is never exposed as a public URL.</summary>
+public class SourceArtifact
+{
+    [Key] public Guid Id { get; set; }
+    public Guid CreatedByUserId { get; set; }
+    public IngestionSourceKind Kind { get; set; }
+    [MaxLength(255)] public string OriginalFileName { get; set; } = "";
+    [MaxLength(128)] public string ContentType { get; set; } = "";
+    public long ExpectedBytes { get; set; }
+    public long? ActualBytes { get; set; }
+    [MaxLength(512)] public string ObjectKey { get; set; } = "";
+    [MaxLength(32)] public string Status { get; set; } = "AwaitingUpload";
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime ExpiresAt { get; set; }
+    [ForeignKey(nameof(CreatedByUserId))] public User CreatedByUser { get; set; } = null!;
+}
+
+/// <summary>Durable, lease-based ingestion queue backed by PostgreSQL.</summary>
+public class IngestionJob
+{
+    [Key] public Guid Id { get; set; }
+    public Guid CreatedByUserId { get; set; }
+    public Guid? SourceArtifactId { get; set; }
+    public IngestionSourceKind SourceKind { get; set; }
+    [Column(TypeName = "jsonb")] public string SourceUrlsData { get; set; } = "[]";
+    [MaxLength(100)] public string? SelectedModel { get; set; }
+    [MaxLength(32)] public string Status { get; set; } = "Queued";
+    public int Attempts { get; set; }
+    public int MaxAttempts { get; set; } = 3;
+    public Guid? LeaseId { get; set; }
+    public DateTime? LeaseExpiresAt { get; set; }
+    public DateTime AvailableAt { get; set; } = DateTime.UtcNow;
+    [MaxLength(80)] public string? ErrorCode { get; set; }
+    [Column(TypeName = "jsonb")] public string? DraftData { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+    [ForeignKey(nameof(CreatedByUserId))] public User CreatedByUser { get; set; } = null!;
+    [ForeignKey(nameof(SourceArtifactId))] public SourceArtifact? SourceArtifact { get; set; }
 }
 
 /// <summary>Vai trò nghiệp vụ trong scenario; một stakeholder có nhiều persona.</summary>

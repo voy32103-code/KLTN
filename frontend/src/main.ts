@@ -16,6 +16,7 @@ import type {
   ReviewSessionSummary,
   ScenarioDetail,
   ScenarioDraft,
+  IngestionJob,
   ScenarioPreviewResponse,
   ScenarioStatItem,
   ScenarioSummary,
@@ -145,6 +146,14 @@ function renderAdminCharts() {
 }
 
 function bindEvents() {
+  const legacyMediaInput = document.querySelector<HTMLInputElement>('#admin-video-path-input')
+  if (legacyMediaInput) {
+    legacyMediaInput.type = 'file'
+    legacyMediaInput.accept = 'audio/*,video/mp4,video/webm,video/quicktime'
+    legacyMediaInput.removeAttribute('placeholder')
+    const label = legacyMediaInput.closest('.form-group')?.querySelector('label')
+    if (label) label.textContent = 'Audio/video meeting file (max 250 MB):'
+  }
   document.querySelectorAll<HTMLButtonElement>('[data-auth-mode]').forEach((button) => {
     button.addEventListener('click', () => {
       state.authMode = button.dataset.authMode === 'register' ? 'register' : 'login'
@@ -324,10 +333,10 @@ async function handleAction(action: string, options: { tab?: string; userId?: st
       }
       break
     case 'admin-crawl':
-      await runAdminCrawl()
+      await runQueuedAdminCrawl()
       break
     case 'admin-video':
-      await runAdminVideo()
+      await runQueuedAdminVideo()
       break
     case 'admin-publish-scenario':
       await publishAdminScenario()
@@ -650,6 +659,7 @@ async function openAdminDashboard() {
       isCreatingUser: false,
       scenarioDraft: null,
       scenarioDraftSource: null,
+      ingestionJob: null,
       feedbackExperiment: null,
     }
     clearNotice()
@@ -1013,6 +1023,78 @@ async function publishAdminScenario() {
   })
 }
 
+async function runQueuedAdminCrawl() {
+  const urlInput = document.querySelector('#admin-crawl-url-input') as HTMLTextAreaElement | null
+  const modelSelect = document.querySelector('#admin-crawl-model-select') as HTMLSelectElement | null
+  const urls = urlInput?.value.split(/\r?\n/).map(value => value.trim()).filter(Boolean) ?? []
+  if (urls.length === 0) {
+    setNotice('error', 'Enter at least one public URL.')
+    return
+  }
+  await withBusy(async () => {
+    const created = await api.request<{ jobId: string }>('/api/admin-ingestion/crawl-jobs', {
+      method: 'POST', body: { urls, selectedModel: modelSelect?.value || 'gemini-2.5-flash' },
+    })
+    await waitForIngestion(created.jobId, urls.join(', '))
+  })
+}
+
+async function runQueuedAdminVideo() {
+  const input = document.querySelector('#admin-video-path-input') as HTMLInputElement | null
+  const modelSelect = document.querySelector('#admin-video-model-select') as HTMLSelectElement | null
+  const file = input?.files?.[0]
+  if (!file) {
+    setNotice('error', 'Choose an audio or video meeting file first.')
+    return
+  }
+  if (file.size > 250 * 1024 * 1024) {
+    setNotice('error', 'The file is larger than the 250 MB limit.')
+    return
+  }
+  await withBusy(async () => {
+    const contentType = file.type || 'audio/mpeg'
+    const intent = await api.request<{ jobId: string; artifactId: string; uploadUrl: string }>('/api/admin-ingestion/upload-intents', {
+      method: 'POST', body: { fileName: file.name, contentType, size: file.size, selectedModel: modelSelect?.value || 'gemini-2.5-flash' },
+    })
+    await uploadToPresignedUrl(intent.uploadUrl, file, contentType)
+    await api.request(`/api/admin-ingestion/artifacts/${intent.artifactId}/complete`, { method: 'POST' })
+    await waitForIngestion(intent.jobId, file.name)
+  })
+}
+
+function uploadToPresignedUrl(uploadUrl: string, file: File, contentType: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const request = new XMLHttpRequest()
+    request.open('PUT', uploadUrl)
+    request.setRequestHeader('Content-Type', contentType)
+    request.upload.onprogress = event => {
+      if (event.lengthComputable) setNotice('info', `Uploading: ${Math.round((event.loaded / event.total) * 100)}%.`)
+    }
+    request.onerror = () => reject(new Error('Upload to private storage failed.'))
+    request.onload = () => request.status >= 200 && request.status < 300 ? resolve() : reject(new Error(`Upload failed (${request.status}).`))
+    request.send(file)
+  })
+}
+
+async function waitForIngestion(jobId: string, source: string) {
+  for (let attempt = 0; attempt < 120; attempt += 1) {
+    const job = await api.request<IngestionJob>(`/api/admin-ingestion/jobs/${jobId}`)
+    if (state.adminState) state.adminState.ingestionJob = job
+    if (job.status === 'AwaitingReview' && job.draft) {
+      if (state.adminState) {
+        state.adminState.scenarioDraft = job.draft
+        state.adminState.scenarioDraftSource = source
+      }
+      setNotice('success', 'Preview is ready. Review it before publishing.')
+      return
+    }
+    if (job.status === 'Failed') throw new Error(`Ingestion failed (${job.errorCode ?? 'processing_failed'}).`)
+    setNotice('info', job.status === 'Queued' ? 'Waiting for the ingestion worker.' : 'Generating scenario preview…')
+    await new Promise(resolve => window.setTimeout(resolve, 3000))
+  }
+  throw new Error('Ingestion is taking too long. Open Admin later to check its status.')
+}
+
 async function runAdminCrawl() {
   const urlInput = document.querySelector('#admin-crawl-url-input') as HTMLTextAreaElement | null
   const modelSelect = document.querySelector('#admin-crawl-model-select') as HTMLSelectElement | null
@@ -1062,6 +1144,10 @@ async function runAdminVideo() {
     setNotice('success', 'Đã tạo bản preview từ video. Hãy kiểm tra trước khi publish.')
   })
 }
+// Kept temporarily for compatibility with older UI integrations while queued ingestion rolls out.
+void runAdminCrawl
+void runAdminVideo
+
 async function withBusy(task: () => Promise<void>) {
   state.busy = true
   render()
