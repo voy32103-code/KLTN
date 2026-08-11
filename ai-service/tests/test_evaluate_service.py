@@ -1,11 +1,14 @@
 import asyncio
+import json
 import unittest
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 import numpy as np
 
 from app.models.schemas import EvaluateRequest, ExtractedReq, HiddenReq
 from app.services.evaluate_service import evaluate
+from app.services.design_service import generate_design_models
 
 
 class EvaluateServiceTests(unittest.TestCase):
@@ -32,7 +35,7 @@ class EvaluateServiceTests(unittest.TestCase):
             AsyncMock(return_value=matrix),
         ), patch(
             "app.services.evaluate_service.generate_design_models",
-            return_value=None,
+            new=AsyncMock(return_value=None),
         ):
             result = asyncio.run(evaluate(request))
 
@@ -41,6 +44,30 @@ class EvaluateServiceTests(unittest.TestCase):
         self.assertEqual(len(set(matched)), 2)
         self.assertEqual(result.extraExtractedCount, 1)
         self.assertEqual(result.feedback.extractionsToReview, ["unrelated dashboard"])
+
+    def test_design_generation_uses_shared_provider_manager(self):
+        response = SimpleNamespace(text=json.dumps({
+            "useCaseMermaid": "graph TD\nUser --> ViewStock",
+            "erdMermaid": "erDiagram\nSTOCK ||--o{ ITEM : contains",
+            "mainActors": ["User"],
+            "mainEntities": ["Stock", "Item"],
+        }))
+        requirement = ExtractedReq(
+            text="Users view stock",
+            confidence=0.9,
+            actor="User",
+            action="View",
+            object="Stock",
+            type="FR",
+        )
+        with patch(
+            "app.services.design_service.client_manager.generate_content",
+            new=AsyncMock(return_value=response),
+        ) as generate:
+            result = asyncio.run(generate_design_models([requirement], selected_model="gemini-2.5-flash"))
+
+        self.assertEqual(result.mainActors, ["User"])
+        self.assertEqual(generate.await_args.kwargs["model"], "gemini-2.5-flash")
 
 
 if __name__ == "__main__":

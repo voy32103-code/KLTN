@@ -1,9 +1,11 @@
 import asyncio
+import io
 import os
 import tempfile
 import time
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 from google.genai import types
@@ -13,9 +15,14 @@ from app.services.admin_crawler_service import (
     ScenarioConfigSchema,
     ScenarioRequirementRuleSchema,
 )
-from app.services.admin_service import CrawlScenarioRequest
+from app.services.admin_crawler_service import validate_public_http_url
 from app.services.api_client_manager import ApiClientManager, GroqResponseShim
-from app.services.video_processing_service import extract_audio_from_video, generate_scenario_from_video, validate_media_signature
+from app.services.video_processing_service import (
+    extract_audio_from_video,
+    generate_scenario_from_video,
+    validate_media_signature,
+    wait_for_gemini_file_active,
+)
 
 
 def valid_scenario_data(scenario_key: str) -> dict:
@@ -43,8 +50,8 @@ def valid_scenario_data(scenario_key: str) -> dict:
 
 class SecurityRegressionTests(unittest.TestCase):
     def test_crawler_rejects_loopback_url(self):
-        with self.assertRaises(ValidationError):
-            CrawlScenarioRequest(url="http://127.0.0.1:8000/internal")
+        with self.assertRaises(ValueError):
+            asyncio.run(validate_public_http_url("http://127.0.0.1:8000/internal"))
 
     def test_scenario_key_rejects_path_traversal(self):
         with self.assertRaises(ValidationError):
@@ -102,6 +109,27 @@ class ProviderConfigRegressionTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(response.text, "fallback")
         manager._call_groq.assert_awaited_once()
 
+    async def test_transient_gemini_failure_uses_next_available_key(self):
+        class FailingModels:
+            def generate_content(self, **_kwargs):
+                raise RuntimeError("connection timed out")
+
+        class SuccessfulModels:
+            def generate_content(self, **_kwargs):
+                return GroqResponseShim("second key worked")
+
+        with patch.dict(os.environ, {}, clear=True):
+            manager = ApiClientManager()
+        manager.gemini_clients = [
+            SimpleNamespace(models=FailingModels()),
+            SimpleNamespace(models=SuccessfulModels()),
+        ]
+
+        response = await manager.generate_content(model="gemini-2.5-flash", contents="input")
+
+        self.assertEqual(response.text, "second key worked")
+        self.assertIn(0, manager.blocked_until)
+
 
 class VideoFileRegressionTests(unittest.IsolatedAsyncioTestCase):
     def test_media_signature_rejects_renamed_text_file(self):
@@ -110,6 +138,22 @@ class VideoFileRegressionTests(unittest.IsolatedAsyncioTestCase):
             fake_video.write_text("not media", encoding="utf-8")
             with self.assertRaises(ValueError):
                 validate_media_signature(fake_video)
+
+    def test_media_signature_reads_only_the_header(self):
+        class HeaderFile(io.BytesIO):
+            def __init__(self):
+                super().__init__(b"\x00\x00\x00\x18ftypmp42")
+                self.read_sizes = []
+
+            def read(self, size=-1):
+                self.read_sizes.append(size)
+                return super().read(size)
+
+        media_file = HeaderFile()
+        with patch.object(Path, "open", return_value=media_file):
+            validate_media_signature(Path("large-upload.mp4"))
+
+        self.assertEqual(media_file.read_sizes, [16])
 
     async def test_media_signature_accepts_iso_video_container(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -124,6 +168,10 @@ class VideoFileRegressionTests(unittest.IsolatedAsyncioTestCase):
             async def communicate(self):
                 return b"", b""
 
+        async def create_audio_file(*command, **_kwargs):
+            Path(command[-1]).write_bytes(b"audio")
+            return CompletedProcess()
+
         with tempfile.TemporaryDirectory() as directory:
             video = Path(directory) / "meeting.mp4"
             adjacent_audio = Path(directory) / "meeting.mp3"
@@ -132,7 +180,7 @@ class VideoFileRegressionTests(unittest.IsolatedAsyncioTestCase):
 
             with patch(
                 "app.services.video_processing_service.asyncio.create_subprocess_exec",
-                new=AsyncMock(return_value=CompletedProcess()),
+                new=AsyncMock(side_effect=create_audio_file),
             ):
                 generated_audio = await extract_audio_from_video(video)
 
@@ -141,6 +189,65 @@ class VideoFileRegressionTests(unittest.IsolatedAsyncioTestCase):
                 self.assertEqual(adjacent_audio.read_bytes(), b"keep-me")
             finally:
                 generated_audio.unlink(missing_ok=True)
+
+    async def test_audio_conversion_timeout_kills_the_subprocess(self):
+        class HangingProcess:
+            returncode = None
+
+            def __init__(self):
+                self.killed = False
+
+            def kill(self):
+                self.killed = True
+                self.returncode = -9
+
+            async def communicate(self):
+                if self.killed:
+                    return b"", b""
+                await asyncio.Future()
+
+        process = HangingProcess()
+        with tempfile.TemporaryDirectory() as directory:
+            video = Path(directory) / "meeting.mp4"
+            video.write_bytes(b"video")
+            with (
+                patch(
+                    "app.services.video_processing_service.asyncio.create_subprocess_exec",
+                    new=AsyncMock(return_value=process),
+                ),
+                patch("app.services.video_processing_service.FFMPEG_TIMEOUT_SECONDS", 0.001),
+            ):
+                with self.assertRaisesRegex(RuntimeError, "timed out"):
+                    await extract_audio_from_video(video)
+        self.assertTrue(process.killed)
+
+    async def test_audio_only_ingestion_rejects_missing_ffmpeg(self):
+        with tempfile.TemporaryDirectory() as directory:
+            video = Path(directory) / "meeting.mp4"
+            video.write_bytes(b"\x00\x00\x00\x18ftypmp42")
+            with patch(
+                "app.services.video_processing_service.is_ffmpeg_available",
+                return_value=False,
+            ):
+                with self.assertRaisesRegex(RuntimeError, "audio-only"):
+                    await generate_scenario_from_video(str(video))
+
+    async def test_gemini_file_polling_waits_for_active_state(self):
+        uploaded = SimpleNamespace(name="files/audio")
+        client = SimpleNamespace(
+            files=SimpleNamespace(
+                get=lambda **_kwargs: next(states),
+            )
+        )
+        states = iter([
+            SimpleNamespace(state=SimpleNamespace(name="PROCESSING")),
+            SimpleNamespace(state=SimpleNamespace(name="ACTIVE")),
+        ])
+        with patch("app.services.video_processing_service.asyncio.sleep", new=AsyncMock()) as sleep:
+            ready = await wait_for_gemini_file_active(client, uploaded)
+
+        self.assertEqual(ready.state.name, "ACTIVE")
+        sleep.assert_awaited_once()
 
 
 if __name__ == "__main__":
