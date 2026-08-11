@@ -83,7 +83,7 @@ async def generate_scenario_from_video(
     if not video_path.is_file():
         raise FileNotFoundError(f"Không tìm thấy tệp media tại {video_path.name}")
 
-    allowed_extensions = {".webm", ".mp3", ".wav", ".m4a", ".aac", ".ogg"}
+    allowed_extensions = {".mp4", ".mov", ".mkv", ".webm", ".mp3", ".wav", ".m4a", ".aac", ".ogg"}
     if video_path.suffix.lower() not in allowed_extensions:
         raise ValueError("Định dạng tệp media không được hỗ trợ.")
     validate_media_signature(video_path)
@@ -92,8 +92,7 @@ async def generate_scenario_from_video(
     if not model_name.lower().startswith("gemini-"):
         raise ValueError("Video ingestion chỉ hỗ trợ mô hình Gemini.")
  
-    # The ingestion contract is audio-only. FFmpeg may normalize an audio
-    # container to MP3, but no video input is accepted by this function.
+    # Normalize any supported media container to MP3 before it is sent to Gemini.
     media_path = video_path
     temp_audio_created = False
     
@@ -102,9 +101,9 @@ async def generate_scenario_from_video(
             media_path = await extract_audio_from_video(video_path)
             temp_audio_created = True
         except Exception as ex:
-            logger.warning(f"Không thể chuẩn hóa audio bằng FFmpeg, sử dụng file audio gốc làm fallback: {ex}")
+            logger.warning(f"Không thể trích xuất audio bằng FFmpeg, sử dụng file media gốc làm fallback: {ex}")
     else:
-        logger.warning("Không tìm thấy lệnh ffmpeg trong hệ thống, sử dụng file audio gốc để tải lên.")
+        logger.warning("Không tìm thấy lệnh ffmpeg trong hệ thống, sử dụng file media gốc để tải lên.")
 
     # 2. Lấy client Gemini đang hoạt động
     idx = client_manager._get_active_gemini_client_index()
@@ -127,7 +126,7 @@ async def generate_scenario_from_video(
         await asyncio.sleep(2.0)
 
         # 4. Gửi prompt đa phương tiện yêu cầu trích xuất kịch bản
-        prompt = """Hãy lắng nghe tệp âm thanh cuộc họp thảo luận về yêu cầu phần mềm đính kèm.
+        prompt = """Hãy lắng nghe tệp âm thanh/video cuộc họp thảo luận về yêu cầu phần mềm đính kèm.
 Trích xuất tất cả các thông tin nghiệp vụ và cấu trúc hóa chúng thành một kịch bản giả lập phỏng vấn (Scenario Config).
 
 Yêu cầu chi tiết:
@@ -158,7 +157,7 @@ Yêu cầu chi tiết:
             max_output_tokens=20000
         )
 
-        logger.info(f"Đang gọi Gemini ({model_name}) để phân tích tệp audio...")
+        logger.info(f"Đang gọi Gemini ({model_name}) để phân tích tệp video/audio...")
         response = await asyncio.to_thread(
             client.models.generate_content,
             model=model_name,

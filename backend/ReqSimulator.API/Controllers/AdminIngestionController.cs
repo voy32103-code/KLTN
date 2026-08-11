@@ -17,7 +17,7 @@ public sealed class AdminIngestionController : ControllerBase
 {
     private const long MaxMediaBytes = 250L * 1024 * 1024;
     private static readonly HashSet<string> AllowedMediaTypes = new(StringComparer.OrdinalIgnoreCase)
-    { "audio/mpeg", "audio/wav", "audio/x-wav", "audio/mp4", "audio/aac", "audio/ogg", "audio/webm" };
+    { "audio/mpeg", "audio/wav", "audio/x-wav", "audio/mp4", "audio/aac", "audio/ogg", "audio/webm", "video/mp4", "video/webm", "video/quicktime" };
     private readonly AppDbContext _db;
     private readonly IR2ObjectStorage _storage;
     private readonly IConfiguration _configuration;
@@ -33,7 +33,7 @@ public sealed class AdminIngestionController : ControllerBase
     [HttpPost("upload-intents")]
     public async Task<IActionResult> CreateUploadIntent([FromBody] UploadIntentDto dto, CancellationToken cancellationToken)
     {
-        if (!AllowedMediaTypes.Contains(dto.ContentType)) return BadRequest(new { message = "Unsupported audio content type." });
+        if (!AllowedMediaTypes.Contains(dto.ContentType)) return BadRequest(new { message = "Unsupported audio or video content type." });
         var userId = GetUserId();
         var jobId = Guid.NewGuid();
         var artifactId = Guid.NewGuid();

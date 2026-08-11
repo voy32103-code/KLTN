@@ -149,10 +149,10 @@ function bindEvents() {
   const legacyMediaInput = document.querySelector<HTMLInputElement>('#admin-video-path-input')
   if (legacyMediaInput) {
     legacyMediaInput.type = 'file'
-    legacyMediaInput.accept = 'audio/mpeg,audio/wav,audio/x-wav,audio/mp4,audio/aac,audio/ogg,audio/webm'
+    legacyMediaInput.accept = 'audio/mpeg,audio/wav,audio/x-wav,audio/mp4,audio/aac,audio/ogg,audio/webm,video/mp4,video/webm,video/quicktime'
     legacyMediaInput.removeAttribute('placeholder')
     const label = legacyMediaInput.closest('.form-group')?.querySelector('label')
-    if (label) label.textContent = 'Audio meeting file (max 250 MB):'
+    if (label) label.textContent = 'Video/audio meeting file (max 250 MB):'
   }
   document.querySelectorAll<HTMLButtonElement>('[data-auth-mode]').forEach((button) => {
     button.addEventListener('click', () => {
@@ -1044,7 +1044,7 @@ async function runQueuedAdminVideo() {
   const modelSelect = document.querySelector('#admin-video-model-select') as HTMLSelectElement | null
   const file = input?.files?.[0]
   if (!file) {
-    setNotice('error', 'Choose an audio meeting file first.')
+    setNotice('error', 'Choose a video or audio meeting file first.')
     return
   }
   if (file.size > 250 * 1024 * 1024) {
