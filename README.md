@@ -1,105 +1,162 @@
-# ReqSimulator
+<p align="center">
+  <h1 align="center">🧭 ReqSimulator</h1>
+  <p align="center">
+    Nền tảng mô phỏng phỏng vấn stakeholder bằng AI cho môn Kỹ nghệ yêu cầu.
+    <br />
+    <strong>Hỏi đúng hơn. Khai thác sâu hơn. Review có căn cứ.</strong>
+  </p>
+</p>
 
-ReqSimulator là hệ thống web hỗ trợ giảng dạy và thực hành **khai thác yêu
-cầu phần mềm** (*Requirements Elicitation*). Sinh viên phỏng vấn stakeholder
-ảo; hệ thống áp dụng progressive disclosure/gating, trích xuất yêu cầu và đánh
-giá coverage. Giảng viên/Admin có thể review kết quả, điều chỉnh đánh giá và
-tạo scenario mới từ nguồn được kiểm soát.
+<p align="center">
+  <a href="https://kltn-chi.vercel.app"><strong>Khám phá ứng dụng »</strong></a>
+  ·
+  <a href="#-bắt-đầu-nhanh">Bắt đầu nhanh</a>
+  ·
+  <a href="#-nạp-tri-thức-từ-nguồn-nghiệp-vụ">Nạp tri thức</a>
+  ·
+  <a href="#-kiến-trúc">Kiến trúc</a>
+</p>
 
-Trạng thái tài liệu: **11/08/2026**. Hệ thống phù hợp cho demo, pilot học phần
-và dữ liệu do Admin kiểm duyệt; chưa được thiết kế cho tải lớn hoặc tự động
-publish nội dung AI.
+<p align="center">
+  <a href="https://github.com/voy32103-code/KLTN/actions/workflows/ingestion-worker.yml">
+    <img src="https://github.com/voy32103-code/KLTN/actions/workflows/ingestion-worker.yml/badge.svg" alt="Ingestion worker" />
+  </a>
+  <img src="https://img.shields.io/badge/.NET-9-512BD4?logo=dotnet&logoColor=white" alt=".NET 9" />
+  <img src="https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white" alt="FastAPI" />
+  <img src="https://img.shields.io/badge/Vite-TypeScript-646CFF?logo=vite&logoColor=white" alt="Vite TypeScript" />
+  <img src="https://img.shields.io/badge/Neon-PostgreSQL-00E599?logo=postgresql&logoColor=white" alt="Neon PostgreSQL" />
+  <img src="https://img.shields.io/badge/Cloudflare-R2-F38020?logo=cloudflare&logoColor=white" alt="Cloudflare R2" />
+</p>
 
-## Kiến trúc đang chạy
+> [!IMPORTANT]
+> Đây là công cụ học tập/pilot có **human review**. Scenario do AI sinh ra luôn
+> ở dạng bản nháp; chỉ Admin mới có thể kiểm tra và publish.
 
-```text
-Vercel frontend (Vite + TypeScript)
-  -> Render backend (ASP.NET Core 9, JWT, API, PostgreSQL queue)
-     -> Neon PostgreSQL (sessions, scenarios, jobs, artifacts metadata)
-     -> Render AI service (FastAPI, persona/evaluation/provider adapters)
-     -> private Cloudflare R2 (video/audio artifacts)
-  -> GitHub Actions run-once worker (Playwright, FFmpeg, Gemini)
-```
+## ✨ Vì sao ReqSimulator?
 
-Backend là ranh giới công khai: xác thực, phân quyền và dữ liệu nằm ở đây. AI
-service chỉ nhận request có `X-AI-Service-Key`. GitHub Action có worker key
-riêng; không có Render Background Worker trả phí.
-
-## Chức năng chính
-
-- JWT và role `Student`, `Lecturer`, `Admin`.
-- Scenario versioning, stakeholder/persona, hidden requirements và gating
-  chống lộ ground truth cho sinh viên.
-- Chat mô phỏng stakeholder, extraction/normalization Actor–Action–Object–
-  Condition, matching một-một, coverage và learning feedback.
-- Lecturer review/override có audit trail; Admin tạo, review và publish
-  scenario.
-- Nạp tri thức từ URL công khai: HTTP trước, Playwright fallback cho SPA,
-  giới hạn SSRF/redirect/kích thước/thời gian.
-- Nạp tri thức từ video/audio do Admin upload: private R2, PostgreSQL queue,
-  GitHub Actions, FFmpeg **audio-only**, Gemini structured output, rồi Admin
-  review trước khi publish.
-
-## Video/audio ingestion
-
-Đây là **trích xuất tri thức nghiệp vụ qua audio**, không phải fine-tuning và
-không phải hiểu toàn bộ hình ảnh trong video.
-
-```text
-Admin upload -> presigned R2 PUT -> Queued in Neon
--> GitHub Action claims one job -> FFmpeg extracts MP3 audio
--> Gemini Files API + JSON schema -> AwaitingReview -> Admin publish
-```
-
-Video/audio tối đa 250 MB; worker chuẩn hóa audio thành MP3 128 kbps/44.1 kHz,
-giới hạn FFmpeg 180 giây và giới hạn audio 128 MB. Video ingestion chỉ hỗ trợ
-model Gemini vì dùng Gemini Files API. Workflow xử lý một job mỗi run; Admin
-có thể chạy thủ công hoặc chờ lịch hằng ngày lúc 10:17 (giờ Việt Nam).
-
-Luồng giải thích để demo/bảo vệ được lưu trong tài liệu nội bộ, không công bố
-trong repository.
-
-## Triển khai và secrets
-
-| Thành phần | Nền tảng | Cấu hình quan trọng |
+| 🎓 Học bằng thực hành | 🤖 AI có kiểm soát | 🧑‍🏫 Giảng viên làm chủ |
 | --- | --- | --- |
-| Frontend | Vercel | `VITE_API_BASE_URL` |
-| Backend | Render | Neon connection string, JWT, AI internal key, `R2__*`, `Ingestion__WorkerKey` |
-| AI service | Render | `AI_SERVICE_INTERNAL_KEY`, Gemini/provider keys |
-| Database | Neon PostgreSQL | `ConnectionStrings__DefaultConnection` |
-| Worker | GitHub Actions | `INGESTION_BACKEND_URL`, `INGESTION_WORKER_KEY`, `GEMINI_API_KEY` |
+| Sinh viên phỏng vấn stakeholder ảo, thay vì chỉ học lý thuyết requirement. | Progressive disclosure và hidden requirements giúp AI không tiết lộ đáp án quá sớm. | Review transcript, điều chỉnh kết quả, tạo và publish scenario theo phiên bản. |
 
-R2 bucket phải là private. Không commit access key, secret key, JWT key, worker
-key, Gemini key hay database URL. Runbook triển khai và xử lý `Queued` được
-lưu nội bộ, không công bố trong repository.
+```mermaid
+flowchart LR
+    S["👩‍🎓 Sinh viên"] -->|"Phỏng vấn"| P["🗣️ Stakeholder AI"]
+    P -->|"Gating & persona"| E["🔎 Extraction + matching"]
+    E -->|"Coverage & feedback"| S
+    L["🧑‍🏫 Giảng viên / Admin"] -->|"Review & publish"| C["📚 Scenario version"]
+    C --> P
+```
 
-## Chạy local
+## 🚀 Chức năng nổi bật
 
-Yêu cầu: .NET SDK 9, Node 20+, pnpm, Python **3.12** và PostgreSQL test riêng.
-Sao chép `.env.example` tương ứng cho backend, AI service và frontend; không
-dùng secret production trên máy local.
+| Nhóm | Có gì trong hệ thống |
+| --- | --- |
+| **Phỏng vấn mô phỏng** | Persona, mood/patience, question-quality, progressive disclosure và consistency guard. |
+| **Đánh giá requirement** | Extraction/normalization Actor–Action–Object–Condition, matching một-một, coverage và learning feedback. |
+| **Quản trị học phần** | Role `Student` / `Lecturer` / `Admin`, scenario versioning, lecturer override và audit trail. |
+| **Knowledge ingestion** | Crawler URL công khai có Playwright fallback cho SPA; upload video/audio với private R2 và worker bất đồng bộ. |
+
+## 🎬 Nạp tri thức từ nguồn nghiệp vụ
+
+### URL công khai
+
+`Public URL → SSRF guard → HTTP fetch → Playwright fallback → Gemini → Scenario draft`
+
+Chỉ Admin được nạp URL. Hệ thống ưu tiên HTTP để tiết kiệm tài nguyên, chỉ mở
+trình duyệt Playwright cho trang SPA render JavaScript.
+
+### Video/audio — audio-only
+
+```mermaid
+flowchart LR
+    A["Admin upload"] --> R["Private R2"]
+    R --> Q["Neon job queue"]
+    Q --> G["GitHub Actions worker"]
+    G --> F["FFmpeg\nextract audio"]
+    F --> M["Gemini Files API"]
+    M --> D["Structured scenario draft"]
+    D --> V["Admin review & publish"]
+```
+
+- Video/audio tối đa **250 MB**; video được chuyển thành MP3 128 kbps, 44.1 kHz.
+- Chỉ audio được gửi đến Gemini: đây là **trích xuất tri thức qua lời nói**,
+  không phải fine-tuning và không đọc hình ảnh không có thuyết minh.
+- Worker chạy một job mỗi run. Khi UI báo `Job queued — chạy GitHub Action.`,
+  Admin chạy workflow thủ công hoặc chờ lịch hằng ngày lúc **10:17 giờ Việt Nam**.
+
+> [!NOTE]
+> Chỉ dùng video/audio do người vận hành sở hữu hoặc có quyền sử dụng. Video
+> công khai không mặc nhiên cho phép tải lại hoặc gửi nội dung đến AI provider.
+
+## 🏗️ Kiến trúc
+
+```mermaid
+flowchart TB
+    FE["Vercel\nVite + TypeScript"] --> API["Render\nASP.NET Core 9 API"]
+    API <--> DB["Neon\nPostgreSQL"]
+    API --> AI["Render\nFastAPI AI service"]
+    FE -->|"Presigned upload"| R2["Cloudflare R2\nPrivate bucket"]
+    GH["GitHub Actions\nrun-once worker"] --> API
+    GH <--> R2
+    GH --> GEM["Gemini"]
+    AI --> LLM["Gemini / provider adapters"]
+```
+
+| Layer | Công nghệ | Trách nhiệm |
+| --- | --- | --- |
+| Frontend | Vite, TypeScript, Vanilla CSS, Chart.js | Student lab, lecturer review, Admin console và upload progress. |
+| Backend | ASP.NET Core 9, EF Core, Npgsql | JWT, role, API, sessions, scenario versioning, queue và R2 presigned URLs. |
+| AI service | FastAPI, Pydantic, NumPy, Google GenAI | Persona, gating, extraction, evaluation, crawler và provider adapters. |
+| Data & jobs | Neon PostgreSQL, Cloudflare R2, GitHub Actions | Dữ liệu bền vững, artifact private và xử lý media chi phí thấp. |
+
+## 🔐 Các ranh giới bảo vệ
+
+| Boundary | Cách kiểm soát |
+| --- | --- |
+| Người dùng | JWT, role-based authorization và rate limiting. |
+| Ground truth | Không trả hidden requirements về client; gating fail-closed. |
+| AI service | Khóa nội bộ `X-AI-Service-Key`; provider key chỉ nằm ở môi trường server/Actions. |
+| Media | R2 private, presigned URL có hạn, worker key riêng, validate media và cleanup artifact tạm. |
+| AI output | Prompt coi nội dung nguồn là untrusted, structured JSON validation, bắt buộc Admin review. |
+
+## ⚡ Bắt đầu nhanh
+
+<details>
+<summary><strong>1. Chuẩn bị môi trường</strong></summary>
+
+Yêu cầu: .NET SDK 9, Node.js 20+, pnpm, Python **3.12** và PostgreSQL dành
+riêng cho local/test.
+
+Sao chép `.env.example` trong `backend/ReqSimulator.API`, `ai-service` và
+`frontend`. Không dùng secret production trên máy local.
+</details>
+
+<details>
+<summary><strong>2. Chạy ba service</strong></summary>
 
 ```powershell
-# Backend (mặc định http://localhost:5206)
+# API — http://localhost:5206
 dotnet restore .\KLTN.sln
 dotnet run --project .\backend\ReqSimulator.API
 
-# Frontend (terminal khác)
+# Frontend — terminal khác
 Set-Location .\frontend
 pnpm.cmd install --frozen-lockfile
 pnpm.cmd run dev
 
-# AI service (terminal khác)
+# AI service — terminal khác
 Set-Location ..\ai-service
 py -3.12 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 .\.venv\Scripts\python.exe -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
+</details>
 
-## Kiểm tra local
+<details>
+<summary><strong>3. Kiểm tra trước khi thay đổi</strong></summary>
 
 ```powershell
-# .NET build và unit runner
+# .NET
 dotnet build .\KLTN.sln -c Release --no-restore
 dotnet run --project .\backend\ReqSimulator.API.UnitTests\ReqSimulator.API.UnitTests.csproj -c Release --no-build
 
@@ -107,21 +164,43 @@ dotnet run --project .\backend\ReqSimulator.API.UnitTests\ReqSimulator.API.UnitT
 Set-Location .\frontend
 pnpm.cmd run build
 pnpm.cmd test
-pnpm.cmd exec playwright install chromium  # chỉ cần lần đầu cho E2E/a11y
+pnpm.cmd exec playwright install chromium
 pnpm.cmd exec playwright test
 
-# AI service, sau khi đã cài requirements bằng Python 3.12
+# AI service
 Set-Location ..\ai-service
 .\.venv\Scripts\python.exe -m unittest discover -s tests -v
 ```
 
-Backend integration suite ghi vào PostgreSQL, nên chỉ chạy khi đã cấu hình một
-database riêng có tên `test` hoặc `integration`; tuyệt đối không dùng Neon
-production.
+> [!CAUTION]
+> Backend integration suite ghi vào PostgreSQL. Chỉ chạy với database có tên
+> `test` hoặc `integration`; không dùng Neon production.
+</details>
 
-## Tài liệu nội bộ
+## 🧪 Checklist demo
+
+- [ ] Đăng nhập đúng role: Student, Lecturer hoặc Admin.
+- [ ] Student tạo session, hỏi stakeholder và kết thúc phiên.
+- [ ] Lecturer review transcript/evaluation hoặc thực hiện override có lý do.
+- [ ] Admin tạo scenario và publish sau khi review.
+- [ ] Với ingestion: upload nguồn, chạy GitHub Action, kiểm tra trạng thái
+      `AwaitingReview` rồi mới publish.
+
+## 🗺️ Giới hạn và hướng phát triển
+
+- Video ingestion hiện là audio-only; text/sơ đồ xuất hiện im lặng trong video
+  không được trích xuất.
+- GitHub Actions run-once là trade-off free tier: độ trễ cao hơn worker liên tục
+  nhưng queue vẫn bền trong PostgreSQL.
+- Trước khi tăng thời lượng video, lưu lượng hoặc tự động hóa, cần đánh giá lại
+  lease worker, observability, dependency lock và lifecycle artifact.
+
+## 📁 Tài liệu nội bộ
 
 Audit, runbook deployment, video-ingestion guide và tài liệu nghiên cứu được
-giữ trong thư mục `docs/` trên môi trường nội bộ. Thư mục này bị Git ignore và
-không được công bố trong repository; không đưa secret hay dữ liệu vận hành vào
-GitHub.
+giữ trong `docs/` trên môi trường nội bộ. Thư mục này bị Git ignore và không
+được công bố trong repository; không đưa secret hay dữ liệu vận hành vào GitHub.
+
+<p align="center">
+  <sub>Built for learning requirement elicitation through deliberate practice.</sub>
+</p>
