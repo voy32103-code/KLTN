@@ -35,8 +35,8 @@ jobs:
       - name: Build
         run: dotnet build KLTN.sln -c Release --no-restore
 
-      - name: Run unit tests
-        run: dotnet test backend/ReqSimulator.API.UnitTests/ReqSimulator.API.UnitTests.csproj -c Release --no-build --verbosity normal
+      - name: Run unit test harness
+        run: dotnet run --project backend/ReqSimulator.API.UnitTests/ReqSimulator.API.UnitTests.csproj -c Release --no-build
 
   ai-service:
     name: AI service tests

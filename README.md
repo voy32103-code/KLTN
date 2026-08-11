@@ -138,7 +138,7 @@ Open the URL printed by Vite, usually `http://localhost:5173`.
 # API: build and unit tests
 dotnet restore .\KLTN.sln
 dotnet build .\KLTN.sln -c Release --no-restore
-dotnet test .\backend\ReqSimulator.API.UnitTests\ReqSimulator.API.UnitTests.csproj -c Release --no-build
+dotnet run --project .\backend\ReqSimulator.API.UnitTests\ReqSimulator.API.UnitTests.csproj -c Release --no-build
 
 # AI service tests
 Set-Location .\ai-service
@@ -193,4 +193,4 @@ Licensed under the [MIT License](LICENSE).
 
 ## Project status
 
-The first public milestone is **v0.1.0**. It establishes the reviewed scenario workflow, durable ingestion queue, audio-only media pipeline, accessibility checks, and CI validation.
+The first public milestone is **v0.1.1**. It establishes the reviewed scenario workflow, durable ingestion queue, audio-only media pipeline, accessibility checks, and CI validation.
