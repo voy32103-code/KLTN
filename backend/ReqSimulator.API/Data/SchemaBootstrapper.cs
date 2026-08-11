@@ -94,39 +94,6 @@ public static class SchemaBootstrapper
             submitted_at timestamp with time zone NOT NULL DEFAULT NOW()
         );
 
-        CREATE TABLE IF NOT EXISTS source_artifacts (
-            id uuid PRIMARY KEY,
-            created_by_user_id uuid NOT NULL REFERENCES users(id),
-            kind character varying(16) NOT NULL,
-            original_file_name character varying(255) NOT NULL,
-            content_type character varying(128) NOT NULL,
-            expected_bytes bigint NOT NULL,
-            actual_bytes bigint NULL,
-            object_key character varying(512) NOT NULL UNIQUE,
-            status character varying(32) NOT NULL,
-            created_at timestamp with time zone NOT NULL DEFAULT NOW(),
-            expires_at timestamp with time zone NOT NULL
-        );
-
-        CREATE TABLE IF NOT EXISTS ingestion_jobs (
-            id uuid PRIMARY KEY,
-            created_by_user_id uuid NOT NULL REFERENCES users(id),
-            source_artifact_id uuid NULL REFERENCES source_artifacts(id),
-            source_kind character varying(16) NOT NULL,
-            source_urls_data jsonb NOT NULL DEFAULT '[]'::jsonb,
-            selected_model character varying(100) NULL,
-            status character varying(32) NOT NULL,
-            attempts integer NOT NULL DEFAULT 0,
-            max_attempts integer NOT NULL DEFAULT 3,
-            lease_id uuid NULL,
-            lease_expires_at timestamp with time zone NULL,
-            available_at timestamp with time zone NOT NULL DEFAULT NOW(),
-            error_code character varying(80) NULL,
-            draft_data jsonb NULL,
-            created_at timestamp with time zone NOT NULL DEFAULT NOW(),
-            updated_at timestamp with time zone NOT NULL DEFAULT NOW()
-        );
-
         UPDATE scenarios
         SET scenario_key = 'legacy_' || replace(id::text, '-', '')
         WHERE scenario_key IS NULL OR btrim(scenario_key) = '';
@@ -154,11 +121,6 @@ public static class SchemaBootstrapper
         CREATE UNIQUE INDEX IF NOT EXISTS uq_feedback_survey_session
             ON feedback_survey_responses (session_id);
 
-        CREATE INDEX IF NOT EXISTS idx_ingestion_jobs_claim
-            ON ingestion_jobs (status, available_at);
-
-        CREATE INDEX IF NOT EXISTS idx_ingestion_jobs_artifact
-            ON ingestion_jobs (source_artifact_id);
         """;
 
     private const string UpdateSessionsSql = """
@@ -270,6 +232,7 @@ public static class SchemaBootstrapper
         using var scope = services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
+        await IngestionSchemaMigration.ApplyAsync(db);
         await db.Database.ExecuteSqlRawAsync(AddColumnsSql);
         await db.Database.ExecuteSqlRawAsync(CreateIndexSql);
         await db.Database.ExecuteSqlRawAsync(UpdateSessionsSql);

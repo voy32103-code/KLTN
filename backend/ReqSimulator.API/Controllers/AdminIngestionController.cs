@@ -3,6 +3,7 @@ using System.Security.Claims;
 using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using ReqSimulator.API.Data;
 using ReqSimulator.API.Models;
@@ -31,6 +32,7 @@ public sealed class AdminIngestionController : ControllerBase
     public sealed record WorkerCompletionDto([Required] Guid LeaseId, ScenarioConfigJson? Scenario, [StringLength(80)] string? ErrorCode);
 
     [HttpPost("upload-intents")]
+    [EnableRateLimiting("admin_ingestion")]
     public async Task<IActionResult> CreateUploadIntent([FromBody] UploadIntentDto dto, CancellationToken cancellationToken)
     {
         if (!AllowedMediaTypes.Contains(dto.ContentType)) return BadRequest(new { message = "Unsupported audio or video content type." });
@@ -58,6 +60,7 @@ public sealed class AdminIngestionController : ControllerBase
     }
 
     [HttpPost("artifacts/{artifactId:guid}/complete")]
+    [EnableRateLimiting("admin_ingestion")]
     public async Task<IActionResult> CompleteUpload(Guid artifactId, CancellationToken cancellationToken)
     {
         var artifact = await _db.SourceArtifacts.SingleOrDefaultAsync(item => item.Id == artifactId && item.CreatedByUserId == GetUserId(), cancellationToken);
@@ -75,6 +78,7 @@ public sealed class AdminIngestionController : ControllerBase
     }
 
     [HttpPost("crawl-jobs")]
+    [EnableRateLimiting("admin_ingestion")]
     public async Task<IActionResult> CreateCrawlJob([FromBody] CrawlJobDto dto, CancellationToken cancellationToken)
     {
         var urls = dto.Urls.Select(value => value.Trim()).Where(value => !string.IsNullOrWhiteSpace(value)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
@@ -98,6 +102,7 @@ public sealed class AdminIngestionController : ControllerBase
     {
         if (!IsWorkerRequest()) return Unauthorized();
         await CleanupExpiredArtifacts(cancellationToken);
+        await RecoverExpiredLeases(cancellationToken);
         await using var transaction = await _db.Database.BeginTransactionAsync(cancellationToken);
         var now = DateTime.UtcNow;
         var job = await _db.IngestionJobs.FromSqlInterpolated($@"SELECT * FROM ingestion_jobs WHERE status = 'Queued' AND available_at <= {now} FOR UPDATE SKIP LOCKED").OrderBy(item => item.CreatedAt).FirstOrDefaultAsync(cancellationToken);
@@ -106,7 +111,24 @@ public sealed class AdminIngestionController : ControllerBase
         await _db.SaveChangesAsync(cancellationToken);
         SourceArtifact? artifact = job.SourceArtifactId is null ? null : await _db.SourceArtifacts.SingleAsync(item => item.Id == job.SourceArtifactId, cancellationToken);
         await transaction.CommitAsync(cancellationToken);
-        string? downloadUrl = artifact is null ? null : await _storage.CreateDownloadUrlAsync(artifact.ObjectKey, cancellationToken);
+        string? downloadUrl;
+        try
+        {
+            downloadUrl = artifact is null ? null : await _storage.CreateDownloadUrlAsync(artifact.ObjectKey, cancellationToken);
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(exception, "Could not create a download URL for claimed ingestion job {JobId}; releasing its claim.", job.Id);
+            job.Status = "Queued";
+            job.Attempts = Math.Max(0, job.Attempts - 1);
+            job.LeaseId = null;
+            job.LeaseExpiresAt = null;
+            job.AvailableAt = DateTime.UtcNow.AddMinutes(1);
+            job.ErrorCode = "storage_unavailable";
+            job.UpdatedAt = DateTime.UtcNow;
+            await _db.SaveChangesAsync(cancellationToken);
+            return StatusCode(StatusCodes.Status503ServiceUnavailable, new { error = "Ingestion storage is temporarily unavailable." });
+        }
         return Ok(new { jobId = job.Id, leaseId = job.LeaseId, sourceKind = job.SourceKind.ToString(), urls = JsonSerializer.Deserialize<List<string>>(job.SourceUrlsData) ?? [], selectedModel = job.SelectedModel, artifact = artifact is null ? null : new { artifact.OriginalFileName, artifact.ContentType, downloadUrl } });
     }
 
@@ -162,5 +184,30 @@ public sealed class AdminIngestionController : ControllerBase
             }
         }
         if (expired.Count > 0) await _db.SaveChangesAsync(cancellationToken);
+    }
+
+    private async Task RecoverExpiredLeases(CancellationToken cancellationToken)
+    {
+        var now = DateTime.UtcNow;
+        var expired = await _db.IngestionJobs
+            .Where(item => item.Status == "Processing" && item.LeaseExpiresAt <= now)
+            .Take(20)
+            .ToListAsync(cancellationToken);
+
+        foreach (var job in expired)
+        {
+            job.Status = job.Attempts >= job.MaxAttempts ? "Failed" : "Queued";
+            job.ErrorCode = "lease_expired";
+            job.LeaseId = null;
+            job.LeaseExpiresAt = null;
+            job.AvailableAt = now;
+            job.UpdatedAt = now;
+        }
+
+        if (expired.Count > 0)
+        {
+            await _db.SaveChangesAsync(cancellationToken);
+            _logger.LogWarning("Recovered {Count} ingestion jobs with expired worker leases.", expired.Count);
+        }
     }
 }
