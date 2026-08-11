@@ -149,10 +149,10 @@ function bindEvents() {
   const legacyMediaInput = document.querySelector<HTMLInputElement>('#admin-video-path-input')
   if (legacyMediaInput) {
     legacyMediaInput.type = 'file'
-    legacyMediaInput.accept = 'audio/*,video/mp4,video/webm,video/quicktime'
+    legacyMediaInput.accept = 'audio/mpeg,audio/wav,audio/x-wav,audio/mp4,audio/aac,audio/ogg,audio/webm'
     legacyMediaInput.removeAttribute('placeholder')
     const label = legacyMediaInput.closest('.form-group')?.querySelector('label')
-    if (label) label.textContent = 'Audio/video meeting file (max 250 MB):'
+    if (label) label.textContent = 'Audio meeting file (max 250 MB):'
   }
   document.querySelectorAll<HTMLButtonElement>('[data-auth-mode]').forEach((button) => {
     button.addEventListener('click', () => {
@@ -1044,7 +1044,7 @@ async function runQueuedAdminVideo() {
   const modelSelect = document.querySelector('#admin-video-model-select') as HTMLSelectElement | null
   const file = input?.files?.[0]
   if (!file) {
-    setNotice('error', 'Choose an audio or video meeting file first.')
+    setNotice('error', 'Choose an audio meeting file first.')
     return
   }
   if (file.size > 250 * 1024 * 1024) {
@@ -1122,31 +1122,8 @@ async function runAdminCrawl() {
   })
 }
 
-async function runAdminVideo() {
-  const videoPathInput = document.querySelector('#admin-video-path-input') as HTMLInputElement | null
-  const modelSelect = document.querySelector('#admin-video-model-select') as HTMLSelectElement | null
-  if (!videoPathInput || !videoPathInput.value.trim()) {
-    setNotice('error', 'Vui lòng nhập đường dẫn tệp video tuyệt đối!')
-    return
-  }
-  const videoPath = videoPathInput.value.trim()
-  const selectedModel = modelSelect?.value || 'gemini-2.5-flash'
-
-  await withBusy(async () => {
-    clearNotice()
-    const result = await api.request<ScenarioPreviewResponse>('/api/AdminScenarios/upload-video/preview', {
-      method: 'POST',
-      body: { videoPath, selectedModel }
-    })
-    if (!state.adminState) return
-    state.adminState.scenarioDraft = result.scenario
-    state.adminState.scenarioDraftSource = videoPath
-    setNotice('success', 'Đã tạo bản preview từ video. Hãy kiểm tra trước khi publish.')
-  })
-}
 // Kept temporarily for compatibility with older UI integrations while queued ingestion rolls out.
 void runAdminCrawl
-void runAdminVideo
 
 async function withBusy(task: () => Promise<void>) {
   state.busy = true
