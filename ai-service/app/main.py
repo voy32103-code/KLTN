@@ -54,7 +54,6 @@ app.add_middleware(
     allow_headers=["Content-Type", "X-AI-Service-Key"],
 )
 
-from app.services.admin_service import router as admin_router
 from app.services.chat_service import router as chat_router
 from app.services.evaluate_service import router as evaluate_router
 from app.services.extract_service import router as extract_router
@@ -62,7 +61,6 @@ from app.services.extract_service import router as extract_router
 app.include_router(chat_router, prefix="/api")
 app.include_router(extract_router, prefix="/api")
 app.include_router(evaluate_router, prefix="/api")
-app.include_router(admin_router, prefix="/api")
 
 
 @app.get("/")
