@@ -2,6 +2,10 @@ import os
 import unittest
 from unittest.mock import AsyncMock, patch
 
+import aiofiles
+import aiofiles.os
+import httpx
+
 from app import ingestion_worker
 from app.services.admin_crawler_service import fetch_url_content_with_spa_fallback
 
@@ -32,6 +36,24 @@ class SpaFallbackTests(unittest.IsolatedAsyncioTestCase):
 
 
 class RunOnceWorkerTests(unittest.IsolatedAsyncioTestCase):
+    async def test_download_artifact_streams_to_a_temporary_file(self):
+        payload = b"audio fixture"
+        client = httpx.AsyncClient(
+            transport=httpx.MockTransport(lambda request: httpx.Response(200, content=payload))
+        )
+        try:
+            path = await ingestion_worker._download_artifact(
+                client,
+                {"originalFileName": "recording.mp3", "downloadUrl": "https://storage.example/recording"},
+            )
+            self.assertEqual(path.suffix, ".mp3")
+            async with aiofiles.open(path, "rb") as artifact_file:
+                self.assertEqual(await artifact_file.read(), payload)
+        finally:
+            if "path" in locals():
+                await aiofiles.os.remove(path)
+            await client.aclose()
+
     async def test_process_one_job_returns_false_when_queue_is_empty(self):
         class EmptyResponse:
             status_code = 204

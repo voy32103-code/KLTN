@@ -5,6 +5,8 @@ import os
 import tempfile
 from pathlib import Path
 
+import aiofiles
+import aiofiles.os
 import httpx
 
 from app.services.admin_crawler_service import (
@@ -39,17 +41,17 @@ async def _download_artifact(client: httpx.AsyncClient, artifact: dict) -> Path:
         total = 0
         async with client.stream("GET", artifact["downloadUrl"], timeout=90.0) as response:
             response.raise_for_status()
-            with path.open("wb") as output:
+            async with aiofiles.open(path, "wb") as output:
                 async for chunk in response.aiter_bytes():
                     total += len(chunk)
                     if total > MAX_DOWNLOAD_BYTES:
                         raise ValueError("artifact_too_large")
-                    output.write(chunk)
+                    await output.write(chunk)
         if total == 0:
             raise ValueError("empty_artifact")
         return path
     except Exception:
-        path.unlink(missing_ok=True)
+        await aiofiles.os.remove(path)
         raise
 
 
@@ -71,7 +73,7 @@ async def _process_job(client: httpx.AsyncClient, job: dict) -> dict:
             scenario = await generate_scenario_from_video(str(source_path), model)
             return scenario.model_dump()
         finally:
-            source_path.unlink(missing_ok=True)
+            await aiofiles.os.remove(source_path)
     raise ValueError("unsupported_source")
 
 

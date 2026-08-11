@@ -224,30 +224,3 @@ def generate_feedback(matches: list[Any], hidden_reqs: list[Any]) -> tuple[list[
     if not strengths:
         strengths.append("Bạn đã hoàn thành phiên phỏng vấn; hãy mở rộng câu hỏi trước khi đi sâu.")
     return strengths, weaknesses, suggestions
-
-    for match in matches:
-        hidden = req_map.get(match.hiddenId)
-        if hidden is None:
-            continue
-
-        if match.matchType in ("exact", "semantic"):
-            strengths.append(
-                f"Đã xác định thành công: {hidden.text} (độ tương đồng: {match.score:.0%})"
-            )
-        elif match.matchType == "partial":
-            weaknesses.append(
-                f"Xác định được một phần: {hidden.text} — Sự hiểu biết của bạn chưa đầy đủ"
-            )
-            suggestions.append(
-                f"Đặt câu hỏi chi tiết hơn về các yêu cầu thuộc nhóm: {hidden.category}"
-            )
-        else:
-            weaknesses.append(f"Bỏ sót yêu cầu thuộc lĩnh vực: {hidden.category}")
-            suggestions.append(
-                f"Cân nhắc hỏi thêm về các khía cạnh {hidden.category.lower()} của hệ thống"
-            )
-
-    if not strengths:
-        strengths.append("Hãy tiếp tục luyện tập — thử đặt thêm các câu hỏi mở trước")
-
-    return strengths, weaknesses, suggestions
