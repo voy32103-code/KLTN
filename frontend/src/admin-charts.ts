@@ -10,6 +10,17 @@ Chart.register(...registerables)
 
 const activeCharts: Record<string, Chart> = {}
 
+const chartColors = {
+  text: '#1C1B1A',
+  secondaryText: '#5F5B54',
+  muted: '#77736B',
+  grid: '#E9E6E0',
+  accent: '#C96442',
+  green: '#3F6B5C',
+  amber: '#9A5B31',
+  rose: '#A6454C',
+}
+
 function destroyChart(id: string) {
   if (activeCharts[id]) {
     activeCharts[id].destroy()
@@ -36,18 +47,18 @@ export function renderCoverageDistributionChart(
           label: 'Số phiên phỏng vấn',
           data: safeBins.map(b => b.count),
           backgroundColor: [
-            'rgba(239, 68, 68, 0.7)',
-            'rgba(245, 158, 11, 0.7)',
-            'rgba(59, 130, 246, 0.7)',
-            'rgba(16, 185, 129, 0.7)',
-            'rgba(139, 92, 246, 0.7)'
+            'rgba(166, 69, 76, 0.72)',
+            'rgba(154, 91, 49, 0.72)',
+            'rgba(201, 100, 66, 0.72)',
+            'rgba(63, 107, 92, 0.72)',
+            'rgba(119, 115, 107, 0.58)'
           ],
           borderColor: [
-            '#ef4444',
-            '#f59e0b',
-            '#3b82f6',
-            '#10b981',
-            '#8b5cf6'
+            chartColors.rose,
+            chartColors.amber,
+            chartColors.accent,
+            chartColors.green,
+            chartColors.muted,
           ],
           borderWidth: 1,
           borderRadius: 6
@@ -62,13 +73,13 @@ export function renderCoverageDistributionChart(
         title: {
           display: true,
           text: 'Phân bổ Coverage Score (%)',
-          color: '#1e293b',
+          color: chartColors.text,
           font: { size: 14, weight: 'bold' }
         }
       },
       scales: {
-        x: { ticks: { color: '#64748b' }, grid: { color: 'rgba(217, 119, 87, 0.06)' } },
-        y: { ticks: { color: '#64748b', stepSize: 1 }, grid: { color: 'rgba(217, 119, 87, 0.06)' }, beginAtZero: true }
+        x: { ticks: { color: chartColors.muted }, grid: { color: chartColors.grid } },
+        y: { ticks: { color: chartColors.muted, stepSize: 1 }, grid: { color: chartColors.grid }, beginAtZero: true }
       }
     }
   })
@@ -89,8 +100,8 @@ export function renderSessionsOverTimeChart(
         {
           label: 'Số phiên',
           data: counts,
-          borderColor: '#38bdf8',
-          backgroundColor: 'rgba(56, 189, 248, 0.15)',
+          borderColor: chartColors.accent,
+          backgroundColor: 'rgba(201, 100, 66, 0.16)',
           fill: true,
           tension: 0.35,
           pointRadius: 3,
@@ -106,13 +117,13 @@ export function renderSessionsOverTimeChart(
         title: {
           display: true,
           text: 'Xu hướng phiên phỏng vấn theo ngày',
-          color: '#1e293b',
+          color: chartColors.text,
           font: { size: 14, weight: 'bold' }
         }
       },
       scales: {
-        x: { ticks: { color: '#64748b', maxRotation: 45 }, grid: { color: 'rgba(217, 119, 87, 0.06)' } },
-        y: { ticks: { color: '#64748b', stepSize: 1 }, grid: { color: 'rgba(217, 119, 87, 0.06)' }, beginAtZero: true }
+        x: { ticks: { color: chartColors.muted, maxRotation: 45 }, grid: { color: chartColors.grid } },
+        y: { ticks: { color: chartColors.muted, stepSize: 1 }, grid: { color: chartColors.grid }, beginAtZero: true }
       }
     }
   })
@@ -132,13 +143,13 @@ export function renderScenarioStatsChart(
         {
           label: 'Coverage TB (%)',
           data: safeScenarios.map(s => s.averageCoverage),
-          backgroundColor: 'rgba(217, 119, 87, 0.8)',
+          backgroundColor: 'rgba(201, 100, 66, 0.8)',
           borderRadius: 4
         },
         {
           label: 'Số lượt hội thoại TB',
           data: safeScenarios.map(s => s.averageTurns),
-          backgroundColor: 'rgba(100, 116, 139, 0.8)',
+          backgroundColor: 'rgba(119, 115, 107, 0.8)',
           borderRadius: 4
         }
       ]
@@ -147,17 +158,17 @@ export function renderScenarioStatsChart(
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
-        legend: { labels: { color: '#334155' } },
+        legend: { labels: { color: chartColors.secondaryText } },
         title: {
           display: true,
           text: 'So sánh hiệu suất theo Kịch bản',
-          color: '#1e293b',
+          color: chartColors.text,
           font: { size: 14, weight: 'bold' }
         }
       },
       scales: {
-        x: { ticks: { color: '#64748b' }, grid: { color: 'rgba(217, 119, 87, 0.06)' } },
-        y: { ticks: { color: '#64748b' }, grid: { color: 'rgba(217, 119, 87, 0.06)' }, beginAtZero: true }
+        x: { ticks: { color: chartColors.muted }, grid: { color: chartColors.grid } },
+        y: { ticks: { color: chartColors.muted }, grid: { color: chartColors.grid }, beginAtZero: true }
       }
     }
   })
@@ -179,7 +190,7 @@ export function renderMatchTypeBreakdownChart(
       datasets: [
         {
           data: [exact, semantic, partial, missed],
-          backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#ef4444'],
+          backgroundColor: [chartColors.green, chartColors.accent, chartColors.amber, chartColors.rose],
           borderColor: '#ffffff',
           borderWidth: 2
         }
@@ -189,11 +200,11 @@ export function renderMatchTypeBreakdownChart(
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
-        legend: { position: 'right', labels: { color: '#334155', font: { size: 12 } } },
+        legend: { position: 'right', labels: { color: chartColors.secondaryText, font: { size: 12 } } },
         title: {
           display: true,
           text: 'Tỷ lệ Loại so khớp Requirement',
-          color: '#1e293b',
+          color: chartColors.text,
           font: { size: 14, weight: 'bold' }
         }
       }

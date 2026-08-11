@@ -71,11 +71,11 @@ function renderModelGroups(state: AppState) {
   ];
 
   const providers: Record<string, { label: string; color: string }> = {
-    gemini: { label: 'Google Gemini', color: '#38bdf8' },
-    deepseek: { label: 'DeepSeek', color: '#10b981' },
-    llama: { label: 'Meta Llama (Groq)', color: '#a855f7' },
-    mimo: { label: 'Mimo Cloud', color: '#f59e0b' },
-    openrouter: { label: 'OpenRouter', color: '#ec4899' }
+    gemini: { label: 'Google Gemini', color: 'var(--accent-emerald)' },
+    deepseek: { label: 'DeepSeek', color: 'var(--accent)' },
+    llama: { label: 'Meta Llama (Groq)', color: 'var(--accent-amber)' },
+    mimo: { label: 'Mimo Cloud', color: 'var(--pastel-yellow-text)' },
+    openrouter: { label: 'OpenRouter', color: 'var(--accent-rose)' }
   };
 
   const grouped: Record<string, typeof models> = {};
@@ -87,8 +87,8 @@ function renderModelGroups(state: AppState) {
   return Object.entries(grouped).map(([prov, items]) => {
     const info = providers[prov];
     return `
-      <div style="border-bottom: 1px solid rgba(255,255,255,0.03); padding-bottom: 6px; margin-bottom: 6px; display: flex; flex-direction: column; gap: 2px;">
-        <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; font-weight: 700; padding: 4px 8px; display: flex; align-items: center; gap: 6px;">
+      <div style="border-bottom: 1px solid var(--line-subtle); padding-bottom: 6px; margin-bottom: 6px; display: flex; flex-direction: column; gap: 2px;">
+        <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); font-weight: 700; padding: 4px 8px; display: flex; align-items: center; gap: 6px;">
           <span style="width: 5px; height: 5px; border-radius: 50%; background: ${info.color}; display: inline-block;"></span>
           ${info.label}
         </div>
@@ -98,9 +98,9 @@ function renderModelGroups(state: AppState) {
             <button class="dropdown-item-btn ${active ? 'active' : ''}" data-action="select-model" data-model="${m.id}" role="option" aria-selected="${active}" type="button">
               <span style="font-weight: 600; display: flex; align-items: center; gap: 6px; justify-content: space-between; width: 100%;">
                 ${m.name}
-                ${active ? '<span style="font-size: 11px; color: #38bdf8;">✓</span>' : ''}
+                ${active ? '<span style="font-size: 11px; color: var(--accent);">✓</span>' : ''}
               </span>
-              <span style="font-size: 10px; color: #64748b; font-weight: normal;">${m.desc}</span>
+              <span style="font-size: 10px; color: var(--muted); font-weight: normal;">${m.desc}</span>
             </button>
           `;
         }).join('')}
@@ -137,9 +137,9 @@ function renderTopbar(state: AppState) {
   const isAdmin = state.user?.role === 'Admin'
 
   return `
-    <header class="topbar" style="background: var(--surface-glass); backdrop-filter: blur(16px); border-bottom: 1px solid var(--line-subtle); padding: 14px 28px;">
+    <header class="topbar" style="background: var(--surface); border-bottom: 1px solid var(--line-subtle); padding: 14px 28px;">
       <div class="brand-block" style="display: flex; align-items: center; gap: 12px;">
-        <span class="brand-mark font-heading" aria-hidden="true" style="background: linear-gradient(135deg, var(--accent-indigo), #8B5CF6); color: #FFF; width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 18px; box-shadow: 0 0 16px var(--accent-indigo-glow);">R</span>
+        <span class="brand-mark font-heading" aria-hidden="true" style="background: var(--accent); color: #FFF; width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 18px;">R</span>
         <div>
           <p class="eyebrow" style="letter-spacing: 0.08em; font-size: 10px; font-weight: 800; color: var(--accent-indigo); text-transform: uppercase; margin: 0;">ReqSimulator • PRO AI</p>
           <h1 style="font-size: 17px; font-family: var(--font-heading); font-weight: 700; color: var(--text-primary); margin: 0;">
@@ -152,7 +152,7 @@ function renderTopbar(state: AppState) {
         ${state.user?.email ? `<span class="user-pill" style="background: var(--surface-raised); border: 1px solid var(--line-subtle); color: var(--text-primary); font-size: 12px; font-weight: 500; padding: 4px 14px; border-radius: 20px;">${escapeHtml(state.user.email)} <span style="color: var(--accent-emerald); font-weight: 700; margin-left: 4px;">(${escapeHtml(state.user.role ?? 'Student')})</span></span>` : ''}
         ${state.token && state.view !== 'scenarios' ? `<button class="ghost-button" data-action="open-student-lab" type="button" ${state.busy ? 'disabled' : ''}>Phòng thực hành</button>` : ''}
         ${canReview && state.view !== 'review' ? `<button class="ghost-button" data-action="open-review" type="button" ${state.busy ? 'disabled' : ''}>Review Giảng viên</button>` : ''}
-        ${isAdmin && state.view !== 'admin' ? `<button class="ghost-button" data-action="open-admin" type="button" ${state.busy ? 'disabled' : ''} style="border-color: #38bdf8; color: #38bdf8;">Admin Console</button>` : ''}
+        ${isAdmin && state.view !== 'admin' ? `<button class="ghost-button" data-action="open-admin" type="button" ${state.busy ? 'disabled' : ''} style="border-color: var(--accent-amber); color: var(--accent-amber);">Admin Console</button>` : ''}
         ${state.token ? `<button class="ghost-button" data-action="logout" type="button" ${state.busy ? 'disabled' : ''} style="color: var(--accent-rose); border-color: rgba(244,63,94,0.3);">Đăng xuất</button>` : ''}
       </div>
     </header>
@@ -334,7 +334,7 @@ function renderScenarioDetail(scenario: ScenarioDetail, state: AppState) {
           
           <!-- Dropdown menu -->
           ${state.modelDropdownOpen ? `
-            <div class="dropdown-menu glass-panel" id="model-dropdown-menu" role="listbox" aria-label="Chọn mô hình AI" style="position: absolute; bottom: 100%; right: 0; margin-bottom: 8px; width: 340px; max-height: 380px; overflow-y: auto; border: 1px solid var(--line); background: var(--surface); backdrop-filter: blur(20px); border-radius: var(--radius-lg); box-shadow: var(--shadow-subtle); z-index: 1000; padding: 8px; display: flex; flex-direction: column; gap: 4px;">
+            <div class="dropdown-menu glass-panel" id="model-dropdown-menu" role="listbox" aria-label="Chọn mô hình AI" style="position: absolute; bottom: 100%; right: 0; margin-bottom: 8px; width: 340px; max-height: 380px; overflow-y: auto; border: 1px solid var(--line); background: var(--surface-raised); border-radius: var(--radius-lg); box-shadow: var(--shadow-subtle); z-index: 1000; padding: 8px; display: flex; flex-direction: column; gap: 4px;">
               ${renderModelGroups(state)}
             </div>
           ` : ''}
@@ -459,12 +459,12 @@ function renderEndSessionModal(state: AppState) {
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
           </div>
           <div>
-            <h2 id="end-session-modal-title" style="margin:0; font-size:18px; font-weight:700; color:#FFF; font-family: var(--font-heading);">Xác nhận kết thúc phỏng vấn</h2>
+            <h2 id="end-session-modal-title" style="margin:0; font-size:18px; font-weight:700; color:var(--text-primary); font-family: var(--font-heading);">Xác nhận kết thúc phỏng vấn</h2>
             <span style="font-size:12px; color:var(--accent-indigo); font-weight: 600;">${escapeHtml(scenario?.title ?? '')}</span>
           </div>
         </div>
         <div class="modal-body">
-          <p id="end-session-modal-description">Bạn có chắc chắn muốn kết thúc phiên phỏng vấn với đối tác <strong style="color: #FFF;">${escapeHtml(persona?.name ?? 'Stakeholder')}</strong> không?</p>
+          <p id="end-session-modal-description">Bạn có chắc chắn muốn kết thúc phiên phỏng vấn với đối tác <strong style="color: var(--text-primary);">${escapeHtml(persona?.name ?? 'Stakeholder')}</strong> không?</p>
           <p style="margin-top: 8px; font-size: 13px;">Hệ thống AI sẽ tự động trích xuất các yêu cầu phần mềm đã trao đổi và tiến hành chấm điểm bài làm của bạn. Sau khi nộp bài, bạn không thể tiếp tục gửi câu hỏi trong phiên này.</p>
         </div>
         <div class="modal-stats">
@@ -733,13 +733,13 @@ function renderEvaluation(evaluation: EvaluationResult, showSurvey = false) {
         <div class="meta-section" style="background: rgba(255, 255, 255, 0.01); border: 1px solid var(--color-border); border-radius: 6px; padding: 12px;">
           <strong style="display: block; margin-bottom: 8px; font-size: 13px; color: var(--color-text-secondary);">Tác nhân chính (Actors)</strong>
           <div class="badge-list" style="display: flex; flex-wrap: wrap; gap: 6px;">
-            ${design.mainActors.map(actor => `<span class="actor-badge" style="background: rgba(147, 197, 253, 0.1); color: #93c5fd; padding: 4px 8px; border-radius: 4px; border: 1px solid rgba(147, 197, 253, 0.2); font-size: 11px; font-family: var(--font-mono); font-weight: bold;">${escapeHtml(actor)}</span>`).join('')}
+            ${design.mainActors.map(actor => `<span class="actor-badge" style="background: var(--pastel-blue-bg); color: var(--pastel-blue-text); padding: 4px 8px; border-radius: 4px; border: 1px solid var(--line); font-size: 11px; font-family: var(--font-mono); font-weight: bold;">${escapeHtml(actor)}</span>`).join('')}
           </div>
         </div>
         <div class="meta-section" style="background: rgba(255, 255, 255, 0.01); border: 1px solid var(--color-border); border-radius: 6px; padding: 12px;">
           <strong style="display: block; margin-bottom: 8px; font-size: 13px; color: var(--color-text-secondary);">Thực thể chính (Entities)</strong>
           <div class="badge-list" style="display: flex; flex-wrap: wrap; gap: 6px;">
-            ${design.mainEntities.map(entity => `<span class="entity-badge" style="background: rgba(167, 243, 208, 0.1); color: #a7f3d0; padding: 4px 8px; border-radius: 4px; border: 1px solid rgba(167, 243, 208, 0.2); font-size: 11px; font-family: var(--font-mono); font-weight: bold;">${escapeHtml(entity)}</span>`).join('')}
+            ${design.mainEntities.map(entity => `<span class="entity-badge" style="background: var(--pastel-green-bg); color: var(--pastel-green-text); padding: 4px 8px; border-radius: 4px; border: 1px solid var(--line); font-size: 11px; font-family: var(--font-mono); font-weight: bold;">${escapeHtml(entity)}</span>`).join('')}
           </div>
         </div>
       </div>
@@ -860,7 +860,7 @@ function renderRequirementReport(matches: RequirementMatchReport[]) {
                 <div style="display: flex; align-items: center; gap: 8px;">
                   ${match.overriddenMatchType ? '<span class="override-badge">Đã chỉnh</span>' : ''}
                   ${renderMatchBadge(match.overriddenMatchType || match.matchType, match.score)}
-                  <select class="override-type-select" data-match-id="${escapeAttribute(match.matchId)}" style="background: #1e293b; color: #f8fafc; border: 1px solid #475569; border-radius: 4px; padding: 2px 6px; font-size: 12px;">
+                  <select class="override-type-select" data-match-id="${escapeAttribute(match.matchId)}" style="background: var(--surface-raised); color: var(--text-primary); border: 1px solid var(--line); border-radius: 4px; padding: 2px 6px; font-size: 12px;">
                     <option value="exact" ${activeType === 'exact' ? 'selected' : ''}>Exact</option>
                     <option value="semantic" ${activeType === 'semantic' ? 'selected' : ''}>Semantic</option>
                     <option value="partial" ${activeType === 'partial' ? 'selected' : ''}>Partial</option>
@@ -880,14 +880,14 @@ function renderRequirementReport(matches: RequirementMatchReport[]) {
             </article>
           `
         }).join('')}
-        <div class="override-action-panel" style="margin-top: 16px; padding: 16px; background: #0f172a; border-radius: 8px; border: 1px solid #334155;">
-          <h4 style="margin-bottom: 8px; color: #38bdf8;">Lưu thay đổi đánh giá của Giảng viên</h4>
-          <p style="font-size: 13px; color: #94a3b8; margin-bottom: 12px;">Hệ thống sẽ tự động tính lại <strong>Coverage Score</strong> dựa trên loại so khớp (MatchType) mới được chọn ở trên.</p>
+        <div class="override-action-panel" style="margin-top: 16px; padding: 16px; background: var(--surface-raised); border-radius: 8px; border: 1px solid var(--line);">
+          <h4 style="margin-bottom: 8px; color: var(--accent);">Lưu thay đổi đánh giá của Giảng viên</h4>
+          <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px;">Hệ thống sẽ tự động tính lại <strong>Coverage Score</strong> dựa trên loại so khớp (MatchType) mới được chọn ở trên.</p>
           <div style="margin-bottom: 12px;">
-            <label style="display: block; font-size: 12px; color: #cbd5e1; margin-bottom: 4px;">Ghi chú / Nhận xét của Giảng viên (tùy chọn):</label>
-            <textarea id="override-comment" rows="2" style="width: 100%; background: #1e293b; color: #f8fafc; border: 1px solid #475569; border-radius: 6px; padding: 8px; font-family: var(--font-sans); font-size: 13px;" placeholder="Nhập lý do điều chỉnh hoặc góp ý cho sinh viên..."></textarea>
+            <label style="display: block; font-size: 12px; color: var(--muted-strong); margin-bottom: 4px;">Ghi chú / Nhận xét của Giảng viên (tùy chọn):</label>
+            <textarea id="override-comment" rows="2" style="width: 100%; background: var(--surface); color: var(--text-primary); border: 1px solid var(--line); border-radius: 6px; padding: 8px; font-family: var(--font-sans); font-size: 13px;" placeholder="Nhập lý do điều chỉnh hoặc góp ý cho sinh viên..."></textarea>
           </div>
-          <button class="primary-button" data-action="submit-override" type="button" style="background: var(--color-primary);">Lưu & Tính lại điểm số</button>
+          <button class="primary-button" data-action="submit-override" type="button">Lưu & Tính lại điểm số</button>
         </div>
       </form>
     </div>
@@ -1036,7 +1036,7 @@ function renderAdminScenarioSection(state: AppState) {
       <!-- Card 2: Video Knowledge Upload -->
       <div class="card glass-panel" style="padding: 24px; display: flex; flex-direction: column; gap: 16px; border: 1px solid var(--line); background: var(--surface); border-radius: var(--radius-lg); box-shadow: var(--shadow-subtle);">
         <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
-          <div style="background: rgba(168, 85, 247, 0.1); padding: 8px; border-radius: 8px; color: #a855f7;">
+          <div style="background: var(--pastel-yellow-bg); padding: 8px; border-radius: 8px; color: var(--pastel-yellow-text);">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>
           </div>
           <div>
@@ -1063,7 +1063,7 @@ function renderAdminScenarioSection(state: AppState) {
           <span style="font-size: 11px; color: var(--text-secondary); line-height: 1.4;">Chỉ quản trị viên có thể nạp nguồn. Worker trích xuất audio từ video rồi gửi dữ liệu đã chọn đến Gemini.</span>
         </div>
 
-        <button class="primary-button" data-action="admin-video" type="button" ${state.busy ? 'disabled' : ''} style="margin-top: 4px; background: linear-gradient(135deg, var(--accent-indigo), #c96b4b); border: none; display: flex; align-items: center; justify-content: center; gap: 8px;">
+        <button class="primary-button" data-action="admin-video" type="button" ${state.busy ? 'disabled' : ''} style="margin-top: 4px; border: none; display: flex; align-items: center; justify-content: center; gap: 8px;">
           ${state.busy ? '<span class="spinner-mini"></span> Đang xử lý...' : 'Tạo bản preview từ video/audio'}
         </button>
       </div>

@@ -1,0 +1,48 @@
+name: Feature request
+description: Propose an improvement to the learning or administration workflow.
+title: "feature: "
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please describe the learning or operational problem before proposing an implementation.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem to solve
+      description: Who is affected and what cannot they do today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed outcome
+      description: Describe the user-visible behavior, not just a technology choice.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Include manual workflow or smaller-scope alternatives.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Primary area
+      options:
+        - Student learning flow
+        - Lecturer review
+        - Scenario administration
+        - Knowledge ingestion
+        - Infrastructure or reliability
+        - Documentation
+    validations:
+      required: true
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution
+      options:
+        - label: I can help test or implement this feature.
+          required: false
