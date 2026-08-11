@@ -1080,6 +1080,10 @@ async function waitForIngestion(jobId: string, source: string) {
   for (let attempt = 0; attempt < 120; attempt += 1) {
     const job = await api.request<IngestionJob>(`/api/admin-ingestion/jobs/${jobId}`)
     if (state.adminState) state.adminState.ingestionJob = job
+    if (job.status === 'Queued') {
+      setNotice('info', 'Job queued — chạy GitHub Action.')
+      return
+    }
     if (job.status === 'AwaitingReview' && job.draft) {
       if (state.adminState) {
         state.adminState.scenarioDraft = job.draft
@@ -1089,7 +1093,7 @@ async function waitForIngestion(jobId: string, source: string) {
       return
     }
     if (job.status === 'Failed') throw new Error(`Ingestion failed (${job.errorCode ?? 'processing_failed'}).`)
-    setNotice('info', job.status === 'Queued' ? 'Waiting for the ingestion worker.' : 'Generating scenario preview…')
+    setNotice('info', 'Generating scenario preview…')
     await new Promise(resolve => window.setTimeout(resolve, 3000))
   }
   throw new Error('Ingestion is taking too long. Open Admin later to check its status.')
