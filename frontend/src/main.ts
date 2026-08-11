@@ -65,6 +65,8 @@ const state: AppState = {
   modelDropdownOpen: false,
 }
 
+let modalReturnFocus: HTMLElement | null = null
+
 const api = createApiClient({
   baseUrl: API_BASE_URL,
   getToken: () => state.token,
@@ -152,7 +154,7 @@ function bindEvents() {
     legacyMediaInput.accept = 'audio/mpeg,audio/wav,audio/x-wav,audio/mp4,audio/aac,audio/ogg,audio/webm,video/mp4,video/webm,video/quicktime'
     legacyMediaInput.removeAttribute('placeholder')
     const label = legacyMediaInput.closest('.form-group')?.querySelector('label')
-    if (label) label.textContent = 'Video/audio meeting file (max 250 MB):'
+    if (label) label.textContent = 'Tệp video/audio cuộc họp (tối đa 250 MB):'
   }
   document.querySelectorAll<HTMLButtonElement>('[data-auth-mode]').forEach((button) => {
     button.addEventListener('click', () => {
@@ -236,14 +238,14 @@ function bindEvents() {
       const tab = button.dataset.tab ?? ''
       const userId = button.dataset.userId ?? ''
       const model = button.dataset.model ?? ''
-      void handleAction(action, { tab, userId, model })
+      const jobId = button.dataset.jobId ?? ''
+      void handleAction(action, { tab, userId, model, jobId })
     })
   })
 
   document.querySelector('#end-session-modal-overlay')?.addEventListener('click', (event) => {
     if (event.target === event.currentTarget) {
-      state.confirmEndSession = false
-      render()
+      closeEndSessionModal()
     }
   })
 
@@ -260,9 +262,47 @@ function bindEvents() {
       }
     })
   }
+
+  if (!(window as any).hasAccessibilityKeyboardListener) {
+    (window as any).hasAccessibilityKeyboardListener = true
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        if (state.confirmEndSession) {
+          event.preventDefault()
+          closeEndSessionModal()
+          return
+        }
+        if (state.modelDropdownOpen) {
+          state.modelDropdownOpen = false
+          render()
+        }
+      }
+
+      if (event.key !== 'Tab' || !state.confirmEndSession) return
+      const dialog = document.querySelector<HTMLElement>('#end-session-modal')
+      if (!dialog) return
+      const focusable = Array.from(dialog.querySelectorAll<HTMLElement>('button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'))
+      if (focusable.length === 0) return
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
+    })
+  }
 }
 
-async function handleAction(action: string, options: { tab?: string; userId?: string; model?: string } = {}) {
+function closeEndSessionModal() {
+  state.confirmEndSession = false
+  render()
+  requestAnimationFrame(() => modalReturnFocus?.focus())
+}
+
+async function handleAction(action: string, options: { tab?: string; userId?: string; model?: string; jobId?: string } = {}) {
   if (state.busy) return
   switch (action) {
     case 'logout':
@@ -287,12 +327,13 @@ async function handleAction(action: string, options: { tab?: string; userId?: st
       await startSession()
       break
     case 'open-end-session-modal':
+      modalReturnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null
       state.confirmEndSession = true
       render()
+      requestAnimationFrame(() => document.querySelector<HTMLElement>('#end-session-modal')?.focus())
       break
     case 'cancel-end-session':
-      state.confirmEndSession = false
-      render()
+      closeEndSessionModal()
       break
     case 'confirm-end-session':
     case 'end-session':
@@ -337,6 +378,12 @@ async function handleAction(action: string, options: { tab?: string; userId?: st
       break
     case 'admin-video':
       await runQueuedAdminVideo()
+      break
+    case 'refresh-ingestion-history':
+      await refreshIngestionHistory(true)
+      break
+    case 'review-ingestion-job':
+      if (options.jobId) await openIngestionJob(options.jobId)
       break
     case 'admin-publish-scenario':
       await publishAdminScenario()
@@ -660,12 +707,13 @@ async function openAdminDashboard() {
       scenarioDraft: null,
       scenarioDraftSource: null,
       ingestionJob: null,
+      ingestionJobs: [],
       feedbackExperiment: null,
     }
     clearNotice()
 
     // Fetch Overview metrics & charts in parallel
-    const [ov, distResp, time, scen, top, breakdown, userList, feedbackExperiment] = await Promise.all([
+    const [ov, distResp, time, scen, top, breakdown, userList, feedbackExperiment, ingestionJobs] = await Promise.all([
       api.request<AdminOverview>('/api/Admin/stats/overview'),
       api.request<{ bins: CoverageDistributionBin[] } | CoverageDistributionBin[]>('/api/Admin/stats/coverage-distribution'),
       api.request<SessionsOverTimeData>('/api/Admin/stats/sessions-over-time'),
@@ -674,6 +722,7 @@ async function openAdminDashboard() {
       api.request<MatchTypeBreakdownData>('/api/Admin/stats/match-type-breakdown'),
       api.request<AdminUserItem[]>('/api/Admin/users'),
       api.request<NonNullable<AdminState['feedbackExperiment']>>('/api/Admin/stats/feedback-experiment'),
+      api.request<IngestionJob[]>('/api/admin-ingestion/jobs').catch(() => []),
     ])
 
     state.adminState.overview = ov
@@ -684,6 +733,7 @@ async function openAdminDashboard() {
     state.adminState.feedbackExperiment = feedbackExperiment
     state.adminState.matchTypeBreakdown = breakdown
     state.adminState.users = Array.isArray(userList) ? userList : []
+    state.adminState.ingestionJobs = ingestionJobs
   })
 }
 
@@ -1028,7 +1078,7 @@ async function runQueuedAdminCrawl() {
   const modelSelect = document.querySelector('#admin-crawl-model-select') as HTMLSelectElement | null
   const urls = urlInput?.value.split(/\r?\n/).map(value => value.trim()).filter(Boolean) ?? []
   if (urls.length === 0) {
-    setNotice('error', 'Enter at least one public URL.')
+    setNotice('error', 'Vui lòng nhập ít nhất một URL công khai.')
     return
   }
   await withBusy(async () => {
@@ -1044,11 +1094,11 @@ async function runQueuedAdminVideo() {
   const modelSelect = document.querySelector('#admin-video-model-select') as HTMLSelectElement | null
   const file = input?.files?.[0]
   if (!file) {
-    setNotice('error', 'Choose a video or audio meeting file first.')
+    setNotice('error', 'Vui lòng chọn tệp video hoặc audio cuộc họp.')
     return
   }
   if (file.size > 250 * 1024 * 1024) {
-    setNotice('error', 'The file is larger than the 250 MB limit.')
+    setNotice('error', 'Tệp vượt quá giới hạn 250 MB.')
     return
   }
   await withBusy(async () => {
@@ -1068,10 +1118,10 @@ function uploadToPresignedUrl(uploadUrl: string, file: File, contentType: string
     request.open('PUT', uploadUrl)
     request.setRequestHeader('Content-Type', contentType)
     request.upload.onprogress = event => {
-      if (event.lengthComputable) setNotice('info', `Uploading: ${Math.round((event.loaded / event.total) * 100)}%.`)
+      if (event.lengthComputable) setNotice('info', `Đang tải tệp: ${Math.round((event.loaded / event.total) * 100)}%.`)
     }
-    request.onerror = () => reject(new Error('Upload to private storage failed.'))
-    request.onload = () => request.status >= 200 && request.status < 300 ? resolve() : reject(new Error(`Upload failed (${request.status}).`))
+    request.onerror = () => reject(new Error('Không thể tải tệp lên kho riêng.'))
+    request.onload = () => request.status >= 200 && request.status < 300 ? resolve() : reject(new Error(`Tải tệp thất bại (${request.status}).`))
     request.send(file)
   })
 }
@@ -1079,7 +1129,11 @@ function uploadToPresignedUrl(uploadUrl: string, file: File, contentType: string
 async function waitForIngestion(jobId: string, source: string) {
   for (let attempt = 0; attempt < 120; attempt += 1) {
     const job = await api.request<IngestionJob>(`/api/admin-ingestion/jobs/${jobId}`)
-    if (state.adminState) state.adminState.ingestionJob = job
+    if (state.adminState) {
+      state.adminState.ingestionJob = job
+      const historyJob = { ...job, sourceLabel: source }
+      state.adminState.ingestionJobs = [historyJob, ...state.adminState.ingestionJobs.filter(item => item.jobId !== jobId)]
+    }
     if (job.status === 'Queued') {
       setNotice('info', 'Job queued — chạy GitHub Action.')
       return
@@ -1089,14 +1143,40 @@ async function waitForIngestion(jobId: string, source: string) {
         state.adminState.scenarioDraft = job.draft
         state.adminState.scenarioDraftSource = source
       }
-      setNotice('success', 'Preview is ready. Review it before publishing.')
+      setNotice('success', 'Bản nháp đã sẵn sàng. Hãy kiểm tra trước khi publish.')
       return
     }
-    if (job.status === 'Failed') throw new Error(`Ingestion failed (${job.errorCode ?? 'processing_failed'}).`)
-    setNotice('info', 'Generating scenario preview…')
+    if (job.status === 'Failed') throw new Error(`Nạp tri thức thất bại (${job.errorCode ?? 'processing_failed'}).`)
+    setNotice('info', 'Đang tạo bản nháp scenario…')
     await new Promise(resolve => window.setTimeout(resolve, 3000))
   }
-  throw new Error('Ingestion is taking too long. Open Admin later to check its status.')
+  throw new Error('Job đang mất nhiều thời gian. Hãy mở lịch sử nạp tri thức trong Admin để kiểm tra lại.')
+}
+
+async function refreshIngestionHistory(showNotice = false) {
+  if (!state.adminState) return
+  await withBusy(async () => {
+    const jobs = await api.request<IngestionJob[]>('/api/admin-ingestion/jobs')
+    if (!state.adminState) return
+    state.adminState.ingestionJobs = jobs
+    if (showNotice) setNotice('success', 'Đã làm mới lịch sử nạp tri thức.')
+  })
+}
+
+async function openIngestionJob(jobId: string) {
+  await withBusy(async () => {
+    const job = await api.request<IngestionJob>(`/api/admin-ingestion/jobs/${jobId}`)
+    if (!state.adminState) return
+    state.adminState.ingestionJob = job
+    state.adminState.ingestionJobs = state.adminState.ingestionJobs.map(item => item.jobId === job.jobId ? { ...item, ...job } : item)
+    if (job.status !== 'AwaitingReview' || !job.draft) {
+      setNotice('info', `Job hiện ở trạng thái ${job.status}.`)
+      return
+    }
+    state.adminState.scenarioDraft = job.draft
+    state.adminState.scenarioDraftSource = job.sourceLabel ?? 'Ingestion job'
+    setNotice('success', 'Đã mở bản nháp scenario để kiểm tra trước khi publish.')
+  })
 }
 
 async function runAdminCrawl() {

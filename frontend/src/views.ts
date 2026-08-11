@@ -95,7 +95,7 @@ function renderModelGroups(state: AppState) {
         ${items.map(m => {
           const active = state.selectedModel === m.id;
           return `
-            <button class="dropdown-item-btn ${active ? 'active' : ''}" data-action="select-model" data-model="${m.id}" type="button">
+            <button class="dropdown-item-btn ${active ? 'active' : ''}" data-action="select-model" data-model="${m.id}" role="option" aria-selected="${active}" type="button">
               <span style="font-weight: 600; display: flex; align-items: center; gap: 6px; justify-content: space-between; width: 100%;">
                 ${m.name}
                 ${active ? '<span style="font-size: 11px; color: #38bdf8;">✓</span>' : ''}
@@ -142,14 +142,14 @@ function renderTopbar(state: AppState) {
         <span class="brand-mark font-heading" aria-hidden="true" style="background: linear-gradient(135deg, var(--accent-indigo), #8B5CF6); color: #FFF; width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 18px; box-shadow: 0 0 16px var(--accent-indigo-glow);">R</span>
         <div>
           <p class="eyebrow" style="letter-spacing: 0.08em; font-size: 10px; font-weight: 800; color: var(--accent-indigo); text-transform: uppercase; margin: 0;">ReqSimulator • PRO AI</p>
-          <h1 style="font-size: 17px; font-family: var(--font-heading); font-weight: 700; color: #FFF; margin: 0;">
+          <h1 style="font-size: 17px; font-family: var(--font-heading); font-weight: 700; color: var(--text-primary); margin: 0;">
             Phòng Thực Hành Khai Thác Yêu Cầu
           </h1>
         </div>
       </div>
       <div class="topbar-actions" style="display: flex; align-items: center; gap: 12px;">
         <span class="view-pill" style="background: var(--surface-raised); border: 1px solid var(--line-subtle); color: var(--accent-indigo); font-weight: 600; font-size: 12px; padding: 4px 12px; border-radius: 20px;">${escapeHtml(viewLabels[state.view])}</span>
-        ${state.user?.email ? `<span class="user-pill" style="background: var(--surface-raised); border: 1px solid var(--line-subtle); color: #FFF; font-size: 12px; font-weight: 500; padding: 4px 14px; border-radius: 20px;">${escapeHtml(state.user.email)} <span style="color: var(--accent-emerald); font-weight: 700; margin-left: 4px;">(${escapeHtml(state.user.role ?? 'Student')})</span></span>` : ''}
+        ${state.user?.email ? `<span class="user-pill" style="background: var(--surface-raised); border: 1px solid var(--line-subtle); color: var(--text-primary); font-size: 12px; font-weight: 500; padding: 4px 14px; border-radius: 20px;">${escapeHtml(state.user.email)} <span style="color: var(--accent-emerald); font-weight: 700; margin-left: 4px;">(${escapeHtml(state.user.role ?? 'Student')})</span></span>` : ''}
         ${state.token && state.view !== 'scenarios' ? `<button class="ghost-button" data-action="open-student-lab" type="button" ${state.busy ? 'disabled' : ''}>Phòng thực hành</button>` : ''}
         ${canReview && state.view !== 'review' ? `<button class="ghost-button" data-action="open-review" type="button" ${state.busy ? 'disabled' : ''}>Review Giảng viên</button>` : ''}
         ${isAdmin && state.view !== 'admin' ? `<button class="ghost-button" data-action="open-admin" type="button" ${state.busy ? 'disabled' : ''} style="border-color: #38bdf8; color: #38bdf8;">Admin Console</button>` : ''}
@@ -160,7 +160,9 @@ function renderTopbar(state: AppState) {
 }
 
 function renderNotice(notice: Notice) {
-  return `<div class="notice ${notice.type}" role="status">${escapeHtml(notice.text)}</div>`
+  const role = notice.type === 'error' ? 'alert' : 'status'
+  const live = notice.type === 'error' ? 'assertive' : 'polite'
+  return `<div class="notice ${notice.type}" role="${role}" aria-live="${live}" aria-atomic="true">${escapeHtml(notice.text)}</div>`
 }
 
 function renderAuth(state: AppState) {
@@ -193,28 +195,28 @@ function renderAuth(state: AppState) {
         </div>
       </div>
       <div class="auth-form-wrapper">
-        <form class="auth-panel" id="auth-form">
+        <form class="auth-panel" id="auth-form" role="tabpanel" aria-labelledby="auth-tab-${isLogin ? 'login' : 'register'}">
           <div class="form-heading">
             <p class="section-kicker">${isLogin ? 'Đăng nhập' : 'Đăng ký'}</p>
             <h2>${isLogin ? 'Vào phòng thực hành' : 'Tạo tài khoản sinh viên'}</h2>
           </div>
-          <div class="tabs" role="tablist">
-            <button class="${isLogin ? 'active' : ''}" data-auth-mode="login" type="button">Đăng nhập</button>
-            <button class="${!isLogin ? 'active' : ''}" data-auth-mode="register" type="button">Tạo tài khoản</button>
+          <div class="tabs" role="tablist" aria-label="Đăng nhập hoặc tạo tài khoản">
+            <button id="auth-tab-login" class="${isLogin ? 'active' : ''}" data-auth-mode="login" role="tab" aria-selected="${isLogin}" aria-controls="auth-form" type="button">Đăng nhập</button>
+            <button id="auth-tab-register" class="${!isLogin ? 'active' : ''}" data-auth-mode="register" role="tab" aria-selected="${!isLogin}" aria-controls="auth-form" type="button">Tạo tài khoản</button>
           </div>
           ${isLogin ? '' : `
-            <label>
+            <label for="auth-name">
               Họ tên
-              <input name="name" autocomplete="name" required maxlength="100" />
+              <input id="auth-name" name="name" autocomplete="name" required maxlength="100" />
             </label>
           `}
-          <label>
+          <label for="auth-email">
             Email
-            <input name="email" type="email" autocomplete="email" required maxlength="255" />
+            <input id="auth-email" name="email" type="email" autocomplete="email" required maxlength="255" />
           </label>
-          <label>
+          <label for="auth-password">
             Mật khẩu
-            <input name="password" type="password" autocomplete="${isLogin ? 'current-password' : 'new-password'}" required minlength="${isLogin ? 1 : 12}" maxlength="128" />
+            <input id="auth-password" name="password" type="password" autocomplete="${isLogin ? 'current-password' : 'new-password'}" required minlength="${isLogin ? 1 : 12}" maxlength="128" />
           </label>
           <button class="primary-button" type="submit" ${state.busy ? 'disabled' : ''}>
             ${state.busy ? 'Đang xử lý...' : isLogin ? 'Vào hệ thống' : 'Tạo tài khoản'}
@@ -324,7 +326,7 @@ function renderScenarioDetail(scenario: ScenarioDetail, state: AppState) {
       <div style="display: flex; gap: var(--spacing-sm); align-items: center; flex-wrap: wrap; position: relative;">
         <!-- Custom Dropdown Container -->
         <div class="custom-dropdown">
-          <button class="liquid-glass" data-action="toggle-model-dropdown" type="button" style="display: flex; align-items: center; gap: 8px; padding: 0.625rem 1rem; border-radius: var(--radius-md); border: 1px solid var(--line); background: var(--surface); color: var(--text-primary); font-size: 0.875rem; cursor: pointer; outline: none; font-weight: 500;">
+            <button class="liquid-glass" data-action="toggle-model-dropdown" type="button" aria-haspopup="listbox" aria-expanded="${state.modelDropdownOpen}" aria-controls="model-dropdown-menu" style="display: flex; align-items: center; gap: 8px; padding: 0.625rem 1rem; border-radius: var(--radius-md); border: 1px solid var(--line); background: var(--surface); color: var(--text-primary); font-size: 0.875rem; cursor: pointer; outline: none; font-weight: 500;">
             <span class="model-provider-badge ${getProviderClass(state.selectedModel)}"></span>
             <span>${getFriendlyModelName(state.selectedModel)}</span>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-left: 4px; transform: ${state.modelDropdownOpen ? 'rotate(180deg)' : 'rotate(0)'}; transition: transform 0.2s;"><polyline points="6 9 12 15 18 9"></polyline></svg>
@@ -332,7 +334,7 @@ function renderScenarioDetail(scenario: ScenarioDetail, state: AppState) {
           
           <!-- Dropdown menu -->
           ${state.modelDropdownOpen ? `
-            <div class="dropdown-menu glass-panel" style="position: absolute; bottom: 100%; right: 0; margin-bottom: 8px; width: 340px; max-height: 380px; overflow-y: auto; border: 1px solid var(--line); background: var(--surface); backdrop-filter: blur(20px); border-radius: var(--radius-lg); box-shadow: var(--shadow-subtle); z-index: 1000; padding: 8px; display: flex; flex-direction: column; gap: 4px;">
+            <div class="dropdown-menu glass-panel" id="model-dropdown-menu" role="listbox" aria-label="Chọn mô hình AI" style="position: absolute; bottom: 100%; right: 0; margin-bottom: 8px; width: 340px; max-height: 380px; overflow-y: auto; border: 1px solid var(--line); background: var(--surface); backdrop-filter: blur(20px); border-radius: var(--radius-lg); box-shadow: var(--shadow-subtle); z-index: 1000; padding: 8px; display: flex; flex-direction: column; gap: 4px;">
               ${renderModelGroups(state)}
             </div>
           ` : ''}
@@ -451,18 +453,18 @@ function renderEndSessionModal(state: AppState) {
 
   return `
     <div class="modal-overlay" id="end-session-modal-overlay">
-      <div class="modal-card">
+      <div class="modal-card" id="end-session-modal" role="dialog" aria-modal="true" aria-labelledby="end-session-modal-title" aria-describedby="end-session-modal-description" tabindex="-1">
         <div class="modal-header">
           <div class="modal-icon">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
           </div>
           <div>
-            <h3 style="margin:0; font-size:18px; font-weight:700; color:#FFF; font-family: var(--font-heading);">Xác nhận kết thúc phỏng vấn</h3>
+            <h2 id="end-session-modal-title" style="margin:0; font-size:18px; font-weight:700; color:#FFF; font-family: var(--font-heading);">Xác nhận kết thúc phỏng vấn</h2>
             <span style="font-size:12px; color:var(--accent-indigo); font-weight: 600;">${escapeHtml(scenario?.title ?? '')}</span>
           </div>
         </div>
         <div class="modal-body">
-          <p>Bạn có chắc chắn muốn kết thúc phiên phỏng vấn với đối tác <strong style="color: #FFF;">${escapeHtml(persona?.name ?? 'Stakeholder')}</strong> không?</p>
+          <p id="end-session-modal-description">Bạn có chắc chắn muốn kết thúc phiên phỏng vấn với đối tác <strong style="color: #FFF;">${escapeHtml(persona?.name ?? 'Stakeholder')}</strong> không?</p>
           <p style="margin-top: 8px; font-size: 13px;">Hệ thống AI sẽ tự động trích xuất các yêu cầu phần mềm đã trao đổi và tiến hành chấm điểm bài làm của bạn. Sau khi nộp bài, bạn không thể tiếp tục gửi câu hỏi trong phiên này.</p>
         </div>
         <div class="modal-stats">
@@ -930,6 +932,7 @@ export function renderAdminDashboard(state: AppState) {
   const isOverviewTab = admin.activeTab === 'overview'
   const isUsersTab = admin.activeTab === 'users'
   const isScenariosTab = admin.activeTab === 'scenarios'
+  const activeTab = isOverviewTab ? 'overview' : isUsersTab ? 'users' : 'scenarios'
 
   return `
     <section class="admin-dashboard" data-animate="fade-up">
@@ -938,22 +941,56 @@ export function renderAdminDashboard(state: AppState) {
           <p class="section-kicker">Bảng điều khiển Admin</p>
           <h2 style="font-size: 24px; font-weight: 700; color: var(--text-primary);">Quản trị Hệ thống & Nạp Tri thức AI</h2>
         </div>
-        <div class="admin-nav-tabs" style="display: flex; gap: 8px; background: var(--surface); padding: 4px; border-radius: 8px; border: 1px solid var(--line);">
-          <button class="ghost-button ${isOverviewTab ? 'active' : ''}" data-action="set-admin-tab" data-tab="overview" type="button" style="${isOverviewTab ? 'background: var(--accent-indigo); color: #fff;' : ''}">Thống kê Analytics</button>
-          <button class="ghost-button ${isUsersTab ? 'active' : ''}" data-action="set-admin-tab" data-tab="users" type="button" style="${isUsersTab ? 'background: var(--accent-indigo); color: #fff;' : ''}">Quản lý Người dùng (CRUD)</button>
-          <button class="ghost-button ${isScenariosTab ? 'active' : ''}" data-action="set-admin-tab" data-tab="scenarios" type="button" style="${isScenariosTab ? 'background: var(--accent-indigo); color: #fff;' : ''}">Cào/Nạp Kịch Bản (AI)</button>
+        <div class="admin-nav-tabs" role="tablist" aria-label="Các chức năng quản trị" style="display: flex; gap: 8px; background: var(--surface); padding: 4px; border-radius: 8px; border: 1px solid var(--line);">
+          <button id="admin-tab-overview" role="tab" aria-selected="${isOverviewTab}" aria-controls="admin-tabpanel-overview" class="ghost-button ${isOverviewTab ? 'active' : ''}" data-action="set-admin-tab" data-tab="overview" type="button" style="${isOverviewTab ? 'background: var(--accent-indigo); color: #fff;' : ''}">Thống kê Analytics</button>
+          <button id="admin-tab-users" role="tab" aria-selected="${isUsersTab}" aria-controls="admin-tabpanel-users" class="ghost-button ${isUsersTab ? 'active' : ''}" data-action="set-admin-tab" data-tab="users" type="button" style="${isUsersTab ? 'background: var(--accent-indigo); color: #fff;' : ''}">Quản lý Người dùng (CRUD)</button>
+          <button id="admin-tab-scenarios" role="tab" aria-selected="${isScenariosTab}" aria-controls="admin-tabpanel-scenarios" class="ghost-button ${isScenariosTab ? 'active' : ''}" data-action="set-admin-tab" data-tab="scenarios" type="button" style="${isScenariosTab ? 'background: var(--accent-indigo); color: #fff;' : ''}">Cào/Nạp Kịch Bản (AI)</button>
         </div>
       </div>
 
-      ${isOverviewTab ? renderAdminOverviewSection(admin) : 
-        isUsersTab ? renderAdminUserManagementSection(admin) : 
-        renderAdminScenarioSection(state)}
+      <div id="admin-tabpanel-${activeTab}" role="tabpanel" aria-labelledby="admin-tab-${activeTab}" tabindex="0">
+        ${isOverviewTab ? renderAdminOverviewSection(admin) :
+          isUsersTab ? renderAdminUserManagementSection(admin) :
+          renderAdminScenarioSection(state)}
+      </div>
+    </section>
+  `
+}
+
+function renderIngestionHistory(admin: AdminState | null) {
+  const jobs = admin?.ingestionJobs ?? []
+  return `
+    <section class="ingestion-history panel" aria-labelledby="ingestion-history-title">
+      <div class="ingestion-history-heading">
+        <div>
+          <p class="section-kicker">Theo dõi tiến trình</p>
+          <h3 id="ingestion-history-title">Lịch sử nạp tri thức</h3>
+        </div>
+        <button class="ghost-button" data-action="refresh-ingestion-history" type="button" aria-label="Làm mới lịch sử nạp tri thức">Làm mới</button>
+      </div>
+      ${jobs.length === 0 ? `
+        <p class="ingestion-history-empty">Chưa có job nào. Sau khi nạp URL hoặc video/audio, job sẽ hiển thị ở đây kể cả khi bạn tải lại trang.</p>
+      ` : `
+        <ul class="ingestion-job-list">
+          ${jobs.map(job => `
+            <li class="ingestion-job-item">
+              <div class="ingestion-job-main">
+                <strong>${escapeHtml(job.sourceLabel ?? 'Nguồn nạp tri thức')}</strong>
+                <span>${escapeHtml(job.status)} · ${job.attempts} lượt chạy${job.updatedAt ? ` · ${escapeHtml(formatTime(job.updatedAt))}` : ''}</span>
+                ${job.errorCode ? `<small>Mã lỗi: ${escapeHtml(job.errorCode)}</small>` : ''}
+              </div>
+              ${job.status === 'AwaitingReview' && job.hasDraft ? `<button class="primary-button" data-action="review-ingestion-job" data-job-id="${escapeAttribute(job.jobId)}" type="button">Mở bản nháp</button>` : ''}
+            </li>
+          `).join('')}
+        </ul>
+      `}
     </section>
   `
 }
 
 function renderAdminScenarioSection(state: AppState) {
   return `
+    ${renderIngestionHistory(state.adminState)}
     ${renderAdminScenarioPreview(state)}
     <div class="admin-scenarios-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px;">
       
@@ -970,12 +1007,12 @@ function renderAdminScenarioSection(state: AppState) {
         </div>
         
         <div class="form-group" style="display: flex; flex-direction: column; gap: 8px;">
-          <label style="font-size: 13px; color: var(--text-secondary); font-weight: 500;">Đường dẫn URL chứa tài liệu:</label>
+          <label for="admin-crawl-url-input" style="font-size: 13px; color: var(--text-secondary); font-weight: 500;">Đường dẫn URL chứa tài liệu:</label>
           <textarea id="admin-crawl-url-input" rows="4" placeholder="Mỗi dòng một URL (tối đa 10 nguồn)..." style="background: var(--surface-raised); color: var(--text-primary); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; font-size: 13px; outline: none; width: 100%; resize: vertical;"></textarea>
         </div>
 
         <div class="form-group" style="display: flex; flex-direction: column; gap: 8px;">
-          <label style="font-size: 13px; color: var(--text-secondary); font-weight: 500;">Mô hình AI xử lý:</label>
+          <label for="admin-crawl-model-select" style="font-size: 13px; color: var(--text-secondary); font-weight: 500;">Mô hình AI xử lý:</label>
           <select id="admin-crawl-model-select" style="background: var(--surface-raised); color: var(--text-primary); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; font-size: 13px; cursor: pointer; outline: none; width: 100%;">
             <option value="gemini-2.5-flash">Gemini 2.5 Flash (Khuyên dùng - Structured Output)</option>
             <option value="gemini-2.5-pro">Gemini 2.5 Pro (Thông minh hơn - Tốc độ chậm hơn)</option>
@@ -1009,12 +1046,12 @@ function renderAdminScenarioSection(state: AppState) {
         </div>
 
         <div class="form-group" style="display: flex; flex-direction: column; gap: 8px;">
-          <label style="font-size: 13px; color: var(--text-secondary); font-weight: 500;">Tệp video/audio cuộc họp (MP4, MOV, WebM, MP3, WAV, M4A, AAC hoặc OGG; tối đa 250 MB):</label>
+          <label for="admin-video-path-input" style="font-size: 13px; color: var(--text-secondary); font-weight: 500;">Tệp video/audio cuộc họp (MP4, MOV, WebM, MP3, WAV, M4A, AAC hoặc OGG; tối đa 250 MB):</label>
           <input id="admin-video-path-input" type="file" accept="audio/mpeg,audio/wav,audio/x-wav,audio/mp4,audio/aac,audio/ogg,audio/webm,video/mp4,video/webm,video/quicktime" style="background: var(--surface-raised); color: var(--text-primary); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; font-size: 13px; outline: none; width: 100%;" />
         </div>
 
         <div class="form-group" style="display: flex; flex-direction: column; gap: 8px;">
-          <label style="font-size: 13px; color: var(--text-secondary); font-weight: 500;">Mô hình AI xử lý:</label>
+          <label for="admin-video-model-select" style="font-size: 13px; color: var(--text-secondary); font-weight: 500;">Mô hình AI xử lý:</label>
           <select id="admin-video-model-select" style="background: var(--surface-raised); color: var(--text-primary); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; font-size: 13px; cursor: pointer; outline: none; width: 100%;">
             <option value="gemini-2.5-flash">Gemini 2.5 Flash (Khuyên dùng - Multimodal)</option>
             <option value="gemini-2.5-pro">Gemini 2.5 Pro (Multimodal Pro)</option>
