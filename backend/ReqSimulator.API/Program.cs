@@ -193,6 +193,7 @@ builder.Services.AddAuthorization();
 // ===== Services (DI) =====
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<ScenarioVersionPublisher>();
+builder.Services.AddSingleton<IR2ObjectStorage, R2ObjectStorage>();
 var aiServiceBaseUrl = GetRequiredConfig(builder.Configuration, "AiService:BaseUrl");
 var aiServiceInternalKey = GetRequiredConfig(builder.Configuration, "AiService:InternalKey");
 if (Encoding.UTF8.GetByteCount(aiServiceInternalKey) < 32)

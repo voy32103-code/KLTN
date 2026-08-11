@@ -1,0 +1,11 @@
+<!doctype html>
+<html lang="en">
+  <head><meta charset="utf-8"><title>ReqSimulator SPA fixture</title></head>
+  <body><main id="app">Loading requirements…</main>
+    <script>
+      fetch('/requirements.json').then(response => response.json()).then(data => {
+        document.querySelector('#app').textContent = data.requirement
+      })
+    </script>
+  </body>
+</html>

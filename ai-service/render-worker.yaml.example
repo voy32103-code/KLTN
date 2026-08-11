@@ -1,0 +1,16 @@
+services:
+  - type: worker
+    name: reqsimulator-ingestion-worker
+    env: docker
+    dockerContext: ./ai-service
+    dockerfilePath: ./ai-service/Dockerfile
+    dockerCommand: python -m app.ingestion_worker
+    envVars:
+      - key: INGESTION_BACKEND_URL
+        sync: false
+      - key: INGESTION_WORKER_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: AI_SERVICE_INTERNAL_KEY
+        sync: false

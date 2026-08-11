@@ -264,6 +264,13 @@ export type ScenarioPreviewResponse = {
   message: string
   scenario: ScenarioDraft
 }
+export type IngestionJob = {
+  jobId: string
+  status: 'AwaitingUpload' | 'Queued' | 'Processing' | 'AwaitingReview' | 'Failed'
+  errorCode?: string | null
+  attempts: number
+  draft?: ScenarioDraft | null
+}
 export type AdminState = {
   activeTab: 'overview' | 'users' | 'scenarios'
   overview: AdminOverview | null
@@ -279,6 +286,7 @@ export type AdminState = {
   isCreatingUser: boolean
   scenarioDraft: ScenarioDraft | null
   scenarioDraftSource: string | null
+  ingestionJob: IngestionJob | null
   feedbackExperiment: {
     variants: Array<{
       variant: string

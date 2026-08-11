@@ -8,7 +8,7 @@ namespace ReqSimulator.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Roles = "Lecturer,Admin")]
+[Authorize(Roles = "Admin")]
 [EnableRateLimiting("admin_ingestion")]
 public class AdminScenariosController : ControllerBase
 {
@@ -37,6 +37,7 @@ public class AdminScenariosController : ControllerBase
         _logger = logger;
     }
 
+    [NonAction]
     [HttpPost("crawl/preview")]
     public async Task<IActionResult> PreviewCrawlScenario([FromBody] CrawlRequestDto dto)
     {
@@ -57,6 +58,7 @@ public class AdminScenariosController : ControllerBase
         });
     }
 
+    [NonAction]
     [HttpPost("crawl/preview-multiple")]
     public async Task<IActionResult> PreviewMultipleSources(
         [FromBody] MultiSourceCrawlRequestDto dto)
@@ -103,6 +105,7 @@ public class AdminScenariosController : ControllerBase
         });
     }
 
+    [NonAction]
     [HttpPost("upload-video/preview")]
     public async Task<IActionResult> PreviewVideoScenario([FromBody] VideoRequestDto dto)
     {
@@ -158,6 +161,7 @@ public class AdminScenariosController : ControllerBase
                 new { message = "Could not publish the scenario." });
         }
     }
+    [NonAction]
     [HttpPost("crawl")]
     public async Task<IActionResult> CrawlScenario(
         [FromBody] CrawlRequestDto dto,
@@ -201,6 +205,7 @@ public class AdminScenariosController : ControllerBase
         }
     }
 
+    [NonAction]
     [HttpPost("upload-video")]
     public async Task<IActionResult> UploadVideoScenario(
         [FromBody] VideoRequestDto dto,

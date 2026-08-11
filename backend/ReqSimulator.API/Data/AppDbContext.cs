@@ -23,6 +23,8 @@ public class AppDbContext : DbContext
     public DbSet<RequirementMatch> RequirementMatches => Set<RequirementMatch>();
     public DbSet<LecturerOverride> LecturerOverrides => Set<LecturerOverride>();
     public DbSet<FeedbackSurveyResponse> FeedbackSurveyResponses => Set<FeedbackSurveyResponse>();
+    public DbSet<SourceArtifact> SourceArtifacts => Set<SourceArtifact>();
+    public DbSet<IngestionJob> IngestionJobs => Set<IngestionJob>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -45,6 +47,8 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<RequirementMatch>().ToTable("requirement_matches");
         modelBuilder.Entity<LecturerOverride>().ToTable("lecturer_overrides");
         modelBuilder.Entity<FeedbackSurveyResponse>().ToTable("feedback_survey_responses");
+        modelBuilder.Entity<SourceArtifact>().ToTable("source_artifacts");
+        modelBuilder.Entity<IngestionJob>().ToTable("ingestion_jobs");
 
         modelBuilder.Entity<User>()
             .Property(u => u.Role)
@@ -130,6 +134,20 @@ public class AppDbContext : DbContext
             .HasIndex(item => item.SessionId)
             .IsUnique()
             .HasDatabaseName("uq_feedback_survey_session");
+        modelBuilder.Entity<SourceArtifact>()
+            .Property(item => item.Kind)
+            .HasConversion<string>()
+            .HasMaxLength(16);
+        modelBuilder.Entity<IngestionJob>()
+            .Property(item => item.SourceKind)
+            .HasConversion<string>()
+            .HasMaxLength(16);
+        modelBuilder.Entity<IngestionJob>()
+            .HasIndex(item => new { item.Status, item.AvailableAt })
+            .HasDatabaseName("idx_ingestion_jobs_claim");
+        modelBuilder.Entity<IngestionJob>()
+            .HasIndex(item => item.SourceArtifactId)
+            .HasDatabaseName("idx_ingestion_jobs_artifact");
     }
 
     private static string ToSnakeCase(string name)
