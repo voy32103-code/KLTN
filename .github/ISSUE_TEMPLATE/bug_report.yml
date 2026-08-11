@@ -1,0 +1,60 @@
+name: Bug report
+description: Report a reproducible problem in ReqSimulator.
+title: "bug: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting a problem. Do not include passwords, API keys, database URLs, or unredacted personal data.
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      description: Release tag, deployed URL, or commit SHA where you observed the issue.
+      placeholder: v0.1.0 or abc1234
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Affected area
+      options:
+        - Frontend
+        - API
+        - AI service
+        - Knowledge ingestion
+        - Database or migration
+        - Documentation
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. ...
+        2. ...
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior and redacted logs
+      description: Include error messages, screenshots, and network status if useful. Remove secrets first.
+    validations:
+      required: true
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety check
+      options:
+        - label: I removed credentials, personal data, and private source material from this report.
+          required: true

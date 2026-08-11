@@ -3,9 +3,14 @@ import AxeBuilder from '@axe-core/playwright'
 import { installAdminApiMock } from './helpers/admin-mock.mjs'
 
 test('admin dashboard has no WCAG A/AA violations in the tested screen', async ({ page }) => {
+  // Prevent a transient fade-in from lowering the effective contrast during the audit.
+  await page.emulateMedia({ reducedMotion: 'reduce' })
   await installAdminApiMock(page)
   await page.goto('/')
   await expect(page.locator('.admin-header h2')).toBeVisible()
+  // The dashboard initially renders a disabled loading state while its data is
+  // requested. Audit the stable, usable screen rather than that transient state.
+  await expect(page.locator('#admin-tab-overview')).toBeEnabled()
 
   const results = await new AxeBuilder({ page })
     .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
