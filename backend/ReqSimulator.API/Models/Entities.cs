@@ -46,10 +46,15 @@ public class Scenario
     [MaxLength(64)] public string? ConfigHash { get; set; }
     public string? SerializedConfig { get; set; }
     [Column(TypeName = "jsonb")] public string SourceUrlsData { get; set; } = "[]";
+    public Guid? ReviewedByUserId { get; set; }
+    public DateTime? ReviewedAt { get; set; }
+    [MaxLength(1000)] public string? ReviewNotes { get; set; }
 
     public ICollection<Stakeholder> Stakeholders { get; set; } = [];
     public ICollection<Persona> Personas { get; set; } = [];
     public ICollection<HiddenRequirement> HiddenRequirements { get; set; } = [];
+    public ICollection<ScenarioReviewAudit> ReviewAudits { get; set; } = [];
+    [ForeignKey(nameof(ReviewedByUserId))] public User? ReviewedByUser { get; set; }
 }
 
 /// <summary>Private R2 object used as an ingestion source. It is never exposed as a public URL.</summary>
@@ -113,6 +118,7 @@ public class Persona
     [Key] public Guid Id { get; set; }
     public Guid ScenarioId { get; set; }
     public Guid? StakeholderId { get; set; }
+    public Guid? TemplateId { get; set; }
     [MaxLength(100)] public string Name { get; set; } = "";
     [MaxLength(100)] public string? Label { get; set; }
     [MaxLength(100)] public string? RoleTitle { get; set; }
@@ -129,6 +135,43 @@ public class Persona
 
     [ForeignKey(nameof(ScenarioId))] public Scenario Scenario { get; set; } = null!;
     [ForeignKey(nameof(StakeholderId))] public Stakeholder? Stakeholder { get; set; }
+    [ForeignKey(nameof(TemplateId))] public PersonaTemplate? Template { get; set; }
+}
+
+/// <summary>
+/// Reusable profile used to create scenario-specific persona snapshots. Editing a
+/// template never mutates personas already used by a student session.
+/// </summary>
+public class PersonaTemplate
+{
+    [Key] public Guid Id { get; set; }
+    [MaxLength(80)] public string TemplateKey { get; set; } = "";
+    [MaxLength(100)] public string Label { get; set; } = "";
+    [Column(TypeName = "jsonb")] public string PersonalityTraits { get; set; } = "{}";
+    [MaxLength(50)] public string CommunicationStyle { get; set; } = "collaborative";
+    [MaxLength(50)] public string KnowledgeLevel { get; set; } = "medium";
+    public PersonaDifficulty Difficulty { get; set; } = PersonaDifficulty.Medium;
+    [MaxLength(50)] public string InitialMood { get; set; } = "neutral";
+    public decimal InitialPatience { get; set; } = 1.00m;
+    public bool IsActive { get; set; } = true;
+    public bool IsSystemDefault { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+}
+
+/// <summary>Immutable evidence that an administrator reviewed a generated scenario before publication.</summary>
+public class ScenarioReviewAudit
+{
+    [Key] public Guid Id { get; set; }
+    public Guid ScenarioId { get; set; }
+    public Guid ReviewerId { get; set; }
+    [MaxLength(1000)] public string? Notes { get; set; }
+    [Column(TypeName = "jsonb")] public string SourceUrlsData { get; set; } = "[]";
+    public int RequirementCount { get; set; }
+    public DateTime ReviewedAt { get; set; } = DateTime.UtcNow;
+
+    [ForeignKey(nameof(ScenarioId))] public Scenario Scenario { get; set; } = null!;
+    [ForeignKey(nameof(ReviewerId))] public User Reviewer { get; set; } = null!;
 }
 
 /// <summary>Ground-truth requirement (ẩn với student, dùng để đánh giá coverage)</summary>

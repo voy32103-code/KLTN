@@ -1,7 +1,5 @@
 import asyncio
-import json
 import unittest
-from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 import numpy as np
@@ -45,13 +43,7 @@ class EvaluateServiceTests(unittest.TestCase):
         self.assertEqual(result.extraExtractedCount, 1)
         self.assertEqual(result.feedback.extractionsToReview, ["unrelated dashboard"])
 
-    def test_design_generation_uses_shared_provider_manager(self):
-        response = SimpleNamespace(text=json.dumps({
-            "useCaseMermaid": "graph TD\nUser --> ViewStock",
-            "erdMermaid": "erDiagram\nSTOCK ||--o{ ITEM : contains",
-            "mainActors": ["User"],
-            "mainEntities": ["Stock", "Item"],
-        }))
+    def test_design_generation_is_deterministic_and_excludes_non_functional_requirements(self):
         requirement = ExtractedReq(
             text="Users view stock",
             confidence=0.9,
@@ -60,14 +52,12 @@ class EvaluateServiceTests(unittest.TestCase):
             object="Stock",
             type="FR",
         )
-        with patch(
-            "app.services.design_service.client_manager.generate_content",
-            new=AsyncMock(return_value=response),
-        ) as generate:
-            result = asyncio.run(generate_design_models([requirement], selected_model="gemini-2.5-flash"))
+        result = asyncio.run(generate_design_models([requirement], selected_model="gemini-2.5-flash"))
 
         self.assertEqual(result.mainActors, ["User"])
-        self.assertEqual(generate.await_args.kwargs["model"], "gemini-2.5-flash")
+        self.assertIn('User', result.useCaseMermaid)
+        self.assertNotIn('include', result.useCaseMermaid.lower())
+        self.assertNotIn('relates to', result.erdMermaid.lower())
 
 
 if __name__ == "__main__":

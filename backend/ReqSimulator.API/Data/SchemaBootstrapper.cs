@@ -233,6 +233,7 @@ public static class SchemaBootstrapper
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
         await IngestionSchemaMigration.ApplyAsync(db);
+        await PipelineEnhancementSchemaMigration.ApplyAsync(db);
         await db.Database.ExecuteSqlRawAsync(AddColumnsSql);
         await db.Database.ExecuteSqlRawAsync(CreateIndexSql);
         await db.Database.ExecuteSqlRawAsync(UpdateSessionsSql);

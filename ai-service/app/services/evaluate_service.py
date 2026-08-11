@@ -138,7 +138,11 @@ async def evaluate(req: EvaluateRequest):
                     reason=explain_match(hr.text, None, 0.0, "missed"),
                 ))
         elif use_aaoc:
-            assignments = assign_weighted_one_to_one(req.extracted, req.hiddenRequirements)
+            assignments = assign_weighted_one_to_one(
+                req.extracted,
+                req.hiddenRequirements,
+                req.normalizationGlossary,
+            )
             for hidden_index, hidden in enumerate(req.hiddenRequirements):
                 assignment = assignments.get(hidden_index)
                 if assignment is None:

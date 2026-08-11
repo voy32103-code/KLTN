@@ -110,7 +110,11 @@ public record AiChatResponse(
     string? DetectedTopic = null,
     string? QuestionQuality = null);
 
-public record AiExtractRequest(string SessionId, List<ChatMessage> History, string? SelectedModel);
+public record AiExtractRequest(
+    string SessionId,
+    List<ChatMessage> History,
+    string? SelectedModel,
+    Dictionary<string, Dictionary<string, string>>? NormalizationGlossary = null);
 public record AiExtractResponse(
     List<ExtractedReq> Requirements,
     bool IsFallback = false,
@@ -121,7 +125,8 @@ public record AiEvaluateRequest(
     List<HiddenReq> HiddenRequirements,
     string? SelectedModel,
     string? ScenarioDescription = null,
-    string FeedbackVariant = "A");
+    string FeedbackVariant = "A",
+    Dictionary<string, Dictionary<string, string>>? NormalizationGlossary = null);
 public record AiEvaluateResponse(
     decimal CoverageScore,
     List<ReqMatch> Matches,
@@ -155,7 +160,10 @@ public record ScenarioConfigJson(
     [property: JsonPropertyName("question_type_gate_map")] Dictionary<string, List<int>> QuestionTypeGateMap,
     [property: JsonPropertyName("max_new_reveals_per_turn")] int MaxNewRevealsPerTurn,
     [property: JsonPropertyName("requirements")] List<ScenarioRequirementRuleJson> Requirements,
-    [property: JsonPropertyName("source_urls")] List<string>? SourceUrls = null);
+    [property: JsonPropertyName("source_urls")] List<string>? SourceUrls = null,
+    [property: JsonPropertyName("persona_template_keys")] List<string>? PersonaTemplateKeys = null,
+    [property: JsonPropertyName("normalization_glossary")] Dictionary<string, Dictionary<string, string>>? NormalizationGlossary = null,
+    [property: JsonPropertyName("review_notes")] string? ReviewNotes = null);
 
 public record ChatMessage(string Role, string Content, DateTime Timestamp);
 public record PersonaProfile(string Name, string RoleTitle, string Traits, string Style, string Mood, decimal Patience);

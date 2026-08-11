@@ -258,6 +258,24 @@ export type ScenarioDraft = {
   max_new_reveals_per_turn: number
   requirements: ScenarioRequirementDraft[]
   source_urls?: string[]
+  persona_template_keys?: string[]
+  normalization_glossary?: Record<string, Record<string, string>>
+  review_notes?: string | null
+}
+
+export type PersonaTemplate = {
+  id: string
+  templateKey: string
+  label: string
+  personalityTraits: string
+  communicationStyle: string
+  knowledgeLevel: string
+  difficulty: 'Easy' | 'Medium' | 'Hard'
+  initialMood: string
+  initialPatience: number
+  isActive: boolean
+  isSystemDefault: boolean
+  updatedAt: string
 }
 
 export type ScenarioPreviewResponse = {
@@ -293,6 +311,7 @@ export type AdminState = {
   scenarioDraftSource: string | null
   ingestionJob: IngestionJob | null
   ingestionJobs: IngestionJob[]
+  personaTemplates: PersonaTemplate[]
   feedbackExperiment: {
     variants: Array<{
       variant: string

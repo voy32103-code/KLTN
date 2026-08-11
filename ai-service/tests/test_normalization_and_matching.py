@@ -6,6 +6,7 @@ import numpy as np
 from app.models.schemas import StructuredRequirement
 from app.services.extract_service import _parse_structured_extraction_json
 from app.services.matching_service import assign_one_to_one
+from app.services.aaoc_matching_service import score_pair
 from app.services.normalization_service import normalize_and_deduplicate
 
 
@@ -44,6 +45,47 @@ class NormalizationTests(unittest.TestCase):
 
         with self.assertRaises(Exception):
             asyncio.run(_parse_structured_extraction_json(invalid))
+
+    def test_scenario_glossary_overrides_shared_aliases_and_is_used_for_deduplication(self):
+        requirement = StructuredRequirement(
+            id="REQ003",
+            actor="Member",
+            action="Reserve",
+            object="Desk pass",
+            condition="At library branch A",
+            type="FR",
+            confidence=0.9,
+        )
+        glossary = {
+            "actor": {"member": "library member"},
+            "action": {"reserve": "book"},
+            "object": {"desk pass": "study desk"},
+            "condition": {"at library branch a": "branch a"},
+        }
+        normalized = normalize_and_deduplicate([requirement], glossary)
+        self.assertEqual(
+            normalized[0].canonicalKey,
+            "library member|book|study desk|branch a",
+        )
+
+    def test_scenario_glossary_is_used_for_aaoc_matching(self):
+        extracted = type("Requirement", (), {
+            "type": "FR", "actor": "Member", "action": "Reserve",
+            "object": "Desk pass", "condition": "At library branch A",
+        })()
+        hidden = type("Requirement", (), {
+            "type": "FR", "actor": "Library member", "action": "Book",
+            "object": "Study desk", "condition": "Branch A",
+        })()
+        glossary = {
+            "actor": {"member": "library member"},
+            "action": {"reserve": "book"},
+            "object": {"desk pass": "study desk"},
+            "condition": {"at library branch a": "branch a"},
+        }
+        score = score_pair(extracted, hidden, glossary)
+        self.assertIsNotNone(score)
+        self.assertEqual(score.score, 1.0)
 
 
 class OneToOneMatchingTests(unittest.TestCase):

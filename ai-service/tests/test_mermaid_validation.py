@@ -9,6 +9,10 @@ class MermaidValidationTests(unittest.TestCase):
         errors = validate_mermaid("graph TD\n%%{init: {}}%%\nA-->B", "flowchart")
         self.assertTrue(errors)
 
+    def test_rejects_unsupported_use_case_include_or_extend(self):
+        errors = validate_mermaid("graph LR\nA --> include B", "flowchart")
+        self.assertTrue(errors)
+
     def test_repairs_invalid_generated_diagrams(self):
         result = DesignSuggestionsData(
             useCaseMermaid="not mermaid",

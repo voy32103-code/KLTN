@@ -866,8 +866,14 @@ public class SessionsController : ControllerBase
                 _logger.LogWarning(exception, "Stored persona state could not be parsed; using the default model.");
             }
 
+            var serializedConfig = await _db.Scenarios
+                .Where(item => item.Id == session.ScenarioId)
+                .Select(item => item.SerializedConfig)
+                .FirstOrDefaultAsync();
+            var normalizationGlossary = TryReadNormalizationGlossary(serializedConfig);
+
             var extractResult = await _ai.ExtractRequirements(
-                new AiExtractRequest(sessionId.ToString(), history, selectedModel));
+                new AiExtractRequest(sessionId.ToString(), history, selectedModel, normalizationGlossary));
 
             var hiddenRequirements = await _db.HiddenRequirements
                 .Where(r => r.ScenarioId == session.ScenarioId)
@@ -888,7 +894,8 @@ public class SessionsController : ControllerBase
                 selectedModel,
                 await _db.Scenarios.Where(s => s.Id == session.ScenarioId)
                     .Select(s => s.Description).FirstOrDefaultAsync(),
-                FeedbackVariantFor(sessionId)
+                FeedbackVariantFor(sessionId),
+                normalizationGlossary
             ));
 
             if (extractResult.IsFallback || evaluateResult.IsFallback)
@@ -1222,6 +1229,23 @@ public class SessionsController : ControllerBase
             Matches = matches ?? [],
             ScoringPolicy = scoringPolicy
         };
+
+    private Dictionary<string, Dictionary<string, string>>? TryReadNormalizationGlossary(string? serializedConfig)
+    {
+        if (string.IsNullOrWhiteSpace(serializedConfig)) return null;
+        try
+        {
+            var config = JsonSerializer.Deserialize<ScenarioConfigJson>(serializedConfig);
+            return config?.NormalizationGlossary is { Count: > 0 }
+                ? config.NormalizationGlossary
+                : null;
+        }
+        catch (JsonException exception)
+        {
+            _logger.LogWarning(exception, "Scenario configuration could not be read for glossary normalization.");
+            return null;
+        }
+    }
 
     private static string NormalizeRequirementText(string? text)
     {
