@@ -8,40 +8,40 @@
   --transition-smooth: cubic-bezier(0.16, 1, 0.3, 1);
   --transition-fast: cubic-bezier(0.4, 0, 0.2, 1);
 
-  /* Claude-inspired Warm Glassmorphic Base & Terracotta Accents */
-  --bg: #FBF9F6;
-  --surface: rgba(244, 240, 234, 0.85);
-  --surface-raised: rgba(255, 255, 255, 0.95);
-  --surface-muted: rgba(217, 119, 87, 0.03);
-  --surface-glass: rgba(244, 240, 234, 0.65);
+  /* Claude UI Base Variables */
+  --bg: #F3F1ED;
+  --surface: #FFFFFF;
+  --surface-raised: #FFFFFF;
+  --surface-muted: #F8F6F2;
+  --surface-glass: #FFFFFF;
   
-  --text: #383530;
+  --text: #1A1A1A;
   --text-primary: #191816;
-  --text-secondary: #5C5850;
-  --muted: #858076;
-  --muted-strong: #4A4742;
+  --text-secondary: #5F5F5F;
+  --muted: #808080;
+  --muted-strong: #4A4A4A;
   
-  --line: rgba(217, 119, 87, 0.1);
-  --line-subtle: rgba(217, 119, 87, 0.06);
-  --line-strong: rgba(217, 119, 87, 0.18);
+  --line: #E5E0D8;
+  --line-subtle: rgba(0, 0, 0, 0.06);
+  --line-strong: rgba(0, 0, 0, 0.12);
 
-  /* Claude Terracotta Accent & Muted Semantic Colors */
+  /* Terracotta & Semantic Accents */
   --accent-indigo: #D97757;
   --accent-indigo-glow: rgba(217, 119, 87, 0.15);
-  --accent-emerald: #3E8E7E;
-  --accent-emerald-glow: rgba(62, 142, 126, 0.15);
-  --accent-amber: #D99857;
-  --accent-amber-glow: rgba(217, 152, 87, 0.15);
-  --accent-rose: #C95A64;
+  --accent-emerald: #10B981;
+  --accent-emerald-glow: rgba(16, 185, 129, 0.15);
+  --accent-amber: #F59E0B;
+  --accent-amber-glow: rgba(245, 158, 11, 0.15);
+  --accent-rose: #EF4444;
 
-  --pastel-red-bg: rgba(201, 90, 100, 0.08);
-  --pastel-red-text: #C95A64;
-  --pastel-blue-bg: rgba(217, 119, 87, 0.08);
-  --pastel-blue-text: #D97757;
-  --pastel-green-bg: rgba(62, 142, 126, 0.08);
-  --pastel-green-text: #3E8E7E;
-  --pastel-yellow-bg: rgba(217, 152, 87, 0.08);
-  --pastel-yellow-text: #D99857;
+  --pastel-red-bg: rgba(239, 68, 68, 0.08);
+  --pastel-red-text: #EF4444;
+  --pastel-blue-bg: rgba(56, 189, 248, 0.08);
+  --pastel-blue-text: #38BDF8;
+  --pastel-green-bg: rgba(16, 185, 129, 0.08);
+  --pastel-green-text: #10B981;
+  --pastel-yellow-bg: rgba(245, 158, 11, 0.08);
+  --pastel-yellow-text: #F59E0B;
 
   --radius: 12px;
   --radius-xl: 16px;
@@ -49,8 +49,8 @@
   --radius-md: 8px;
   --radius-sm: 4px;
   
-  --shadow-subtle: 0 8px 30px rgba(217, 119, 87, 0.04), 0 1px 2px rgba(217, 119, 87, 0.02);
-  --shadow-glow: 0 0 28px rgba(217, 119, 87, 0.12);
+  --shadow-subtle: 0 2px 12px rgba(0, 0, 0, 0.04);
+  --shadow-glow: 0 4px 16px rgba(0, 0, 0, 0.08);
 }
 
 * {
@@ -58,7 +58,7 @@
 }
 
 html {
-  background: radial-gradient(at 0% 0%, rgba(217, 119, 87, 0.08) 0px, transparent 50%), radial-gradient(at 50% 0%, rgba(62, 142, 126, 0.04) 0px, transparent 50%), radial-gradient(at 100% 0%, rgba(217, 152, 87, 0.04) 0px, transparent 50%), var(--bg);
+  background: var(--bg);
   color: var(--text);
   font-family: var(--font-sans);
   font-size: 16px;
@@ -126,63 +126,7 @@ p {
   transform: translateY(0);
 }
 
-/* Liquid Glass Effect */
-.liquid-glass {
-  background: rgba(255, 255, 255, 0.65);
-  background-blend-mode: luminosity;
-  -webkit-backdrop-filter: blur(20px);
-  backdrop-filter: blur(20px);
-  border: none;
-  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
-  position: relative;
-  overflow: hidden;
-}
 
-.liquid-glass::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  padding: 1.2px;
-  background: linear-gradient(180deg,
-    rgba(255,255,255,0.65) 0%, rgba(255,255,255,0.3) 20%,
-    rgba(255,255,255,0) 40%, rgba(255,255,255,0) 60%,
-    rgba(255,255,255,0.3) 80%, rgba(255,255,255,0.65) 100%);
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  pointer-events: none;
-}
-
-/* macOS Faux Chrome */
-.faux-chrome {
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--surface);
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-.chrome-bar {
-  height: 36px;
-  padding: 0 16px;
-  background: var(--surface-muted);
-  border-bottom: 1px solid var(--line);
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
-}
-
-.chrome-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 9999px;
-  background: #EAEAEA;
-  border: 1px solid rgba(0,0,0,0.03);
-}
 
 /* Structural Components */
 .shell {
@@ -195,7 +139,7 @@ p {
   min-height: 72px;
   padding: 16px 32px;
   border-bottom: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.8);
+  background: rgba(243, 241, 237, 0.9);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -446,36 +390,36 @@ textarea:focus {
   background: var(--surface);
 }
 
-/* High-Agency Primary & Ghost Buttons */
+/* Claude Primary & Ghost Buttons */
 .primary-button,
 .ghost-button,
 .danger-button {
   min-height: 42px;
   border-radius: var(--radius-md);
   border: 1px solid transparent;
-  padding: 0 20px;
+  padding: 0 16px;
   font-family: var(--font-body);
-  font-weight: 600;
+  font-weight: 500;
   font-size: 14px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   white-space: nowrap;
-  transition: all 0.25s var(--transition-smooth);
+  transition: all 0.2s var(--transition-smooth);
   cursor: pointer;
   outline: none;
 }
 
 .primary-button {
   color: #FFFFFF;
-  background: linear-gradient(135deg, var(--accent-indigo), #4F46E5);
-  box-shadow: 0 4px 16px var(--accent-indigo-glow);
+  background: #212121;
+  box-shadow: var(--shadow-subtle);
 }
 
 .primary-button:hover:not(:disabled) {
-  background: linear-gradient(135deg, #4F46E5, #4338CA);
-  box-shadow: 0 6px 24px rgba(99, 102, 241, 0.4);
+  background: #333333;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   transform: translateY(-1px);
 }
 
@@ -485,17 +429,12 @@ textarea:focus {
 
 .ghost-button {
   color: var(--text-primary);
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid var(--line-subtle);
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
+  background: var(--surface);
+  border: 1px solid var(--line);
 }
 
 .ghost-button:hover:not(:disabled) {
-  background: rgba(99, 102, 241, 0.08);
-  border-color: var(--accent-indigo);
-  color: var(--accent-indigo);
-  transform: translateY(-1px);
+  background: var(--surface-muted);
 }
 
 .ghost-button:active:not(:disabled) {
@@ -505,14 +444,13 @@ textarea:focus {
 .danger-button {
   width: 100%;
   color: var(--accent-rose);
-  background: rgba(244, 63, 94, 0.12);
-  border: 1px solid rgba(244, 63, 94, 0.3);
+  background: rgba(244, 63, 94, 0.05);
+  border: 1px solid rgba(244, 63, 94, 0.2);
 }
 
 .danger-button:hover:not(:disabled) {
-  background: rgba(244, 63, 94, 0.22);
+  background: rgba(244, 63, 94, 0.1);
   border-color: var(--accent-rose);
-  transform: translateY(-1px);
 }
 
 .danger-button:active:not(:disabled) {
@@ -634,10 +572,8 @@ textarea:focus {
   background: var(--surface-muted);
   color: var(--muted-strong);
   padding: 4px 10px;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
+  font-size: 12px;
+  font-weight: 500;
 }
 
 .override-badge {
@@ -834,10 +770,8 @@ textarea:focus {
 }
 
 .session-status span {
-  font-weight: 700;
-  text-transform: uppercase;
-  font-size: 12px;
-  letter-spacing: 0.05em;
+  font-weight: 600;
+  font-size: 13px;
 }
 
 .session-status strong {
@@ -913,13 +847,13 @@ dd {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 28px;
+  gap: 32px;
   background: transparent;
 }
 
 .message {
-  max-width: min(720px, 90%);
-  padding: 8px 0px;
+  max-width: min(720px, 95%);
+  padding: 0;
   background: transparent;
   border: none;
   box-shadow: none;
@@ -930,20 +864,18 @@ dd {
   justify-content: space-between;
   gap: 12px;
   align-items: center;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 
 .message-meta span {
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
 }
 
 .message-meta small {
   color: var(--muted);
-  font-size: 11px;
-  font-family: var(--font-mono);
+  font-size: 12px;
 }
 
 .message p {
@@ -955,15 +887,14 @@ dd {
 
 .message.student {
   align-self: flex-end;
-  background: rgba(217, 119, 87, 0.07);
-  border: 1px solid rgba(217, 119, 87, 0.12);
-  border-radius: 18px 18px 4px 18px;
-  padding: 14px 20px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.01);
+  background: #EFECE6;
+  border: none;
+  border-radius: 18px;
+  padding: 16px 20px;
 }
 
 .message.student .message-meta span {
-  color: var(--text-primary);
+  display: none;
 }
 
 /* Persona conversation style: Serif for Stakeholder text */
@@ -972,11 +903,11 @@ dd {
   background: transparent;
   border: none;
   box-shadow: none;
-  padding: 8px 0px;
+  padding: 0;
 }
 
 .message.stakeholder .message-meta span {
-  color: var(--pastel-blue-text);
+  color: var(--text-primary);
 }
 
 .message.stakeholder p {
@@ -987,35 +918,46 @@ dd {
 }
 
 .message.pending {
-  border-style: dashed;
-  opacity: 0.7;
+  opacity: 0.6;
 }
 
 .question-chip {
   width: fit-content;
-  border: 1px solid #FFEBAA;
+  border: 1px solid var(--line);
   border-radius: 9999px;
-  background: var(--pastel-yellow-bg);
-  color: var(--pastel-yellow-text);
-  padding: 2px 8px;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-  margin-bottom: 8px;
+  background: var(--surface);
+  color: var(--text-secondary);
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  margin-bottom: 12px;
 }
 
 .composer {
   border: 1px solid var(--line);
-  border-radius: var(--radius-xl);
-  padding: 16px;
+  border-radius: 24px;
+  padding: 12px 16px;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 100px;
-  gap: 16px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
   align-items: end;
-  background: var(--surface-raised);
+  background: var(--surface);
   margin: 0 24px 24px;
   box-shadow: var(--shadow-subtle);
+}
+
+.composer textarea {
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  padding: 8px 4px;
+  min-height: 44px;
+}
+
+.composer textarea:focus {
+  outline: none;
+  box-shadow: none;
+  border-color: transparent;
 }
 
 /* Keystroke shortcuts */
@@ -1055,10 +997,8 @@ kbd {
 
 .score-card small {
   color: var(--muted);
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .score-card.strong {
