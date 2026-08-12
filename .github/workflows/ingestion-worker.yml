@@ -1,0 +1,51 @@
+name: Ingestion worker
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 3 * * *'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ingestion-worker
+  cancel-in-progress: false
+
+jobs:
+  process-one-job:
+    name: Process one queued ingestion job
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: ai-service
+    env:
+      INGESTION_BACKEND_URL: ${{ secrets.INGESTION_BACKEND_URL }}
+      INGESTION_WORKER_KEY: ${{ secrets.INGESTION_WORKER_KEY }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      INGESTION_WORKER_RUN_ONCE: 'true'
+      CRAWLER_RENDER_ALL: 'true'
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: ai-service/requirements.txt
+
+      - name: Install application dependencies
+        run: pip install -r requirements.txt
+
+      - name: Install FFmpeg and Chromium
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes ffmpeg
+          python -m playwright install --with-deps chromium
+
+      - name: Process one queued job
+        run: python -m app.ingestion_worker

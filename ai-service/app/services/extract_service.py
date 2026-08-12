@@ -108,7 +108,10 @@ async def extract_requirements(req: ExtractRequest):
                 structured_requirements = await _parse_structured_extraction_json(
                     getattr(response, "text", "") or ""
                 )
-                normalized_requirements = normalize_and_deduplicate(structured_requirements)
+                normalized_requirements = normalize_and_deduplicate(
+                    structured_requirements,
+                    req.normalizationGlossary,
+                )
                 requirements = [
                     ExtractedReq(
                         text=requirement.canonicalText,

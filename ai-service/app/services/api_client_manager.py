@@ -122,15 +122,15 @@ class ApiClientManager:
                     json=payload
                 )
                 if response.status_code != 200:
-                    logger.error(f"Groq API Error {response.status_code}: {response.text}")
+                    logger.error("Groq API returned status %s.", response.status_code)
                     raise RuntimeError(f"Groq API returned error {response.status_code}")
                 
                 data = response.json()
                 text = data["choices"][0]["message"]["content"]
                 return GroqResponseShim(text=text.strip())
-            except Exception as e:
+            except Exception:
                 logger.exception("Failed to query Groq API")
-                raise e
+                raise
 
     async def _call_openai_compatible(
         self,
@@ -185,15 +185,15 @@ class ApiClientManager:
                     json=payload
                 )
                 if response.status_code != 200:
-                    logger.error(f"API Error {response.status_code}: {response.text}")
-                    raise RuntimeError(f"API returned error {response.status_code}: {response.text}")
+                    logger.error("OpenAI-compatible API returned status %s.", response.status_code)
+                    raise RuntimeError(f"API returned error {response.status_code}")
                 
                 data = response.json()
                 text = data["choices"][0]["message"]["content"]
                 return GroqResponseShim(text=text.strip())
-            except Exception as e:
+            except Exception:
                 logger.exception(f"Failed to query model {model} at {base_url}")
-                raise e
+                raise
 
     async def _call_deepseek(
         self,
@@ -406,11 +406,15 @@ class ApiClientManager:
                     word in err_str for word in ["429", "403", "quota", "rate limit", "exhausted", "resource_exhausted", "limit exceeded"]
                 )
                 
-                if is_quota_error:
-                    self.block_key(idx)
+                is_transient_error = any(
+                    word in err_str for word in ["408", "500", "502", "503", "504", "timeout", "timed out", "connection", "unavailable", "deadline"]
+                )
+
+                if is_quota_error or is_transient_error:
+                    self.block_key(idx, duration_seconds=120 if is_quota_error else 15)
                     attempts += 1
                     if attempts < max_attempts:
-                        logger.info(f"Retrying with the next Gemini API key (Attempt {attempts + 1}/{max_attempts})...")
+                        logger.info("Retrying with another Gemini API key (attempt %s/%s).", attempts + 1, max_attempts)
                         continue
                 
                 logger.error(f"Gemini API call failed: {e}. Fallback to Groq if possible.")
@@ -467,7 +471,7 @@ class ApiClientManager:
                     attempts += 1
                     if attempts < max_attempts:
                         continue
-                raise e
+                raise
                 
         raise RuntimeError("All Gemini API keys failed to generate embeddings.")
 

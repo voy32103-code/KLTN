@@ -71,11 +71,11 @@ function renderModelGroups(state: AppState) {
   ];
 
   const providers: Record<string, { label: string; color: string }> = {
-    gemini: { label: 'Google Gemini', color: '#38bdf8' },
-    deepseek: { label: 'DeepSeek', color: '#10b981' },
-    llama: { label: 'Meta Llama (Groq)', color: '#a855f7' },
-    mimo: { label: 'Mimo Cloud', color: '#f59e0b' },
-    openrouter: { label: 'OpenRouter', color: '#ec4899' }
+    gemini: { label: 'Google Gemini', color: 'var(--accent-emerald)' },
+    deepseek: { label: 'DeepSeek', color: 'var(--accent)' },
+    llama: { label: 'Meta Llama (Groq)', color: 'var(--accent-amber)' },
+    mimo: { label: 'Mimo Cloud', color: 'var(--pastel-yellow-text)' },
+    openrouter: { label: 'OpenRouter', color: 'var(--accent-rose)' }
   };
 
   const grouped: Record<string, typeof models> = {};
@@ -87,20 +87,20 @@ function renderModelGroups(state: AppState) {
   return Object.entries(grouped).map(([prov, items]) => {
     const info = providers[prov];
     return `
-      <div style="border-bottom: 1px solid rgba(255,255,255,0.03); padding-bottom: 6px; margin-bottom: 6px; display: flex; flex-direction: column; gap: 2px;">
-        <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; font-weight: 700; padding: 4px 8px; display: flex; align-items: center; gap: 6px;">
+      <div style="border-bottom: 1px solid var(--line-subtle); padding-bottom: 6px; margin-bottom: 6px; display: flex; flex-direction: column; gap: 2px;">
+        <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); font-weight: 700; padding: 4px 8px; display: flex; align-items: center; gap: 6px;">
           <span style="width: 5px; height: 5px; border-radius: 50%; background: ${info.color}; display: inline-block;"></span>
           ${info.label}
         </div>
         ${items.map(m => {
           const active = state.selectedModel === m.id;
           return `
-            <button class="dropdown-item-btn ${active ? 'active' : ''}" data-action="select-model" data-model="${m.id}" type="button">
+            <button class="dropdown-item-btn ${active ? 'active' : ''}" data-action="select-model" data-model="${m.id}" role="option" aria-selected="${active}" type="button">
               <span style="font-weight: 600; display: flex; align-items: center; gap: 6px; justify-content: space-between; width: 100%;">
                 ${m.name}
-                ${active ? '<span style="font-size: 11px; color: #38bdf8;">✓</span>' : ''}
+                ${active ? '<span style="font-size: 11px; color: var(--accent);">✓</span>' : ''}
               </span>
-              <span style="font-size: 10px; color: #64748b; font-weight: normal;">${m.desc}</span>
+              <span style="font-size: 10px; color: var(--muted); font-weight: normal;">${m.desc}</span>
             </button>
           `;
         }).join('')}
@@ -137,22 +137,22 @@ function renderTopbar(state: AppState) {
   const isAdmin = state.user?.role === 'Admin'
 
   return `
-    <header class="topbar" style="background: var(--surface-glass); backdrop-filter: blur(16px); border-bottom: 1px solid var(--line-subtle); padding: 14px 28px;">
+    <header class="topbar" style="background: var(--surface); border-bottom: 1px solid var(--line-subtle); padding: 14px 28px;">
       <div class="brand-block" style="display: flex; align-items: center; gap: 12px;">
-        <span class="brand-mark font-heading" aria-hidden="true" style="background: linear-gradient(135deg, var(--accent-indigo), #8B5CF6); color: #FFF; width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 18px; box-shadow: 0 0 16px var(--accent-indigo-glow);">R</span>
+        <span class="brand-mark font-heading" aria-hidden="true" style="background: var(--accent); color: #FFF; width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 18px;">R</span>
         <div>
           <p class="eyebrow" style="letter-spacing: 0.08em; font-size: 10px; font-weight: 800; color: var(--accent-indigo); text-transform: uppercase; margin: 0;">ReqSimulator • PRO AI</p>
-          <h1 style="font-size: 17px; font-family: var(--font-heading); font-weight: 700; color: #FFF; margin: 0;">
+          <h1 style="font-size: 17px; font-family: var(--font-heading); font-weight: 700; color: var(--text-primary); margin: 0;">
             Phòng Thực Hành Khai Thác Yêu Cầu
           </h1>
         </div>
       </div>
       <div class="topbar-actions" style="display: flex; align-items: center; gap: 12px;">
         <span class="view-pill" style="background: var(--surface-raised); border: 1px solid var(--line-subtle); color: var(--accent-indigo); font-weight: 600; font-size: 12px; padding: 4px 12px; border-radius: 20px;">${escapeHtml(viewLabels[state.view])}</span>
-        ${state.user?.email ? `<span class="user-pill" style="background: var(--surface-raised); border: 1px solid var(--line-subtle); color: #FFF; font-size: 12px; font-weight: 500; padding: 4px 14px; border-radius: 20px;">${escapeHtml(state.user.email)} <span style="color: var(--accent-emerald); font-weight: 700; margin-left: 4px;">(${escapeHtml(state.user.role ?? 'Student')})</span></span>` : ''}
+        ${state.user?.email ? `<span class="user-pill" style="background: var(--surface-raised); border: 1px solid var(--line-subtle); color: var(--text-primary); font-size: 12px; font-weight: 500; padding: 4px 14px; border-radius: 20px;">${escapeHtml(state.user.email)} <span style="color: var(--accent-emerald); font-weight: 700; margin-left: 4px;">(${escapeHtml(state.user.role ?? 'Student')})</span></span>` : ''}
         ${state.token && state.view !== 'scenarios' ? `<button class="ghost-button" data-action="open-student-lab" type="button" ${state.busy ? 'disabled' : ''}>Phòng thực hành</button>` : ''}
         ${canReview && state.view !== 'review' ? `<button class="ghost-button" data-action="open-review" type="button" ${state.busy ? 'disabled' : ''}>Review Giảng viên</button>` : ''}
-        ${isAdmin && state.view !== 'admin' ? `<button class="ghost-button" data-action="open-admin" type="button" ${state.busy ? 'disabled' : ''} style="border-color: #38bdf8; color: #38bdf8;">Admin Console</button>` : ''}
+        ${isAdmin && state.view !== 'admin' ? `<button class="ghost-button" data-action="open-admin" type="button" ${state.busy ? 'disabled' : ''} style="border-color: var(--accent-amber); color: var(--accent-amber);">Admin Console</button>` : ''}
         ${state.token ? `<button class="ghost-button" data-action="logout" type="button" ${state.busy ? 'disabled' : ''} style="color: var(--accent-rose); border-color: rgba(244,63,94,0.3);">Đăng xuất</button>` : ''}
       </div>
     </header>
@@ -160,7 +160,9 @@ function renderTopbar(state: AppState) {
 }
 
 function renderNotice(notice: Notice) {
-  return `<div class="notice ${notice.type}" role="status">${escapeHtml(notice.text)}</div>`
+  const role = notice.type === 'error' ? 'alert' : 'status'
+  const live = notice.type === 'error' ? 'assertive' : 'polite'
+  return `<div class="notice ${notice.type}" role="${role}" aria-live="${live}" aria-atomic="true">${escapeHtml(notice.text)}</div>`
 }
 
 function renderAuth(state: AppState) {
@@ -193,28 +195,28 @@ function renderAuth(state: AppState) {
         </div>
       </div>
       <div class="auth-form-wrapper">
-        <form class="auth-panel" id="auth-form">
+        <form class="auth-panel" id="auth-form" role="tabpanel" aria-labelledby="auth-tab-${isLogin ? 'login' : 'register'}">
           <div class="form-heading">
             <p class="section-kicker">${isLogin ? 'Đăng nhập' : 'Đăng ký'}</p>
             <h2>${isLogin ? 'Vào phòng thực hành' : 'Tạo tài khoản sinh viên'}</h2>
           </div>
-          <div class="tabs" role="tablist">
-            <button class="${isLogin ? 'active' : ''}" data-auth-mode="login" type="button">Đăng nhập</button>
-            <button class="${!isLogin ? 'active' : ''}" data-auth-mode="register" type="button">Tạo tài khoản</button>
+          <div class="tabs" role="tablist" aria-label="Đăng nhập hoặc tạo tài khoản">
+            <button id="auth-tab-login" class="${isLogin ? 'active' : ''}" data-auth-mode="login" role="tab" aria-selected="${isLogin}" aria-controls="auth-form" type="button">Đăng nhập</button>
+            <button id="auth-tab-register" class="${!isLogin ? 'active' : ''}" data-auth-mode="register" role="tab" aria-selected="${!isLogin}" aria-controls="auth-form" type="button">Tạo tài khoản</button>
           </div>
           ${isLogin ? '' : `
-            <label>
+            <label for="auth-name">
               Họ tên
-              <input name="name" autocomplete="name" required maxlength="100" />
+              <input id="auth-name" name="name" autocomplete="name" required maxlength="100" />
             </label>
           `}
-          <label>
+          <label for="auth-email">
             Email
-            <input name="email" type="email" autocomplete="email" required maxlength="255" />
+            <input id="auth-email" name="email" type="email" autocomplete="email" required maxlength="255" />
           </label>
-          <label>
+          <label for="auth-password">
             Mật khẩu
-            <input name="password" type="password" autocomplete="${isLogin ? 'current-password' : 'new-password'}" required minlength="${isLogin ? 1 : 12}" maxlength="128" />
+            <input id="auth-password" name="password" type="password" autocomplete="${isLogin ? 'current-password' : 'new-password'}" required minlength="${isLogin ? 1 : 12}" maxlength="128" />
           </label>
           <button class="primary-button" type="submit" ${state.busy ? 'disabled' : ''}>
             ${state.busy ? 'Đang xử lý...' : isLogin ? 'Vào hệ thống' : 'Tạo tài khoản'}
@@ -312,7 +314,7 @@ function renderScenarioDetail(scenario: ScenarioDetail, state: AppState) {
       <div style="display: flex; gap: var(--spacing-sm); align-items: center; flex-wrap: wrap; position: relative;">
         <!-- Custom Dropdown Container -->
         <div class="custom-dropdown">
-          <button  data-action="toggle-model-dropdown" type="button" style="display: flex; align-items: center; gap: 8px; padding: 0.625rem 1rem; border-radius: var(--radius-md); border: 1px solid var(--line); background: var(--surface); color: var(--text-primary); font-size: 0.875rem; cursor: pointer; outline: none; font-weight: 500;">
+          <button data-action="toggle-model-dropdown" type="button" aria-haspopup="listbox" aria-expanded="${state.modelDropdownOpen}" aria-controls="model-dropdown-menu" style="display: flex; align-items: center; gap: 8px; padding: 0.625rem 1rem; border-radius: var(--radius-md); border: 1px solid var(--line); background: var(--surface); color: var(--text-primary); font-size: 0.875rem; cursor: pointer; outline: none; font-weight: 500;">
             <span class="model-provider-badge ${getProviderClass(state.selectedModel)}"></span>
             <span>${getFriendlyModelName(state.selectedModel)}</span>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-left: 4px; transform: ${state.modelDropdownOpen ? 'rotate(180deg)' : 'rotate(0)'}; transition: transform 0.2s;"><polyline points="6 9 12 15 18 9"></polyline></svg>
@@ -320,7 +322,7 @@ function renderScenarioDetail(scenario: ScenarioDetail, state: AppState) {
           
           <!-- Dropdown menu -->
           ${state.modelDropdownOpen ? `
-            <div class="dropdown-menu glass-panel" style="position: absolute; bottom: 100%; right: 0; margin-bottom: 8px; width: 340px; max-height: 380px; overflow-y: auto; border: 1px solid var(--line); background: var(--surface); backdrop-filter: blur(20px); border-radius: var(--radius-lg); box-shadow: var(--shadow-subtle); z-index: 1000; padding: 8px; display: flex; flex-direction: column; gap: 4px;">
+            <div class="dropdown-menu glass-panel" id="model-dropdown-menu" role="listbox" aria-label="Chọn mô hình AI" style="position: absolute; bottom: 100%; right: 0; margin-bottom: 8px; width: 340px; max-height: 380px; overflow-y: auto; border: 1px solid var(--line); background: var(--surface-raised); border-radius: var(--radius-lg); box-shadow: var(--shadow-subtle); z-index: 1000; padding: 8px; display: flex; flex-direction: column; gap: 4px;">
               ${renderModelGroups(state)}
             </div>
           ` : ''}
@@ -427,18 +429,18 @@ function renderEndSessionModal(state: AppState) {
 
   return `
     <div class="modal-overlay" id="end-session-modal-overlay">
-      <div class="modal-card">
+      <div class="modal-card" id="end-session-modal" role="dialog" aria-modal="true" aria-labelledby="end-session-modal-title" aria-describedby="end-session-modal-description" tabindex="-1">
         <div class="modal-header">
           <div class="modal-icon">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
           </div>
           <div>
-            <h3 style="margin:0; font-size:18px; font-weight:700; color:#FFF; font-family: var(--font-heading);">Xác nhận kết thúc phỏng vấn</h3>
+            <h2 id="end-session-modal-title" style="margin:0; font-size:18px; font-weight:700; color:var(--text-primary); font-family: var(--font-heading);">Xác nhận kết thúc phỏng vấn</h2>
             <span style="font-size:12px; color:var(--accent-indigo); font-weight: 600;">${escapeHtml(scenario?.title ?? '')}</span>
           </div>
         </div>
         <div class="modal-body">
-          <p>Bạn có chắc chắn muốn kết thúc phiên phỏng vấn với đối tác <strong style="color: #FFF;">${escapeHtml(persona?.name ?? 'Stakeholder')}</strong> không?</p>
+          <p id="end-session-modal-description">Bạn có chắc chắn muốn kết thúc phiên phỏng vấn với đối tác <strong style="color: var(--text-primary);">${escapeHtml(persona?.name ?? 'Stakeholder')}</strong> không?</p>
           <p style="margin-top: 8px; font-size: 13px;">Hệ thống AI sẽ tự động trích xuất các yêu cầu phần mềm đã trao đổi và tiến hành chấm điểm bài làm của bạn. Sau khi nộp bài, bạn không thể tiếp tục gửi câu hỏi trong phiên này.</p>
         </div>
         <div class="modal-stats">
@@ -695,13 +697,13 @@ function renderEvaluation(evaluation: EvaluationResult, showSurvey = false) {
         <div class="meta-section" style="background: rgba(255, 255, 255, 0.01); border: 1px solid var(--color-border); border-radius: 6px; padding: 12px;">
           <strong style="display: block; margin-bottom: 8px; font-size: 13px; color: var(--color-text-secondary);">Tác nhân chính (Actors)</strong>
           <div class="badge-list" style="display: flex; flex-wrap: wrap; gap: 6px;">
-            ${design.mainActors.map(actor => `<span class="actor-badge" style="background: rgba(147, 197, 253, 0.1); color: #93c5fd; padding: 4px 8px; border-radius: 4px; border: 1px solid rgba(147, 197, 253, 0.2); font-size: 11px; font-family: var(--font-mono); font-weight: bold;">${escapeHtml(actor)}</span>`).join('')}
+            ${design.mainActors.map(actor => `<span class="actor-badge" style="background: var(--pastel-blue-bg); color: var(--pastel-blue-text); padding: 4px 8px; border-radius: 4px; border: 1px solid var(--line); font-size: 11px; font-family: var(--font-mono); font-weight: bold;">${escapeHtml(actor)}</span>`).join('')}
           </div>
         </div>
         <div class="meta-section" style="background: rgba(255, 255, 255, 0.01); border: 1px solid var(--color-border); border-radius: 6px; padding: 12px;">
           <strong style="display: block; margin-bottom: 8px; font-size: 13px; color: var(--color-text-secondary);">Thực thể chính (Entities)</strong>
           <div class="badge-list" style="display: flex; flex-wrap: wrap; gap: 6px;">
-            ${design.mainEntities.map(entity => `<span class="entity-badge" style="background: rgba(167, 243, 208, 0.1); color: #a7f3d0; padding: 4px 8px; border-radius: 4px; border: 1px solid rgba(167, 243, 208, 0.2); font-size: 11px; font-family: var(--font-mono); font-weight: bold;">${escapeHtml(entity)}</span>`).join('')}
+            ${design.mainEntities.map(entity => `<span class="entity-badge" style="background: var(--pastel-green-bg); color: var(--pastel-green-text); padding: 4px 8px; border-radius: 4px; border: 1px solid var(--line); font-size: 11px; font-family: var(--font-mono); font-weight: bold;">${escapeHtml(entity)}</span>`).join('')}
           </div>
         </div>
       </div>
@@ -822,7 +824,7 @@ function renderRequirementReport(matches: RequirementMatchReport[]) {
                 <div style="display: flex; align-items: center; gap: 8px;">
                   ${match.overriddenMatchType ? '<span class="override-badge">Đã chỉnh</span>' : ''}
                   ${renderMatchBadge(match.overriddenMatchType || match.matchType, match.score)}
-                  <select class="override-type-select" data-match-id="${escapeAttribute(match.matchId)}" style="background: #1e293b; color: #f8fafc; border: 1px solid #475569; border-radius: 4px; padding: 2px 6px; font-size: 12px;">
+                  <select class="override-type-select" data-match-id="${escapeAttribute(match.matchId)}" style="background: var(--surface-raised); color: var(--text-primary); border: 1px solid var(--line); border-radius: 4px; padding: 2px 6px; font-size: 12px;">
                     <option value="exact" ${activeType === 'exact' ? 'selected' : ''}>Exact</option>
                     <option value="semantic" ${activeType === 'semantic' ? 'selected' : ''}>Semantic</option>
                     <option value="partial" ${activeType === 'partial' ? 'selected' : ''}>Partial</option>
@@ -842,14 +844,14 @@ function renderRequirementReport(matches: RequirementMatchReport[]) {
             </article>
           `
         }).join('')}
-        <div class="override-action-panel" style="margin-top: 16px; padding: 16px; background: #0f172a; border-radius: 8px; border: 1px solid #334155;">
-          <h4 style="margin-bottom: 8px; color: #38bdf8;">Lưu thay đổi đánh giá của Giảng viên</h4>
-          <p style="font-size: 13px; color: #94a3b8; margin-bottom: 12px;">Hệ thống sẽ tự động tính lại <strong>Coverage Score</strong> dựa trên loại so khớp (MatchType) mới được chọn ở trên.</p>
+        <div class="override-action-panel" style="margin-top: 16px; padding: 16px; background: var(--surface-raised); border-radius: 8px; border: 1px solid var(--line);">
+          <h4 style="margin-bottom: 8px; color: var(--accent);">Lưu thay đổi đánh giá của Giảng viên</h4>
+          <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px;">Hệ thống sẽ tự động tính lại <strong>Coverage Score</strong> dựa trên loại so khớp (MatchType) mới được chọn ở trên.</p>
           <div style="margin-bottom: 12px;">
-            <label style="display: block; font-size: 12px; color: #cbd5e1; margin-bottom: 4px;">Ghi chú / Nhận xét của Giảng viên (tùy chọn):</label>
-            <textarea id="override-comment" rows="2" style="width: 100%; background: #1e293b; color: #f8fafc; border: 1px solid #475569; border-radius: 6px; padding: 8px; font-family: var(--font-sans); font-size: 13px;" placeholder="Nhập lý do điều chỉnh hoặc góp ý cho sinh viên..."></textarea>
+            <label style="display: block; font-size: 12px; color: var(--muted-strong); margin-bottom: 4px;">Ghi chú / Nhận xét của Giảng viên (tùy chọn):</label>
+            <textarea id="override-comment" rows="2" style="width: 100%; background: var(--surface); color: var(--text-primary); border: 1px solid var(--line); border-radius: 6px; padding: 8px; font-family: var(--font-sans); font-size: 13px;" placeholder="Nhập lý do điều chỉnh hoặc góp ý cho sinh viên..."></textarea>
           </div>
-          <button class="primary-button" data-action="submit-override" type="button" style="background: var(--color-primary);">Lưu & Tính lại điểm số</button>
+          <button class="primary-button" data-action="submit-override" type="button">Lưu & Tính lại điểm số</button>
         </div>
       </form>
     </div>
@@ -894,6 +896,7 @@ export function renderAdminDashboard(state: AppState) {
   const isOverviewTab = admin.activeTab === 'overview'
   const isUsersTab = admin.activeTab === 'users'
   const isScenariosTab = admin.activeTab === 'scenarios'
+  const activeTab = isOverviewTab ? 'overview' : isUsersTab ? 'users' : 'scenarios'
 
   return `
     <section class="admin-dashboard" data-animate="fade-up">
@@ -902,22 +905,56 @@ export function renderAdminDashboard(state: AppState) {
           <p class="section-kicker">Bảng điều khiển Admin</p>
           <h2 style="font-size: 24px; font-weight: 700; color: var(--text-primary);">Quản trị Hệ thống & Nạp Tri thức AI</h2>
         </div>
-        <div class="admin-nav-tabs" style="display: flex; gap: 8px; background: var(--surface); padding: 4px; border-radius: 8px; border: 1px solid var(--line);">
-          <button class="ghost-button ${isOverviewTab ? 'active' : ''}" data-action="set-admin-tab" data-tab="overview" type="button" style="${isOverviewTab ? 'background: var(--accent-indigo); color: #fff;' : ''}">Thống kê Analytics</button>
-          <button class="ghost-button ${isUsersTab ? 'active' : ''}" data-action="set-admin-tab" data-tab="users" type="button" style="${isUsersTab ? 'background: var(--accent-indigo); color: #fff;' : ''}">Quản lý Người dùng (CRUD)</button>
-          <button class="ghost-button ${isScenariosTab ? 'active' : ''}" data-action="set-admin-tab" data-tab="scenarios" type="button" style="${isScenariosTab ? 'background: var(--accent-indigo); color: #fff;' : ''}">Cào/Nạp Kịch Bản (AI)</button>
+        <div class="admin-nav-tabs" role="tablist" aria-label="Các chức năng quản trị" style="display: flex; gap: 8px; background: var(--surface); padding: 4px; border-radius: 8px; border: 1px solid var(--line);">
+          <button id="admin-tab-overview" role="tab" aria-selected="${isOverviewTab}" aria-controls="admin-tabpanel-overview" class="ghost-button ${isOverviewTab ? 'active' : ''}" data-action="set-admin-tab" data-tab="overview" type="button" style="${isOverviewTab ? 'background: var(--accent-indigo); color: #fff;' : ''}">Thống kê Analytics</button>
+          <button id="admin-tab-users" role="tab" aria-selected="${isUsersTab}" aria-controls="admin-tabpanel-users" class="ghost-button ${isUsersTab ? 'active' : ''}" data-action="set-admin-tab" data-tab="users" type="button" style="${isUsersTab ? 'background: var(--accent-indigo); color: #fff;' : ''}">Quản lý Người dùng (CRUD)</button>
+          <button id="admin-tab-scenarios" role="tab" aria-selected="${isScenariosTab}" aria-controls="admin-tabpanel-scenarios" class="ghost-button ${isScenariosTab ? 'active' : ''}" data-action="set-admin-tab" data-tab="scenarios" type="button" style="${isScenariosTab ? 'background: var(--accent-indigo); color: #fff;' : ''}">Cào/Nạp Kịch Bản (AI)</button>
         </div>
       </div>
 
-      ${isOverviewTab ? renderAdminOverviewSection(admin) : 
-        isUsersTab ? renderAdminUserManagementSection(admin) : 
-        renderAdminScenarioSection(state)}
+      <div id="admin-tabpanel-${activeTab}" role="tabpanel" aria-labelledby="admin-tab-${activeTab}" tabindex="0">
+        ${isOverviewTab ? renderAdminOverviewSection(admin) :
+          isUsersTab ? renderAdminUserManagementSection(admin) :
+          renderAdminScenarioSection(state)}
+      </div>
+    </section>
+  `
+}
+
+function renderIngestionHistory(admin: AdminState | null) {
+  const jobs = admin?.ingestionJobs ?? []
+  return `
+    <section class="ingestion-history panel" aria-labelledby="ingestion-history-title">
+      <div class="ingestion-history-heading">
+        <div>
+          <p class="section-kicker">Theo dõi tiến trình</p>
+          <h3 id="ingestion-history-title">Lịch sử nạp tri thức</h3>
+        </div>
+        <button class="ghost-button" data-action="refresh-ingestion-history" type="button" aria-label="Làm mới lịch sử nạp tri thức">Làm mới</button>
+      </div>
+      ${jobs.length === 0 ? `
+        <p class="ingestion-history-empty">Chưa có job nào. Sau khi nạp URL hoặc video/audio, job sẽ hiển thị ở đây kể cả khi bạn tải lại trang.</p>
+      ` : `
+        <ul class="ingestion-job-list">
+          ${jobs.map(job => `
+            <li class="ingestion-job-item">
+              <div class="ingestion-job-main">
+                <strong>${escapeHtml(job.sourceLabel ?? 'Nguồn nạp tri thức')}</strong>
+                <span>${escapeHtml(job.status)} · ${job.attempts} lượt chạy${job.updatedAt ? ` · ${escapeHtml(formatTime(job.updatedAt))}` : ''}</span>
+                ${job.errorCode ? `<small>Mã lỗi: ${escapeHtml(job.errorCode)}</small>` : ''}
+              </div>
+              ${job.status === 'AwaitingReview' && job.hasDraft ? `<button class="primary-button" data-action="review-ingestion-job" data-job-id="${escapeAttribute(job.jobId)}" type="button">Mở bản nháp</button>` : ''}
+            </li>
+          `).join('')}
+        </ul>
+      `}
     </section>
   `
 }
 
 function renderAdminScenarioSection(state: AppState) {
   return `
+    ${renderIngestionHistory(state.adminState)}
     ${renderAdminScenarioPreview(state)}
     <div class="admin-scenarios-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px;">
       
@@ -934,12 +971,12 @@ function renderAdminScenarioSection(state: AppState) {
         </div>
         
         <div class="form-group" style="display: flex; flex-direction: column; gap: 8px;">
-          <label style="font-size: 13px; color: var(--text-secondary); font-weight: 500;">Đường dẫn URL chứa tài liệu:</label>
+          <label for="admin-crawl-url-input" style="font-size: 13px; color: var(--text-secondary); font-weight: 500;">Đường dẫn URL chứa tài liệu:</label>
           <textarea id="admin-crawl-url-input" rows="4" placeholder="Mỗi dòng một URL (tối đa 10 nguồn)..." style="background: var(--surface-raised); color: var(--text-primary); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; font-size: 13px; outline: none; width: 100%; resize: vertical;"></textarea>
         </div>
 
         <div class="form-group" style="display: flex; flex-direction: column; gap: 8px;">
-          <label style="font-size: 13px; color: var(--text-secondary); font-weight: 500;">Mô hình AI xử lý:</label>
+          <label for="admin-crawl-model-select" style="font-size: 13px; color: var(--text-secondary); font-weight: 500;">Mô hình AI xử lý:</label>
           <select id="admin-crawl-model-select" style="background: var(--surface-raised); color: var(--text-primary); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; font-size: 13px; cursor: pointer; outline: none; width: 100%;">
             <option value="gemini-2.5-flash">Gemini 2.5 Flash (Khuyên dùng - Structured Output)</option>
             <option value="gemini-2.5-pro">Gemini 2.5 Pro (Thông minh hơn - Tốc độ chậm hơn)</option>
@@ -963,22 +1000,22 @@ function renderAdminScenarioSection(state: AppState) {
       <!-- Card 2: Video Knowledge Upload -->
       <div class="card glass-panel" style="padding: 24px; display: flex; flex-direction: column; gap: 16px; border: 1px solid var(--line); background: var(--surface); border-radius: var(--radius-lg); box-shadow: var(--shadow-subtle);">
         <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
-          <div style="background: rgba(168, 85, 247, 0.1); padding: 8px; border-radius: 8px; color: #a855f7;">
+          <div style="background: var(--pastel-yellow-bg); padding: 8px; border-radius: 8px; color: var(--pastel-yellow-text);">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>
           </div>
           <div>
             <h3 style="font-size: 18px; font-weight: 600; color: var(--text-primary); margin: 0;">Nạp Tri thức Nghiệp vụ từ Video</h3>
-            <p style="font-size: 13px; color: var(--text-secondary); margin: 4px 0 0 0;">Sử dụng Multimodal AI để trích xuất kịch bản từ video/audio cuộc họp</p>
+            <p style="font-size: 13px; color: var(--text-secondary); margin: 4px 0 0 0;">Tải video/audio cuộc họp trực tiếp lên kho riêng để tạo bản nháp scenario</p>
           </div>
         </div>
 
         <div class="form-group" style="display: flex; flex-direction: column; gap: 8px;">
-          <label style="font-size: 13px; color: var(--text-secondary); font-weight: 500;">Đường dẫn tệp video tuyệt đối (Local Path):</label>
-          <input id="admin-video-path-input" type="text" placeholder="Ví dụ: d:\\KLTN\\tools\\meeting_recording.mp4" style="background: var(--surface-raised); color: var(--text-primary); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; font-size: 13px; outline: none; width: 100%;" />
+          <label for="admin-video-path-input" style="font-size: 13px; color: var(--text-secondary); font-weight: 500;">Tệp video/audio cuộc họp (MP4, MOV, WebM, MP3, WAV, M4A, AAC hoặc OGG; tối đa 250 MB):</label>
+          <input id="admin-video-path-input" type="file" accept="audio/mpeg,audio/wav,audio/x-wav,audio/mp4,audio/aac,audio/ogg,audio/webm,video/mp4,video/webm,video/quicktime" style="background: var(--surface-raised); color: var(--text-primary); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; font-size: 13px; outline: none; width: 100%;" />
         </div>
 
         <div class="form-group" style="display: flex; flex-direction: column; gap: 8px;">
-          <label style="font-size: 13px; color: var(--text-secondary); font-weight: 500;">Mô hình AI xử lý:</label>
+          <label for="admin-video-model-select" style="font-size: 13px; color: var(--text-secondary); font-weight: 500;">Mô hình AI xử lý:</label>
           <select id="admin-video-model-select" style="background: var(--surface-raised); color: var(--text-primary); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; font-size: 13px; cursor: pointer; outline: none; width: 100%;">
             <option value="gemini-2.5-flash">Gemini 2.5 Flash (Khuyên dùng - Multimodal)</option>
             <option value="gemini-2.5-pro">Gemini 2.5 Pro (Multimodal Pro)</option>
@@ -987,11 +1024,11 @@ function renderAdminScenarioSection(state: AppState) {
 
         <div style="background: rgba(217, 119, 87, 0.08); border: 1px solid rgba(217, 119, 87, 0.2); border-radius: 6px; padding: 10px 12px; display: flex; gap: 8px; align-items: flex-start;">
           <span style="color: var(--accent-indigo); font-weight: bold; font-size: 14px;">⚠️</span>
-          <span style="font-size: 11px; color: var(--text-secondary); line-height: 1.4;">Hệ thống sẽ tự động sử dụng <strong>FFmpeg</strong> cục bộ để tối ưu dung lượng (tách âm thanh mp3) trước khi gửi lên Gemini File API xử lý đa phương tiện.</span>
+          <span style="font-size: 11px; color: var(--text-secondary); line-height: 1.4;">Chỉ quản trị viên có thể nạp nguồn. Worker trích xuất audio từ video rồi gửi dữ liệu đã chọn đến Gemini.</span>
         </div>
 
-        <button class="primary-button" data-action="admin-video" type="button" ${state.busy ? 'disabled' : ''} style="margin-top: 4px; background: linear-gradient(135deg, var(--accent-indigo), #c96b4b); border: none; display: flex; align-items: center; justify-content: center; gap: 8px;">
-          ${state.busy ? '<span class="spinner-mini"></span> Đang xử lý...' : 'Tạo bản preview từ video'}
+        <button class="primary-button" data-action="admin-video" type="button" ${state.busy ? 'disabled' : ''} style="margin-top: 4px; border: none; display: flex; align-items: center; justify-content: center; gap: 8px;">
+          ${state.busy ? '<span class="spinner-mini"></span> Đang xử lý...' : 'Tạo bản preview từ video/audio'}
         </button>
       </div>
 
@@ -1004,6 +1041,11 @@ function renderAdminScenarioPreview(state: AppState) {
   if (!draft) return ''
 
   const source = state.adminState?.scenarioDraftSource
+  const personaTemplates = state.adminState?.personaTemplates ?? []
+  const selectedPersonaTemplateKeys = new Set(draft.persona_template_keys ?? [])
+  const glossary = draft.normalization_glossary ?? {
+    actor: {}, action: {}, object: {}, condition: {},
+  }
   const requirementCards = draft.requirements.map((requirement, index) => `
     <article class="scenario-draft-requirement" data-requirement-row="${index}">
       <div class="scenario-draft-requirement-header">
@@ -1130,6 +1172,36 @@ function renderAdminScenarioPreview(state: AppState) {
         </label>
       </div>
 
+      <section class="scenario-draft-advanced" aria-labelledby="persona-template-title">
+        <h4 id="persona-template-title">Persona templates tái sử dụng</h4>
+        <p>Chọn 2–3 template để tạo snapshot cho mỗi stakeholder. Thay đổi template sau này không ảnh hưởng phiên phỏng vấn đã phát hành.</p>
+        ${personaTemplates.length === 0 ? `
+          <p><small>Chưa tải được thư viện persona; hệ thống sẽ dùng bộ mặc định Collaborative và Challenging.</small></p>
+        ` : `
+          <div class="scenario-draft-grid compact">
+            ${personaTemplates.map(template => `
+              <label>
+                <span><input type="checkbox" data-persona-template-key value="${escapeAttribute(template.templateKey)}"
+                  ${selectedPersonaTemplateKeys.size === 0
+                    ? template.isSystemDefault ? 'checked' : ''
+                    : selectedPersonaTemplateKeys.has(template.templateKey) ? 'checked' : ''} />
+                  ${escapeHtml(template.label)}</span>
+                <small>${escapeHtml(template.communicationStyle)} · ${escapeHtml(template.knowledgeLevel)} · ${escapeHtml(template.difficulty)}</small>
+              </label>
+            `).join('')}
+          </div>
+        `}
+      </section>
+
+      <section class="scenario-draft-advanced" aria-labelledby="ground-truth-review-title">
+        <h4 id="ground-truth-review-title">Review Ground Truth</h4>
+        <p>Ghi lại kiểm tra của admin trước khi publish. Thông tin này được lưu vào audit trail của phiên bản scenario.</p>
+        <label>
+          <span>Ghi chú review (tùy chọn)</span>
+          <textarea data-draft-field="review_notes" rows="3" maxlength="1000" placeholder="Ví dụ: Đã kiểm tra nguồn, AAOC, type/priority, gate và điều kiện tiết lộ.">${escapeHtml(draft.review_notes ?? '')}</textarea>
+        </label>
+      </section>
+
       <details class="scenario-draft-advanced">
         <summary>Cấu hình Gate nâng cao</summary>
         <div class="scenario-draft-grid">
@@ -1140,6 +1212,11 @@ function renderAdminScenarioPreview(state: AppState) {
           <label>
             <span>Ánh xạ loại câu hỏi → Gate (JSON)</span>
             <textarea data-draft-field="question_type_gate_map" rows="7">${escapeHtml(JSON.stringify(draft.question_type_gate_map, null, 2))}</textarea>
+          </label>
+          <label>
+            <span>Glossary chuẩn hóa theo scenario (JSON)</span>
+            <textarea data-draft-field="normalization_glossary" rows="7" spellcheck="false">${escapeHtml(JSON.stringify(glossary, null, 2))}</textarea>
+            <small>Ví dụ: { "action": { "reserve": "book" }, "object": { "desk pass": "study desk" } }.</small>
           </label>
         </div>
       </details>

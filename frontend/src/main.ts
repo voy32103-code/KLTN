@@ -16,6 +16,8 @@ import type {
   ReviewSessionSummary,
   ScenarioDetail,
   ScenarioDraft,
+  IngestionJob,
+  PersonaTemplate,
   ScenarioPreviewResponse,
   ScenarioStatItem,
   ScenarioSummary,
@@ -63,6 +65,8 @@ const state: AppState = {
   notice: null,
   modelDropdownOpen: false,
 }
+
+let modalReturnFocus: HTMLElement | null = null
 
 const api = createApiClient({
   baseUrl: API_BASE_URL,
@@ -145,6 +149,14 @@ function renderAdminCharts() {
 }
 
 function bindEvents() {
+  const legacyMediaInput = document.querySelector<HTMLInputElement>('#admin-video-path-input')
+  if (legacyMediaInput) {
+    legacyMediaInput.type = 'file'
+    legacyMediaInput.accept = 'audio/mpeg,audio/wav,audio/x-wav,audio/mp4,audio/aac,audio/ogg,audio/webm,video/mp4,video/webm,video/quicktime'
+    legacyMediaInput.removeAttribute('placeholder')
+    const label = legacyMediaInput.closest('.form-group')?.querySelector('label')
+    if (label) label.textContent = 'Tệp video/audio cuộc họp (tối đa 250 MB):'
+  }
   document.querySelectorAll<HTMLButtonElement>('[data-auth-mode]').forEach((button) => {
     button.addEventListener('click', () => {
       state.authMode = button.dataset.authMode === 'register' ? 'register' : 'login'
@@ -227,14 +239,14 @@ function bindEvents() {
       const tab = button.dataset.tab ?? ''
       const userId = button.dataset.userId ?? ''
       const model = button.dataset.model ?? ''
-      void handleAction(action, { tab, userId, model })
+      const jobId = button.dataset.jobId ?? ''
+      void handleAction(action, { tab, userId, model, jobId })
     })
   })
 
   document.querySelector('#end-session-modal-overlay')?.addEventListener('click', (event) => {
     if (event.target === event.currentTarget) {
-      state.confirmEndSession = false
-      render()
+      closeEndSessionModal()
     }
   })
 
@@ -251,9 +263,47 @@ function bindEvents() {
       }
     })
   }
+
+  if (!(window as any).hasAccessibilityKeyboardListener) {
+    (window as any).hasAccessibilityKeyboardListener = true
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        if (state.confirmEndSession) {
+          event.preventDefault()
+          closeEndSessionModal()
+          return
+        }
+        if (state.modelDropdownOpen) {
+          state.modelDropdownOpen = false
+          render()
+        }
+      }
+
+      if (event.key !== 'Tab' || !state.confirmEndSession) return
+      const dialog = document.querySelector<HTMLElement>('#end-session-modal')
+      if (!dialog) return
+      const focusable = Array.from(dialog.querySelectorAll<HTMLElement>('button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'))
+      if (focusable.length === 0) return
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
+    })
+  }
 }
 
-async function handleAction(action: string, options: { tab?: string; userId?: string; model?: string } = {}) {
+function closeEndSessionModal() {
+  state.confirmEndSession = false
+  render()
+  requestAnimationFrame(() => modalReturnFocus?.focus())
+}
+
+async function handleAction(action: string, options: { tab?: string; userId?: string; model?: string; jobId?: string } = {}) {
   if (state.busy) return
   switch (action) {
     case 'logout':
@@ -278,12 +328,13 @@ async function handleAction(action: string, options: { tab?: string; userId?: st
       await startSession()
       break
     case 'open-end-session-modal':
+      modalReturnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null
       state.confirmEndSession = true
       render()
+      requestAnimationFrame(() => document.querySelector<HTMLElement>('#end-session-modal')?.focus())
       break
     case 'cancel-end-session':
-      state.confirmEndSession = false
-      render()
+      closeEndSessionModal()
       break
     case 'confirm-end-session':
     case 'end-session':
@@ -324,10 +375,16 @@ async function handleAction(action: string, options: { tab?: string; userId?: st
       }
       break
     case 'admin-crawl':
-      await runAdminCrawl()
+      await runQueuedAdminCrawl()
       break
     case 'admin-video':
-      await runAdminVideo()
+      await runQueuedAdminVideo()
+      break
+    case 'refresh-ingestion-history':
+      await refreshIngestionHistory(true)
+      break
+    case 'review-ingestion-job':
+      if (options.jobId) await openIngestionJob(options.jobId)
       break
     case 'admin-publish-scenario':
       await publishAdminScenario()
@@ -650,12 +707,15 @@ async function openAdminDashboard() {
       isCreatingUser: false,
       scenarioDraft: null,
       scenarioDraftSource: null,
+      ingestionJob: null,
+      ingestionJobs: [],
+      personaTemplates: [],
       feedbackExperiment: null,
     }
     clearNotice()
 
     // Fetch Overview metrics & charts in parallel
-    const [ov, distResp, time, scen, top, breakdown, userList, feedbackExperiment] = await Promise.all([
+    const [ov, distResp, time, scen, top, breakdown, userList, feedbackExperiment, ingestionJobs, personaTemplates] = await Promise.all([
       api.request<AdminOverview>('/api/Admin/stats/overview'),
       api.request<{ bins: CoverageDistributionBin[] } | CoverageDistributionBin[]>('/api/Admin/stats/coverage-distribution'),
       api.request<SessionsOverTimeData>('/api/Admin/stats/sessions-over-time'),
@@ -664,6 +724,8 @@ async function openAdminDashboard() {
       api.request<MatchTypeBreakdownData>('/api/Admin/stats/match-type-breakdown'),
       api.request<AdminUserItem[]>('/api/Admin/users'),
       api.request<NonNullable<AdminState['feedbackExperiment']>>('/api/Admin/stats/feedback-experiment'),
+      api.request<IngestionJob[]>('/api/admin-ingestion/jobs').catch(() => []),
+      api.request<PersonaTemplate[]>('/api/admin-persona-templates').catch(() => []),
     ])
 
     state.adminState.overview = ov
@@ -674,6 +736,8 @@ async function openAdminDashboard() {
     state.adminState.feedbackExperiment = feedbackExperiment
     state.adminState.matchTypeBreakdown = breakdown
     state.adminState.users = Array.isArray(userList) ? userList : []
+    state.adminState.ingestionJobs = ingestionJobs
+    state.adminState.personaTemplates = personaTemplates.filter(template => template.isActive)
   })
 }
 
@@ -849,6 +913,40 @@ function parseDraftMap<T extends string | number>(
   return result
 }
 
+function parseNormalizationGlossary(raw: string): Record<string, Record<string, string>> {
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(raw.trim() || '{}')
+  } catch {
+    throw new Error('Glossary chuẩn hóa phải là JSON hợp lệ.')
+  }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new Error('Glossary chuẩn hóa phải là một JSON object.')
+  }
+  const allowedComponents = new Set(['actor', 'action', 'object', 'condition'])
+  const result: Record<string, Record<string, string>> = {}
+  for (const [component, aliases] of Object.entries(parsed)) {
+    if (!allowedComponents.has(component)) {
+      throw new Error(`Glossary chỉ hỗ trợ actor, action, object và condition (nhận được ${component}).`)
+    }
+    if (!aliases || typeof aliases !== 'object' || Array.isArray(aliases)) {
+      throw new Error(`Glossary.${component} phải là object dạng "từ đồng nghĩa": "thuật ngữ chuẩn".`)
+    }
+    const normalizedAliases: Record<string, string> = {}
+    for (const [source, target] of Object.entries(aliases)) {
+      if (typeof target !== 'string' || !source.trim() || !target.trim()) {
+        throw new Error(`Glossary.${component} chỉ nhận các cặp chuỗi không rỗng.`)
+      }
+      if (source.length > 160 || target.length > 240) {
+        throw new Error(`Glossary.${component} có thuật ngữ vượt quá giới hạn độ dài.`)
+      }
+      normalizedAliases[source.trim()] = target.trim()
+    }
+    result[component] = normalizedAliases
+  }
+  return result
+}
+
 function getDraftField(root: ParentNode, field: string): string {
   const element = root.querySelector<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(
     `[data-draft-field="${field}"]`
@@ -905,6 +1003,10 @@ function readScenarioDraftForm(): ScenarioDraft {
     }
   })
 
+  const personaTemplateKeys = Array.from(
+    form.querySelectorAll<HTMLInputElement>('[data-persona-template-key]:checked')
+  ).map(input => input.value)
+
   const draft: ScenarioDraft = {
     scenario_key: getDraftField(form, 'scenario_key'),
     scenario_title: getDraftField(form, 'scenario_title'),
@@ -923,6 +1025,9 @@ function readScenarioDraftForm(): ScenarioDraft {
     max_new_reveals_per_turn: Number(getDraftField(form, 'max_new_reveals_per_turn')),
     requirements,
     source_urls: state.adminState.scenarioDraft.source_urls ?? [],
+    persona_template_keys: personaTemplateKeys,
+    normalization_glossary: parseNormalizationGlossary(getDraftField(form, 'normalization_glossary')),
+    review_notes: getDraftField(form, 'review_notes') || null,
   }
 
   validateScenarioDraft(draft)
@@ -941,6 +1046,14 @@ function validateScenarioDraft(draft: ScenarioDraft) {
     throw new Error('Số yêu cầu tiết lộ mỗi lượt phải là số nguyên từ 1 đến 12.')
   }
   if (draft.requirements.length === 0) throw new Error('Scenario phải có ít nhất một yêu cầu.')
+
+  if (draft.persona_template_keys && draft.persona_template_keys.length > 0 &&
+      (draft.persona_template_keys.length < 2 || draft.persona_template_keys.length > 3)) {
+    throw new Error('Hãy chọn từ 2 đến 3 persona template cho mỗi stakeholder.')
+  }
+  if ((draft.review_notes?.length ?? 0) > 1000) {
+    throw new Error('Ghi chú review không được vượt quá 1.000 ký tự.')
+  }
 
   const ids = new Set<string>()
   for (const [index, requirement] of draft.requirements.entries()) {
@@ -1013,6 +1126,112 @@ async function publishAdminScenario() {
   })
 }
 
+async function runQueuedAdminCrawl() {
+  const urlInput = document.querySelector('#admin-crawl-url-input') as HTMLTextAreaElement | null
+  const modelSelect = document.querySelector('#admin-crawl-model-select') as HTMLSelectElement | null
+  const urls = urlInput?.value.split(/\r?\n/).map(value => value.trim()).filter(Boolean) ?? []
+  if (urls.length === 0) {
+    setNotice('error', 'Vui lòng nhập ít nhất một URL công khai.')
+    return
+  }
+  await withBusy(async () => {
+    const created = await api.request<{ jobId: string }>('/api/admin-ingestion/crawl-jobs', {
+      method: 'POST', body: { urls, selectedModel: modelSelect?.value || 'gemini-2.5-flash' },
+    })
+    await waitForIngestion(created.jobId, urls.join(', '))
+  })
+}
+
+async function runQueuedAdminVideo() {
+  const input = document.querySelector('#admin-video-path-input') as HTMLInputElement | null
+  const modelSelect = document.querySelector('#admin-video-model-select') as HTMLSelectElement | null
+  const file = input?.files?.[0]
+  if (!file) {
+    setNotice('error', 'Vui lòng chọn tệp video hoặc audio cuộc họp.')
+    return
+  }
+  if (file.size > 250 * 1024 * 1024) {
+    setNotice('error', 'Tệp vượt quá giới hạn 250 MB.')
+    return
+  }
+  await withBusy(async () => {
+    const contentType = file.type || 'audio/mpeg'
+    const intent = await api.request<{ jobId: string; artifactId: string; uploadUrl: string }>('/api/admin-ingestion/upload-intents', {
+      method: 'POST', body: { fileName: file.name, contentType, size: file.size, selectedModel: modelSelect?.value || 'gemini-2.5-flash' },
+    })
+    await uploadToPresignedUrl(intent.uploadUrl, file, contentType)
+    await api.request(`/api/admin-ingestion/artifacts/${intent.artifactId}/complete`, { method: 'POST' })
+    await waitForIngestion(intent.jobId, file.name)
+  })
+}
+
+function uploadToPresignedUrl(uploadUrl: string, file: File, contentType: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const request = new XMLHttpRequest()
+    request.open('PUT', uploadUrl)
+    request.setRequestHeader('Content-Type', contentType)
+    request.upload.onprogress = event => {
+      if (event.lengthComputable) setNotice('info', `Đang tải tệp: ${Math.round((event.loaded / event.total) * 100)}%.`)
+    }
+    request.onerror = () => reject(new Error('Không thể tải tệp lên kho riêng.'))
+    request.onload = () => request.status >= 200 && request.status < 300 ? resolve() : reject(new Error(`Tải tệp thất bại (${request.status}).`))
+    request.send(file)
+  })
+}
+
+async function waitForIngestion(jobId: string, source: string) {
+  for (let attempt = 0; attempt < 120; attempt += 1) {
+    const job = await api.request<IngestionJob>(`/api/admin-ingestion/jobs/${jobId}`)
+    if (state.adminState) {
+      state.adminState.ingestionJob = job
+      const historyJob = { ...job, sourceLabel: source }
+      state.adminState.ingestionJobs = [historyJob, ...state.adminState.ingestionJobs.filter(item => item.jobId !== jobId)]
+    }
+    if (job.status === 'Queued') {
+      setNotice('info', 'Job queued — chạy GitHub Action.')
+      return
+    }
+    if (job.status === 'AwaitingReview' && job.draft) {
+      if (state.adminState) {
+        state.adminState.scenarioDraft = job.draft
+        state.adminState.scenarioDraftSource = source
+      }
+      setNotice('success', 'Bản nháp đã sẵn sàng. Hãy kiểm tra trước khi publish.')
+      return
+    }
+    if (job.status === 'Failed') throw new Error(`Nạp tri thức thất bại (${job.errorCode ?? 'processing_failed'}).`)
+    setNotice('info', 'Đang tạo bản nháp scenario…')
+    await new Promise(resolve => window.setTimeout(resolve, 3000))
+  }
+  throw new Error('Job đang mất nhiều thời gian. Hãy mở lịch sử nạp tri thức trong Admin để kiểm tra lại.')
+}
+
+async function refreshIngestionHistory(showNotice = false) {
+  if (!state.adminState) return
+  await withBusy(async () => {
+    const jobs = await api.request<IngestionJob[]>('/api/admin-ingestion/jobs')
+    if (!state.adminState) return
+    state.adminState.ingestionJobs = jobs
+    if (showNotice) setNotice('success', 'Đã làm mới lịch sử nạp tri thức.')
+  })
+}
+
+async function openIngestionJob(jobId: string) {
+  await withBusy(async () => {
+    const job = await api.request<IngestionJob>(`/api/admin-ingestion/jobs/${jobId}`)
+    if (!state.adminState) return
+    state.adminState.ingestionJob = job
+    state.adminState.ingestionJobs = state.adminState.ingestionJobs.map(item => item.jobId === job.jobId ? { ...item, ...job } : item)
+    if (job.status !== 'AwaitingReview' || !job.draft) {
+      setNotice('info', `Job hiện ở trạng thái ${job.status}.`)
+      return
+    }
+    state.adminState.scenarioDraft = job.draft
+    state.adminState.scenarioDraftSource = job.sourceLabel ?? 'Ingestion job'
+    setNotice('success', 'Đã mở bản nháp scenario để kiểm tra trước khi publish.')
+  })
+}
+
 async function runAdminCrawl() {
   const urlInput = document.querySelector('#admin-crawl-url-input') as HTMLTextAreaElement | null
   const modelSelect = document.querySelector('#admin-crawl-model-select') as HTMLSelectElement | null
@@ -1040,28 +1259,9 @@ async function runAdminCrawl() {
   })
 }
 
-async function runAdminVideo() {
-  const videoPathInput = document.querySelector('#admin-video-path-input') as HTMLInputElement | null
-  const modelSelect = document.querySelector('#admin-video-model-select') as HTMLSelectElement | null
-  if (!videoPathInput || !videoPathInput.value.trim()) {
-    setNotice('error', 'Vui lòng nhập đường dẫn tệp video tuyệt đối!')
-    return
-  }
-  const videoPath = videoPathInput.value.trim()
-  const selectedModel = modelSelect?.value || 'gemini-2.5-flash'
+// Kept temporarily for compatibility with older UI integrations while queued ingestion rolls out.
+void runAdminCrawl
 
-  await withBusy(async () => {
-    clearNotice()
-    const result = await api.request<ScenarioPreviewResponse>('/api/AdminScenarios/upload-video/preview', {
-      method: 'POST',
-      body: { videoPath, selectedModel }
-    })
-    if (!state.adminState) return
-    state.adminState.scenarioDraft = result.scenario
-    state.adminState.scenarioDraftSource = videoPath
-    setNotice('success', 'Đã tạo bản preview từ video. Hãy kiểm tra trước khi publish.')
-  })
-}
 async function withBusy(task: () => Promise<void>) {
   state.busy = true
   render()

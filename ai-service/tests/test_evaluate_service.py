@@ -6,6 +6,7 @@ import numpy as np
 
 from app.models.schemas import EvaluateRequest, ExtractedReq, HiddenReq
 from app.services.evaluate_service import evaluate
+from app.services.design_service import generate_design_models
 
 
 class EvaluateServiceTests(unittest.TestCase):
@@ -32,7 +33,7 @@ class EvaluateServiceTests(unittest.TestCase):
             AsyncMock(return_value=matrix),
         ), patch(
             "app.services.evaluate_service.generate_design_models",
-            return_value=None,
+            new=AsyncMock(return_value=None),
         ):
             result = asyncio.run(evaluate(request))
 
@@ -41,6 +42,22 @@ class EvaluateServiceTests(unittest.TestCase):
         self.assertEqual(len(set(matched)), 2)
         self.assertEqual(result.extraExtractedCount, 1)
         self.assertEqual(result.feedback.extractionsToReview, ["unrelated dashboard"])
+
+    def test_design_generation_is_deterministic_and_excludes_non_functional_requirements(self):
+        requirement = ExtractedReq(
+            text="Users view stock",
+            confidence=0.9,
+            actor="User",
+            action="View",
+            object="Stock",
+            type="FR",
+        )
+        result = asyncio.run(generate_design_models([requirement], selected_model="gemini-2.5-flash"))
+
+        self.assertEqual(result.mainActors, ["User"])
+        self.assertIn('User', result.useCaseMermaid)
+        self.assertNotIn('include', result.useCaseMermaid.lower())
+        self.assertNotIn('relates to', result.erdMermaid.lower())
 
 
 if __name__ == "__main__":

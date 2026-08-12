@@ -13,6 +13,7 @@ tools/__pycache__/
 # Node
 frontend/node_modules/
 frontend/dist/
+.pnpm-store/
 
 # Environment
 .env
@@ -33,7 +34,7 @@ backup.sql
 .idea/
 *.swp
 
-# Documents
+# Documents (internal only; never commit)
 docs/
 
 # Local Brain/Agent context

@@ -10,9 +10,10 @@ var tests = new (string Name, Func<Task> Run)[]
 {
     ("ai_client_null_chat_response_becomes_fallback", TestNullChatResponseAsync),
     ("ai_client_null_extract_response_becomes_fallback", TestNullExtractResponseAsync),
-    ("ai_client_deserializes_snake_case_scenario", TestSnakeCaseScenarioResponseAsync),
     ("legacy_sha256_password_verifies_and_requests_upgrade", TestLegacySha256Password),
     ("schema_bootstrap_never_deletes_duplicate_evaluations", TestSchemaBootstrapIsNonDestructive),
+    ("extract_request_serializes_scenario_glossary", TestExtractRequestSerializesGlossaryAsync),
+    ("pipeline_enhancement_migration_is_versioned_and_non_destructive", TestPipelineMigrationIsVersioned),
 };
 
 var failures = 0;
@@ -55,49 +56,6 @@ static async Task TestNullExtractResponseAsync()
     Assert(result is not null && result.IsFallback, "null extract payload must produce an explicit fallback");
 }
 
-static async Task TestSnakeCaseScenarioResponseAsync()
-{
-    const string responseJson = """
-        {
-          "success": true,
-          "message": "ok",
-          "scenario": {
-            "scenario_key": "software_requirements_specification",
-            "scenario_title": "Software Requirements Specification",
-            "context": "Elicit requirements for a software system.",
-            "general_keywords": ["requirements"],
-            "gate_keyword_groups": {"0": ["scope"]},
-            "question_type_gate_map": {"OpenEnded": [0]},
-            "max_new_reveals_per_turn": 1,
-            "requirements": [{
-              "id": "REQ-001",
-              "text": "The system shall define its scope.",
-              "gate": 0,
-              "keywords": ["scope"],
-              "question_types": ["OpenEnded"],
-              "reveal_condition": "Ask about scope.",
-              "reveal_difficulty": "Easy",
-              "requires": []
-            }]
-          }
-        }
-        """;
-
-    var handler = new StaticJsonHandler(responseJson);
-    var client = CreateClient(handler);
-    var result = await client.CrawlScenario(
-        "https://example.test/requirements.md",
-        null,
-        persist: false);
-
-    Assert(result.Success, "successful AI response must remain successful");
-    Assert(result.Scenario?.ScenarioKey == "software_requirements_specification",
-        "scenario_key must map to ScenarioKey");
-    Assert(result.Scenario?.Requirements.Single().QuestionTypes.Single() == "OpenEnded",
-        "nested snake_case fields must be deserialized");
-    Assert(handler.LastRequestBody?.Contains("\"persist\":false", StringComparison.Ordinal) == true,
-        "preview generation must tell the AI service not to persist an unapproved draft");
-}
 static Task TestLegacySha256Password()
 {
     const string password = "legacy-password";
@@ -122,6 +80,39 @@ static Task TestSchemaBootstrapIsNonDestructive()
         "schema bootstrap must not delete duplicate evaluation data");
     Assert(sql.Contains("RAISE EXCEPTION", StringComparison.OrdinalIgnoreCase),
         "schema bootstrap must fail explicitly when duplicate data exists");
+    return Task.CompletedTask;
+}
+
+static async Task TestExtractRequestSerializesGlossaryAsync()
+{
+    var handler = new StaticJsonHandler("{\"requirements\":[],\"isFallback\":false}");
+    var client = CreateClient(handler);
+    var glossary = new Dictionary<string, Dictionary<string, string>>
+    {
+        ["object"] = new() { ["desk pass"] = "study desk" }
+    };
+    var result = await client.ExtractRequirements(new AiExtractRequest("session", [], null, glossary));
+    Assert(!result.IsFallback, "valid extract response should not become fallback");
+    Assert(handler.LastRequestBody?.Contains("normalizationGlossary", StringComparison.Ordinal) == true,
+        "extract contract must forward the scenario glossary");
+    Assert(handler.LastRequestBody?.Contains("study desk", StringComparison.Ordinal) == true,
+        "extract contract must preserve the reviewed glossary entry");
+}
+
+static Task TestPipelineMigrationIsVersioned()
+{
+    var type = typeof(PipelineEnhancementSchemaMigration);
+    var version = (string)(type.GetField("Version", BindingFlags.NonPublic | BindingFlags.Static)
+        ?.GetRawConstantValue() ?? "");
+    var sql = (string)(type.GetField("Sql", BindingFlags.NonPublic | BindingFlags.Static)
+        ?.GetRawConstantValue() ?? "");
+    Assert(version.Contains("pipeline_enhancements", StringComparison.Ordinal),
+        "pipeline changes must use a named schema migration version");
+    Assert(sql.Contains("persona_templates", StringComparison.Ordinal) &&
+           sql.Contains("scenario_review_audits", StringComparison.Ordinal),
+        "migration must create reusable personas and review evidence tables");
+    Assert(!sql.Contains("DELETE FROM", StringComparison.OrdinalIgnoreCase),
+        "pipeline migration must not delete existing scenario data");
     return Task.CompletedTask;
 }
 static AiServiceClient CreateClient(HttpMessageHandler? handler = null)

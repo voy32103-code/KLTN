@@ -38,6 +38,25 @@ class LearningFeedbackAbTests(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("SECRET_GROUND_TRUTH", prompt)
         self.assertEqual(result, (["ok"], ["w"], ["s"]))
 
+    async def test_variant_b_rejects_feedback_that_repeats_hidden_requirement_wording(self):
+        hidden = [SimpleNamespace(
+            id="R1", category="Functional", text="Customer must cancel reservation before twenty four hours"
+        )]
+        matches = [SimpleNamespace(
+            hiddenId="R1", matchType="partial", score=0.7,
+            componentScores={"actor": 1.0},
+        )]
+        response = SimpleNamespace(text=(
+            '{"strengths":[],"weaknesses":[],"suggestions":["Customer must cancel reservation before twenty four hours."]}'
+        ))
+        fallback = (["safe"], ["safe"], ["safe"])
+        with patch(
+            "app.services.learning_feedback_service.client_manager.generate_content",
+            new=AsyncMock(return_value=response),
+        ):
+            result = await generate_learning_feedback(matches, hidden, "model", "B", fallback)
+        self.assertEqual(result, fallback)
+
 
 if __name__ == "__main__":
     unittest.main()

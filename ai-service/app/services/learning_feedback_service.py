@@ -1,6 +1,8 @@
 """AI-assisted learning feedback with a strict no-ground-truth-text boundary."""
 import json
 import logging
+import re
+import unicodedata
 
 from google.genai import types
 from pydantic import BaseModel
@@ -14,6 +16,33 @@ class SafeLearningFeedback(BaseModel):
     strengths: list[str]
     weaknesses: list[str]
     suggestions: list[str]
+
+
+def _comparison_text(value: str) -> str:
+    normalized = unicodedata.normalize("NFKD", value.casefold()).replace("đ", "d")
+    normalized = "".join(char for char in normalized if not unicodedata.combining(char))
+    return " ".join(re.sub(r"[^a-z0-9]+", " ", normalized).split())
+
+
+def _contains_hidden_requirement_wording(
+    feedback: SafeLearningFeedback,
+    hidden_requirements: list,
+) -> bool:
+    """Block direct rephrasing of a hidden requirement even when the provider ignores its prompt."""
+    rendered = _comparison_text(" ".join(
+        [*feedback.strengths, *feedback.weaknesses, *feedback.suggestions]
+    ))
+    for requirement in hidden_requirements:
+        hidden = _comparison_text(str(getattr(requirement, "text", "")))
+        tokens = hidden.split()
+        if len(tokens) < 3:
+            continue
+        if hidden in rendered:
+            return True
+        for index in range(len(tokens) - 2):
+            if " ".join(tokens[index:index + 3]) in rendered:
+                return True
+    return False
 
 
 async def generate_learning_feedback(
@@ -58,6 +87,9 @@ Rules:
             ),
         )
         parsed = SafeLearningFeedback.model_validate_json(response.text)
+        if _contains_hidden_requirement_wording(parsed, hidden_requirements):
+            logger.warning("AI learning feedback attempted to repeat hidden requirement wording; using fallback.")
+            return fallback
         return parsed.strengths, parsed.weaknesses, parsed.suggestions
     except Exception:
         logger.warning("Safe AI learning feedback failed; using deterministic fallback.")

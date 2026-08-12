@@ -258,11 +258,41 @@ export type ScenarioDraft = {
   max_new_reveals_per_turn: number
   requirements: ScenarioRequirementDraft[]
   source_urls?: string[]
+  persona_template_keys?: string[]
+  normalization_glossary?: Record<string, Record<string, string>>
+  review_notes?: string | null
+}
+
+export type PersonaTemplate = {
+  id: string
+  templateKey: string
+  label: string
+  personalityTraits: string
+  communicationStyle: string
+  knowledgeLevel: string
+  difficulty: 'Easy' | 'Medium' | 'Hard'
+  initialMood: string
+  initialPatience: number
+  isActive: boolean
+  isSystemDefault: boolean
+  updatedAt: string
 }
 
 export type ScenarioPreviewResponse = {
   message: string
   scenario: ScenarioDraft
+}
+export type IngestionJob = {
+  jobId: string
+  status: 'AwaitingUpload' | 'Queued' | 'Processing' | 'AwaitingReview' | 'Failed'
+  errorCode?: string | null
+  attempts: number
+  createdAt?: string
+  updatedAt?: string
+  selectedModel?: string | null
+  sourceLabel?: string
+  hasDraft?: boolean
+  draft?: ScenarioDraft | null
 }
 export type AdminState = {
   activeTab: 'overview' | 'users' | 'scenarios'
@@ -279,6 +309,9 @@ export type AdminState = {
   isCreatingUser: boolean
   scenarioDraft: ScenarioDraft | null
   scenarioDraftSource: string | null
+  ingestionJob: IngestionJob | null
+  ingestionJobs: IngestionJob[]
+  personaTemplates: PersonaTemplate[]
   feedbackExperiment: {
     variants: Array<{
       variant: string

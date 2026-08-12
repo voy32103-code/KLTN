@@ -120,6 +120,7 @@ public static class SchemaBootstrapper
 
         CREATE UNIQUE INDEX IF NOT EXISTS uq_feedback_survey_session
             ON feedback_survey_responses (session_id);
+
         """;
 
     private const string UpdateSessionsSql = """
@@ -231,6 +232,8 @@ public static class SchemaBootstrapper
         using var scope = services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
+        await IngestionSchemaMigration.ApplyAsync(db);
+        await PipelineEnhancementSchemaMigration.ApplyAsync(db);
         await db.Database.ExecuteSqlRawAsync(AddColumnsSql);
         await db.Database.ExecuteSqlRawAsync(CreateIndexSql);
         await db.Database.ExecuteSqlRawAsync(UpdateSessionsSql);
