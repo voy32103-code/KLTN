@@ -17,8 +17,8 @@
   
   --text: #1A1A1A;
   --text-primary: #191816;
-  --text-secondary: #5F5F5F;
-  --muted: #808080;
+  --text-secondary: #454545;
+  --muted: #5F6368;
   --muted-strong: #4A4A4A;
   
   --line: #E5E0D8;
@@ -26,22 +26,28 @@
   --line-strong: rgba(0, 0, 0, 0.12);
 
   /* Terracotta & Semantic Accents */
-  --accent-indigo: #D97757;
-  --accent-indigo-glow: rgba(217, 119, 87, 0.15);
-  --accent-emerald: #10B981;
-  --accent-emerald-glow: rgba(16, 185, 129, 0.15);
-  --accent-amber: #F59E0B;
-  --accent-amber-glow: rgba(245, 158, 11, 0.15);
-  --accent-rose: #EF4444;
+  --accent-indigo: #9C3F25;
+  --accent-indigo-glow: rgba(156, 63, 37, 0.15);
+  --accent-emerald: #087F5B;
+  --accent-emerald-glow: rgba(8, 127, 91, 0.15);
+  --accent-amber: #8A4B00;
+  --accent-amber-glow: rgba(138, 75, 0, 0.15);
+  --accent-rose: #B42318;
+  /* Compatibility aliases used by generated view fragments. */
+  --accent: #9C3F25;
+  --color-text: #191816;
+  --color-text-secondary: #454545;
+  --color-primary: #9C3F25;
+  --color-border: #E5E0D8;
 
   --pastel-red-bg: rgba(239, 68, 68, 0.08);
-  --pastel-red-text: #EF4444;
+  --pastel-red-text: #B42318;
   --pastel-blue-bg: rgba(56, 189, 248, 0.08);
   --pastel-blue-text: #38BDF8;
   --pastel-green-bg: rgba(16, 185, 129, 0.08);
-  --pastel-green-text: #10B981;
+  --pastel-green-text: #087F5B;
   --pastel-yellow-bg: rgba(245, 158, 11, 0.08);
-  --pastel-yellow-text: #F59E0B;
+  --pastel-yellow-text: #8A4B00;
 
   --radius: 12px;
   --radius-xl: 16px;
@@ -126,6 +132,15 @@ p {
   transform: translateY(0);
 }
 
+@media (prefers-reduced-motion: reduce) {
+  [data-animate="fade-up"],
+  [data-animate="fade-up"].is-visible {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
 
 
 /* Structural Components */
@@ -179,6 +194,7 @@ p {
 
 .workspace {
   width: min(1200px, 100%);
+  box-sizing: border-box;
   margin: 0 auto;
   padding: 48px 32px 64px;
   flex: 1;
@@ -1321,6 +1337,31 @@ kbd {
 }
 
 @media (max-width: 680px) {
+  html,
+  body {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  .workspace,
+  .admin-header,
+  .admin-nav-tabs,
+  #admin-tabpanel-overview,
+  #admin-tabpanel-users,
+  #admin-tabpanel-scenarios {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .admin-nav-tabs {
+    flex-wrap: wrap;
+  }
+
+  .admin-nav-tabs .ghost-button {
+    flex: 1 1 100%;
+    white-space: normal;
+  }
+
   .topbar,
   .section-head,
   .detail-header,
