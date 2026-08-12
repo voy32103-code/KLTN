@@ -40,3 +40,9 @@ docs/
 brain/
 
 
+
+.obsidian/
+.tmp/
+~$*.docx
+*.pdf
+*.docx
