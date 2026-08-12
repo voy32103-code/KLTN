@@ -238,13 +238,7 @@ function renderScenarioPicker(state: AppState) {
       </button>
     </section>
     <section class="picker-layout">
-      <aside class="faux-chrome scenario-list" data-animate="fade-up" style="--index: 1">
-        <div class="chrome-bar">
-          <div class="chrome-dot"></div>
-          <div class="chrome-dot"></div>
-          <div class="chrome-dot"></div>
-        </div>
-        <div class="panel-heading">
+      <aside class="scenario-list" data-animate="fade-up" style="--index: 1">        <div class="panel-heading">
           <div>
             <p class="section-kicker">Danh sách</p>
             <h2>${state.scenarios.length} kịch bản khả dụng</h2>
@@ -254,13 +248,7 @@ function renderScenarioPicker(state: AppState) {
           ${state.scenarios.length === 0 ? renderEmpty('Chưa có kịch bản nào được kích hoạt.', 'Kiểm tra dữ liệu mẫu của máy chủ hoặc tải lại danh sách.') : state.scenarios.map((item, index) => renderScenarioItem(item, state, index)).join('')}
         </div>
       </aside>
-      <section class="faux-chrome detail-panel" data-animate="fade-up" style="--index: 2">
-        <div class="chrome-bar">
-          <div class="chrome-dot"></div>
-          <div class="chrome-dot"></div>
-          <div class="chrome-dot"></div>
-        </div>
-        ${scenario ? renderScenarioDetail(scenario, state) : renderScenarioPlaceholder()}
+      <section class="detail-panel" data-animate="fade-up" style="--index: 2">        ${scenario ? renderScenarioDetail(scenario, state) : renderScenarioPlaceholder()}
       </section>
     </section>
   `
@@ -310,7 +298,7 @@ function renderScenarioDetail(scenario: ScenarioDetail, state: AppState) {
     <div class="persona-section">
       <div class="subsection-heading" data-animate="fade-up" style="--index: 1">
         <h3>Đối tác Stakeholder</h3>
-        ${selectedPersona ? `<span class="view-pill liquid-glass font-serif">${escapeHtml(selectedPersona.name)}</span>` : ''}
+        ${selectedPersona ? `<span class="view-pill font-serif">${escapeHtml(selectedPersona.name)}</span>` : ''}
       </div>
       <div class="persona-grid">
         ${scenario.personas.length === 0 ? renderEmpty('Kịch bản này chưa có đối tác phỏng vấn nào.', 'Cần khởi tạo dữ liệu đối tác trước khi bắt đầu phỏng vấn.') : scenario.personas.map((persona, index) => renderPersonaCard(persona, state, index + 2)).join('')}
@@ -324,7 +312,7 @@ function renderScenarioDetail(scenario: ScenarioDetail, state: AppState) {
       <div style="display: flex; gap: var(--spacing-sm); align-items: center; flex-wrap: wrap; position: relative;">
         <!-- Custom Dropdown Container -->
         <div class="custom-dropdown">
-          <button class="liquid-glass" data-action="toggle-model-dropdown" type="button" style="display: flex; align-items: center; gap: 8px; padding: 0.625rem 1rem; border-radius: var(--radius-md); border: 1px solid var(--line); background: var(--surface); color: var(--text-primary); font-size: 0.875rem; cursor: pointer; outline: none; font-weight: 500;">
+          <button  data-action="toggle-model-dropdown" type="button" style="display: flex; align-items: center; gap: 8px; padding: 0.625rem 1rem; border-radius: var(--radius-md); border: 1px solid var(--line); background: var(--surface); color: var(--text-primary); font-size: 0.875rem; cursor: pointer; outline: none; font-weight: 500;">
             <span class="model-provider-badge ${getProviderClass(state.selectedModel)}"></span>
             <span>${getFriendlyModelName(state.selectedModel)}</span>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-left: 4px; transform: ${state.modelDropdownOpen ? 'rotate(180deg)' : 'rotate(0)'}; transition: transform 0.2s;"><polyline points="6 9 12 15 18 9"></polyline></svg>
@@ -352,7 +340,7 @@ function renderPersonaCard(persona: Persona, state: AppState, index: number) {
     <button class="persona-card ${active ? 'active' : ''}" data-persona-id="${escapeAttribute(persona.id)}" type="button" data-animate="fade-up" style="--index: ${index}">
       <span class="persona-topline">
         <strong class="font-serif">${escapeHtml(persona.name)}</strong>
-        <span class="difficulty-badge liquid-glass">${escapeHtml(persona.difficulty)}</span>
+        <span class="difficulty-badge">${escapeHtml(persona.difficulty)}</span>
       </span>
       <span>${escapeHtml(persona.roleTitle ?? 'Đối tác')}</span>
       <small>${escapeHtml(persona.communicationStyle ?? 'trung lập')} · ${escapeHtml(persona.knowledgeLevel ?? 'tiêu chuẩn')}</small>
@@ -384,13 +372,7 @@ function renderChat(state: AppState) {
 
   return `
     <section class="chat-layout">
-      <aside class="faux-chrome session-panel" data-animate="fade-up" style="--index: 0">
-        <div class="chrome-bar">
-          <div class="chrome-dot"></div>
-          <div class="chrome-dot"></div>
-          <div class="chrome-dot"></div>
-        </div>
-        <button class="ghost-button back-button" data-action="back-to-scenarios" type="button" ${state.busy ? 'disabled' : ''}>
+      <aside class="session-panel" data-animate="fade-up" style="--index: 0">        <button class="ghost-button back-button" data-action="back-to-scenarios" type="button" ${state.busy ? 'disabled' : ''}>
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right: 4px;"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
           Quay lại
         </button>
@@ -415,18 +397,12 @@ function renderChat(state: AppState) {
         </button>
         ${state.evaluation ? renderEvaluation(state.evaluation, true) : ''}
       </aside>
-      <section class="faux-chrome chat-panel" data-animate="fade-up" style="--index: 1">
-        <div class="chrome-bar">
-          <div class="chrome-dot"></div>
-          <div class="chrome-dot"></div>
-          <div class="chrome-dot"></div>
-        </div>
-        <div class="chat-header">
+      <section class="chat-panel" data-animate="fade-up" style="--index: 1">        <div class="chat-header">
           <div>
             <p class="section-kicker">Hội thoại Trực tiếp (${getFriendlyModelName(state.session?.selectedModel || state.selectedModel)})</p>
             <h2 class="font-serif">${escapeHtml(persona?.name ?? 'Đối tác')}</h2>
           </div>
-          <span class="view-pill liquid-glass">${state.evaluation ? 'Chế độ xem lại' : state.busy ? 'Đang xử lý' : 'Sẵn sàng'}</span>
+          <span class="view-pill">${state.evaluation ? 'Chế độ xem lại' : state.busy ? 'Đang xử lý' : 'Sẵn sàng'}</span>
         </div>
         <div class="messages" id="messages">
           ${state.messages.length === 0 ? renderEmpty('Chưa có tin nhắn trong phiên này.', 'Bắt đầu bằng một câu hỏi khảo sát nghiệp vụ.') : state.messages.map((msg, index) => renderMessage(msg, index)).join('')}
@@ -516,13 +492,7 @@ function renderReviewDashboard(state: AppState) {
       </span>
     </section>
     <section class="review-layout">
-      <aside class="faux-chrome review-list" data-animate="fade-up" style="--index: 2">
-        <div class="chrome-bar">
-          <div class="chrome-dot"></div>
-          <div class="chrome-dot"></div>
-          <div class="chrome-dot"></div>
-        </div>
-        <div class="panel-heading">
+      <aside class="review-list" data-animate="fade-up" style="--index: 2">        <div class="panel-heading">
           <div>
             <p class="section-kicker">Bản ghi thử nghiệm</p>
             <h2>Các phiên gần nhất</h2>
@@ -532,13 +502,7 @@ function renderReviewDashboard(state: AppState) {
           ${state.reviewSessions.length === 0 ? renderEmpty('Chưa có phiên phỏng vấn nào để đánh giá.', 'Hãy thực hiện một phiên phỏng vấn rồi quay lại bảng điều khiển.') : state.reviewSessions.map((session, index) => renderReviewSessionItem(session, state, index)).join('')}
         </div>
       </aside>
-      <section class="faux-chrome review-detail" data-animate="fade-up" style="--index: 3">
-        <div class="chrome-bar">
-          <div class="chrome-dot"></div>
-          <div class="chrome-dot"></div>
-          <div class="chrome-dot"></div>
-        </div>
-        ${state.reviewDetail ? renderReviewSessionDetail(state.reviewDetail) : renderReviewPlaceholder()}
+      <section class="review-detail" data-animate="fade-up" style="--index: 3">        ${state.reviewDetail ? renderReviewSessionDetail(state.reviewDetail) : renderReviewPlaceholder()}
       </section>
     </section>
   `
@@ -1468,3 +1432,4 @@ async function validateAndRenderMermaid(container: HTMLElement) {
     await mermaid.run({ nodes: validNodes })
   }
 }
+
