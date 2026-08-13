@@ -355,7 +355,7 @@ class ApiClientManager:
             )
 
         # Nếu là OpenRouter -> Gọi OpenRouter
-        if model_lower.startswith("openrouter") or "/" in model_lower:
+        if model_lower.startswith("openrouter") or ("/" in model_lower and not model_lower.startswith("omniroute/")):
             response_format = None
             if config and config.response_mime_type == "application/json":
                 response_format = {"type": "json_object"}
