@@ -6,7 +6,7 @@ import time
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, patch, MagicMock
 
 from google.genai import types
 from pydantic import ValidationError
@@ -221,16 +221,25 @@ class VideoFileRegressionTests(unittest.IsolatedAsyncioTestCase):
                     await extract_audio_from_video(video)
         self.assertTrue(process.killed)
 
-    async def test_audio_only_ingestion_rejects_missing_ffmpeg(self):
+    @patch("app.services.video_processing_service.client_manager")
+    async def test_audio_only_ingestion_falls_back_to_direct_upload(self, mock_client_manager):
+        # Setup mock client manager to return a mock client
+        mock_client = MagicMock()
+        mock_client.files.upload = MagicMock(return_value=SimpleNamespace(name="mock_file", state=types.FileState.ACTIVE))
+        mock_client.models.generate_content = MagicMock(return_value=SimpleNamespace(text='{"title": "Test"}'))
+        
+        mock_client_manager._get_active_gemini_client_index.return_value = 0
+        mock_client_manager.gemini_clients = [mock_client]
+        
         with tempfile.TemporaryDirectory() as directory:
             video = Path(directory) / "meeting.mp4"
             video.write_bytes(b"\x00\x00\x00\x18ftypmp42")
-            with patch(
-                "app.services.video_processing_service.is_ffmpeg_available",
-                return_value=False,
-            ):
-                with self.assertRaisesRegex(RuntimeError, "audio-only"):
-                    await generate_scenario_from_video(str(video))
+            with patch("app.services.video_processing_service.is_ffmpeg_available", return_value=False):
+                with patch("app.services.video_processing_service.wait_for_gemini_file_active", return_value=SimpleNamespace(name="mock_file")):
+                    with patch("app.services.video_processing_service.parse_and_validate_scenario_config", return_value={}):
+                        await generate_scenario_from_video(str(video))
+                        # Assert that upload was called with the original video file path
+                        mock_client.files.upload.assert_called_once_with(file=str(video))
 
     async def test_gemini_file_polling_waits_for_active_state(self):
         uploaded = SimpleNamespace(name="files/audio")

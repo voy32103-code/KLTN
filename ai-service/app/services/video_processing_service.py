@@ -175,11 +175,11 @@ only JSON matching the supplied schema."""
                 temperature=0.2,
             ),
         )
-        return parse_and_validate_scenario_config(extract_json_string(response.text))
+        return parse_and_validate_scenario_config(extract_json_string(response.text or ""))
     finally:
         if uploaded_file and hasattr(uploaded_file, "name"):
             try:
-                await asyncio.to_thread(client.files.delete, name=uploaded_file.name)
+                await asyncio.to_thread(client.files.delete, name=uploaded_file.name)  # type: ignore
             except Exception:
                 logger.warning("Could not delete the Gemini audio artifact.", exc_info=True)
         if cleanup_path:

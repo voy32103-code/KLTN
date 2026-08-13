@@ -79,7 +79,7 @@ class ApiClientManager:
         self,
         model: str,
         contents: Any,
-        system_instruction: str | None,
+        system_instruction: Any,
         temperature: float,
         max_output_tokens: int,
         response_format: dict | None = None
@@ -139,10 +139,10 @@ class ApiClientManager:
     async def _call_openai_compatible(
         self,
         base_url: str,
-        api_key: str,
+        api_key: str | None,
         model: str,
         contents: Any,
-        system_instruction: str | None,
+        system_instruction: Any,
         temperature: float,
         max_output_tokens: int,
         response_format: dict | None = None
@@ -203,7 +203,7 @@ class ApiClientManager:
         self,
         model: str,
         contents: Any,
-        system_instruction: str | None,
+        system_instruction: Any,
         temperature: float,
         max_output_tokens: int,
         response_format: dict | None = None
@@ -232,7 +232,7 @@ class ApiClientManager:
         self,
         model: str,
         contents: Any,
-        system_instruction: str | None,
+        system_instruction: Any,
         temperature: float,
         max_output_tokens: int,
         response_format: dict | None = None
@@ -259,7 +259,7 @@ class ApiClientManager:
         self,
         model: str,
         contents: Any,
-        system_instruction: str | None,
+        system_instruction: Any,
         temperature: float,
         max_output_tokens: int,
         response_format: dict | None = None
