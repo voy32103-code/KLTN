@@ -42,9 +42,30 @@ function getFriendlyModelName(modelId?: string): string {
     case 'openrouter/meta-llama/llama-3.3-70b-instruct': return 'Llama 3.3 70B (OpenRouter)'
     case 'openrouter/deepseek/deepseek-chat': return 'DeepSeek Chat (OpenRouter)'
     case 'openrouter/google/gemini-2.5-flash': return 'Gemini 2.5 Flash (OpenRouter)'
-    case 'omniroute/meta-llama/llama-3.3-70b-instruct': return 'Llama 3.3 70B (OmniRoute)'
-    case 'omniroute/deepseek/deepseek-chat': return 'DeepSeek Chat (OmniRoute)'
-    case 'omniroute/google/gemini-2.5-flash': return 'Gemini 2.5 Flash (OmniRoute)'
+    case 'omniroute/kmc/k3': return 'Kimi K3 (OmniRoute)'
+    case 'omniroute/kmc/kimi-for-coding': return 'Kimi for Coding (OmniRoute)'
+    case 'omniroute/kmc/kimi-for-coding-highspeed': return 'Kimi Coding Fast (OmniRoute)'
+    case 'omniroute/cp/cline-pass/glm-5.2': return 'GLM-5.2 (OmniRoute)'
+    case 'omniroute/cp/cline-pass/minimax-m3': return 'MiniMax-M3 (OmniRoute)'
+    case 'omniroute/cp/cline-pass/deepseek-v4-pro': return 'DeepSeek V4 Pro (OmniRoute)'
+    case 'omniroute/cp/cline-pass/deepseek-v4-flash': return 'DeepSeek V4 Flash (OmniRoute)'
+    case 'omniroute/cp/cline-pass/kimi-k3': return 'Kimi K3 CP (OmniRoute)'
+    case 'omniroute/cp/cline-pass/kimi-k2.7-code': return 'Kimi K2.7 Code (OmniRoute)'
+    case 'omniroute/cp/cline-pass/mimo-v2.5-pro': return 'MiMo-V2.5-Pro (OmniRoute)'
+    case 'omniroute/cp/cline-pass/mimo-v2.5': return 'MiMo-V2.5 (OmniRoute)'
+    case 'omniroute/cp/cline-pass/qwen3.7-max': return 'Qwen3.7 Max (OmniRoute)'
+    case 'omniroute/cp/cline-pass/qwen3.7-plus': return 'Qwen3.7 Plus (OmniRoute)'
+    case 'omniroute/kr/claude-sonnet-5': return 'Claude Sonnet 5 (OmniRoute)'
+    case 'omniroute/kr/claude-sonnet-4.5': return 'Claude Sonnet 4.5 (OmniRoute)'
+    case 'omniroute/kr/claude-haiku-4.5': return 'Claude Haiku 4.5 (OmniRoute)'
+    case 'omniroute/kr/deepseek-3.2': return 'DeepSeek V3.2 (OmniRoute)'
+    case 'omniroute/kr/minimax-m2.5': return 'MiniMax M2.5 (OmniRoute)'
+    case 'omniroute/kr/minimax-m2.1': return 'MiniMax M2.1 (OmniRoute)'
+    case 'omniroute/kr/glm-5': return 'GLM-5 (OmniRoute)'
+    case 'omniroute/kr/qwen3-coder-next': return 'Qwen3 Coder Next (OmniRoute)'
+    case 'omniroute/kr/gpt-5.6-sol': return 'GPT-5.6 Sol (OmniRoute)'
+    case 'omniroute/kr/gpt-5.6-terra': return 'GPT-5.6 Terra (OmniRoute)'
+    case 'omniroute/kr/gpt-5.6-luna': return 'GPT-5.6 Luna (OmniRoute)'
     default: return modelId
   }
 }
@@ -73,9 +94,30 @@ function renderModelGroups(state: AppState) {
     { id: 'openrouter/meta-llama/llama-3.3-70b-instruct', name: 'Llama 3.3 70B (OR)', provider: 'openrouter', desc: 'Llama 3.3 Instruct qua OpenRouter' },
     { id: 'openrouter/deepseek/deepseek-chat', name: 'DeepSeek Chat (OR)', provider: 'openrouter', desc: 'DeepSeek Chat qua OpenRouter' },
     { id: 'openrouter/google/gemini-2.5-flash', name: 'Gemini 2.5 Flash (OR)', provider: 'openrouter', desc: 'Gemini 2.5 Flash qua OpenRouter' },
-    { id: 'omniroute/meta-llama/llama-3.3-70b-instruct', name: 'Llama 3.3 70B (Omni)', provider: 'omniroute', desc: 'Llama 3.3 qua OmniRoute' },
-    { id: 'omniroute/deepseek/deepseek-chat', name: 'DeepSeek Chat (Omni)', provider: 'omniroute', desc: 'DeepSeek qua OmniRoute' },
-    { id: 'omniroute/google/gemini-2.5-flash', name: 'Gemini 2.5 Flash (Omni)', provider: 'omniroute', desc: 'Gemini 2.5 qua OmniRoute' }
+    { id: 'omniroute/kmc/k3', name: 'Kimi K3 (Omni)', provider: 'omniroute', desc: 'Kimi K3 qua OmniRoute' },
+    { id: 'omniroute/kmc/kimi-for-coding', name: 'Kimi for Coding (Omni)', provider: 'omniroute', desc: 'Kimi for Coding qua OmniRoute' },
+    { id: 'omniroute/kmc/kimi-for-coding-highspeed', name: 'Kimi Coding Fast (Omni)', provider: 'omniroute', desc: 'Kimi for Coding Highspeed qua OmniRoute' },
+    { id: 'omniroute/cp/cline-pass/glm-5.2', name: 'GLM-5.2 (Omni)', provider: 'omniroute', desc: 'GLM-5.2 qua OmniRoute' },
+    { id: 'omniroute/cp/cline-pass/minimax-m3', name: 'MiniMax-M3 (Omni)', provider: 'omniroute', desc: 'MiniMax-M3 qua OmniRoute' },
+    { id: 'omniroute/cp/cline-pass/deepseek-v4-pro', name: 'DeepSeek V4 Pro (Omni)', provider: 'omniroute', desc: 'DeepSeek V4 Pro qua OmniRoute' },
+    { id: 'omniroute/cp/cline-pass/deepseek-v4-flash', name: 'DeepSeek V4 Flash (Omni)', provider: 'omniroute', desc: 'DeepSeek V4 Flash qua OmniRoute' },
+    { id: 'omniroute/cp/cline-pass/kimi-k3', name: 'Kimi K3 CP (Omni)', provider: 'omniroute', desc: 'Kimi K3 qua OmniRoute' },
+    { id: 'omniroute/cp/cline-pass/kimi-k2.7-code', name: 'Kimi K2.7 Code (Omni)', provider: 'omniroute', desc: 'Kimi K2.7 Code qua OmniRoute' },
+    { id: 'omniroute/cp/cline-pass/mimo-v2.5-pro', name: 'MiMo-V2.5-Pro (Omni)', provider: 'omniroute', desc: 'MiMo-V2.5-Pro qua OmniRoute' },
+    { id: 'omniroute/cp/cline-pass/mimo-v2.5', name: 'MiMo-V2.5 (Omni)', provider: 'omniroute', desc: 'MiMo-V2.5 qua OmniRoute' },
+    { id: 'omniroute/cp/cline-pass/qwen3.7-max', name: 'Qwen3.7 Max (Omni)', provider: 'omniroute', desc: 'Qwen3.7 Max qua OmniRoute' },
+    { id: 'omniroute/cp/cline-pass/qwen3.7-plus', name: 'Qwen3.7 Plus (Omni)', provider: 'omniroute', desc: 'Qwen3.7 Plus qua OmniRoute' },
+    { id: 'omniroute/kr/claude-sonnet-5', name: 'Claude Sonnet 5 (Omni)', provider: 'omniroute', desc: 'Claude Sonnet 5 qua OmniRoute' },
+    { id: 'omniroute/kr/claude-sonnet-4.5', name: 'Claude Sonnet 4.5 (Omni)', provider: 'omniroute', desc: 'Claude Sonnet 4.5 qua OmniRoute' },
+    { id: 'omniroute/kr/claude-haiku-4.5', name: 'Claude Haiku 4.5 (Omni)', provider: 'omniroute', desc: 'Claude Haiku 4.5 qua OmniRoute' },
+    { id: 'omniroute/kr/deepseek-3.2', name: 'DeepSeek V3.2 (Omni)', provider: 'omniroute', desc: 'DeepSeek V3.2 qua OmniRoute' },
+    { id: 'omniroute/kr/minimax-m2.5', name: 'MiniMax M2.5 (Omni)', provider: 'omniroute', desc: 'MiniMax M2.5 qua OmniRoute' },
+    { id: 'omniroute/kr/minimax-m2.1', name: 'MiniMax M2.1 (Omni)', provider: 'omniroute', desc: 'MiniMax M2.1 qua OmniRoute' },
+    { id: 'omniroute/kr/glm-5', name: 'GLM-5 (Omni)', provider: 'omniroute', desc: 'GLM-5 qua OmniRoute' },
+    { id: 'omniroute/kr/qwen3-coder-next', name: 'Qwen3 Coder Next (Omni)', provider: 'omniroute', desc: 'Qwen3 Coder Next qua OmniRoute' },
+    { id: 'omniroute/kr/gpt-5.6-sol', name: 'GPT-5.6 Sol (Omni)', provider: 'omniroute', desc: 'GPT-5.6 Sol qua OmniRoute' },
+    { id: 'omniroute/kr/gpt-5.6-terra', name: 'GPT-5.6 Terra (Omni)', provider: 'omniroute', desc: 'GPT-5.6 Terra qua OmniRoute' },
+    { id: 'omniroute/kr/gpt-5.6-luna', name: 'GPT-5.6 Luna (Omni)', provider: 'omniroute', desc: 'GPT-5.6 Luna qua OmniRoute' }
   ];
 
   const providers: Record<string, { label: string; color: string }> = {
@@ -998,9 +1040,30 @@ function renderAdminScenarioSection(state: AppState) {
             <option value="openrouter/meta-llama/llama-3.3-70b-instruct">Llama 3.3 70B (OpenRouter)</option>
             <option value="openrouter/deepseek/deepseek-chat">DeepSeek Chat (OpenRouter)</option>
             <option value="openrouter/google/gemini-2.5-flash">Gemini 2.5 Flash (OpenRouter)</option>
-            <option value="omniroute/meta-llama/llama-3.3-70b-instruct">Llama 3.3 70B (OmniRoute)</option>
-            <option value="omniroute/deepseek/deepseek-chat">DeepSeek Chat (OmniRoute)</option>
-            <option value="omniroute/google/gemini-2.5-flash">Gemini 2.5 Flash (OmniRoute)</option>
+            <option value="omniroute/kmc/k3">Kimi K3</option>
+            <option value="omniroute/kmc/kimi-for-coding">Kimi for Coding</option>
+            <option value="omniroute/kmc/kimi-for-coding-highspeed">Kimi Coding Fast</option>
+            <option value="omniroute/cp/cline-pass/glm-5.2">GLM-5.2</option>
+            <option value="omniroute/cp/cline-pass/minimax-m3">MiniMax-M3</option>
+            <option value="omniroute/cp/cline-pass/deepseek-v4-pro">DeepSeek V4 Pro</option>
+            <option value="omniroute/cp/cline-pass/deepseek-v4-flash">DeepSeek V4 Flash</option>
+            <option value="omniroute/cp/cline-pass/kimi-k3">Kimi K3 CP</option>
+            <option value="omniroute/cp/cline-pass/kimi-k2.7-code">Kimi K2.7 Code</option>
+            <option value="omniroute/cp/cline-pass/mimo-v2.5-pro">MiMo-V2.5-Pro</option>
+            <option value="omniroute/cp/cline-pass/mimo-v2.5">MiMo-V2.5</option>
+            <option value="omniroute/cp/cline-pass/qwen3.7-max">Qwen3.7 Max</option>
+            <option value="omniroute/cp/cline-pass/qwen3.7-plus">Qwen3.7 Plus</option>
+            <option value="omniroute/kr/claude-sonnet-5">Claude Sonnet 5</option>
+            <option value="omniroute/kr/claude-sonnet-4.5">Claude Sonnet 4.5</option>
+            <option value="omniroute/kr/claude-haiku-4.5">Claude Haiku 4.5</option>
+            <option value="omniroute/kr/deepseek-3.2">DeepSeek V3.2</option>
+            <option value="omniroute/kr/minimax-m2.5">MiniMax M2.5</option>
+            <option value="omniroute/kr/minimax-m2.1">MiniMax M2.1</option>
+            <option value="omniroute/kr/glm-5">GLM-5</option>
+            <option value="omniroute/kr/qwen3-coder-next">Qwen3 Coder Next</option>
+            <option value="omniroute/kr/gpt-5.6-sol">GPT-5.6 Sol</option>
+            <option value="omniroute/kr/gpt-5.6-terra">GPT-5.6 Terra</option>
+            <option value="omniroute/kr/gpt-5.6-luna">GPT-5.6 Luna</option>
           </select>
         </div>
 
