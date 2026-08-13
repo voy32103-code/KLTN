@@ -173,7 +173,8 @@ class ApiClientManager:
             "model": model,
             "messages": messages,
             "temperature": temperature,
-            "max_tokens": max_output_tokens
+            "max_tokens": max_output_tokens,
+            "stream": False
         }
         if response_format:
             payload["response_format"] = response_format
