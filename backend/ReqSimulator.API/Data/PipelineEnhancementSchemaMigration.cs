@@ -67,14 +67,14 @@ public static class PipelineEnhancementSchemaMigration
 
         INSERT INTO persona_templates
             (id, template_key, label, personality_traits, communication_style, knowledge_level,
-             difficulty, initial_mood, initial_patience, is_active, is_system_default)
+             difficulty, initial_mood, initial_patience, is_active, is_system_default, created_at, updated_at)
         VALUES
             ('11111111-1111-4111-8111-111111111111', 'collaborative', 'Collaborative',
              '{"traits":["collaborative","detail_oriented"]}'::jsonb, 'collaborative', 'high',
-             'easy', 'neutral', 1.00, TRUE, TRUE),
+             'easy', 'neutral', 1.00, TRUE, TRUE, NOW(), NOW()),
             ('22222222-2222-4222-8222-222222222222', 'challenging', 'Challenging',
              '{"traits":["challenging","detail_oriented"]}'::jsonb, 'concise', 'medium',
-             'hard', 'neutral', 0.70, TRUE, TRUE)
+             'hard', 'neutral', 0.70, TRUE, TRUE, NOW(), NOW())
         ON CONFLICT (template_key) DO NOTHING;
         """;
 

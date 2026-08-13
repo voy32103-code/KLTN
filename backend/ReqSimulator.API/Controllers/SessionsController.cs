@@ -698,7 +698,7 @@ public class SessionsController : ControllerBase
         {
             return Conflict(new
             {
-                message = "The session changed while this message was being processed. Reload and retry."
+                message = "Phiên làm việc đã thay đổi trong quá trình xử lý tin nhắn. Vui lòng tải lại trang và thử lại."
             });
         }
 
@@ -774,7 +774,7 @@ public class SessionsController : ControllerBase
         if (session is null) return NotFound();
         if (session.StudentId != userId.Value) return Forbid();
         if (session.EvaluationResult is null)
-            return BadRequest(new { message = "Complete the evaluation before submitting feedback." });
+            return BadRequest(new { message = "Vui lòng hoàn thành đánh giá trước khi gửi phản hồi." });
 
         var response = await _db.FeedbackSurveyResponses
             .FirstOrDefaultAsync(item => item.SessionId == sessionId);

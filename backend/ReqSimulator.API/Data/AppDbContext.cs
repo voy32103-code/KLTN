@@ -30,12 +30,12 @@ public class AppDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder.HasPostgresEnum<UserRole>("public", "user_role");
-        modelBuilder.HasPostgresEnum<SenderType>("public", "sender_type");
-        modelBuilder.HasPostgresEnum<RequirementCategory>("public", "requirement_category");
-        modelBuilder.HasPostgresEnum<Models.MatchType>("public", "match_type");
-        modelBuilder.HasPostgresEnum<QuestionType>("public", "question_type");
-        modelBuilder.HasPostgresEnum<PersonaDifficulty>("public", "persona_difficulty");
+        modelBuilder.HasPostgresEnum<UserRole>(name: "user_role");
+        modelBuilder.HasPostgresEnum<SenderType>(name: "sender_type");
+        modelBuilder.HasPostgresEnum<RequirementCategory>(name: "requirement_category");
+        modelBuilder.HasPostgresEnum<Models.MatchType>(name: "match_type");
+        modelBuilder.HasPostgresEnum<QuestionType>(name: "question_type");
+        modelBuilder.HasPostgresEnum<PersonaDifficulty>(name: "persona_difficulty");
 
         modelBuilder.Entity<User>().ToTable("users");
         modelBuilder.Entity<Scenario>().ToTable("scenarios");

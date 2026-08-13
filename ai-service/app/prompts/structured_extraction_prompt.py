@@ -129,6 +129,7 @@ Bạn là chuyên gia phân tích yêu cầu phần mềm. Nhiệm vụ của b�
    - <0.5: Không chắc chắn, có thể bỏ qua
 
 5. **ID generation**: Sử dụng format REQ001, REQ002... theo thứ tự tăng dần
+6. **Ngôn ngữ bắt buộc**: Tất cả nội dung trích xuất (actor, action, object, condition, raw_text) PHẢI ĐƯỢC VIẾT BẰNG TIẾNG VIỆT, kể cả khi hội thoại gốc có chứa tiếng Anh.
 
 ---
 

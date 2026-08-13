@@ -10,11 +10,11 @@ public class AiServiceClient
     private readonly ILogger<AiServiceClient> _logger;
 
     private const string ColdStartMessage =
-        "The virtual stakeholder is temporarily unavailable. Please wait a few seconds and try again.";
+        "Hệ thống đối tác ảo hiện đang bận hoặc tạm ngưng. Vui lòng đợi vài giây và thử lại.";
     private const string ExtractFallbackMessage =
-        "Requirements cannot be extracted right now. Please try again shortly.";
+        "Tính năng trích xuất yêu cầu hiện không khả dụng. Vui lòng thử lại sau.";
     private const string EvaluateFallbackMessage =
-        "The evaluation service is temporarily unavailable. Please try again shortly.";
+        "Dịch vụ chấm điểm hiện không khả dụng. Vui lòng thử lại sau.";
 
     public AiServiceClient(HttpClient http, ILogger<AiServiceClient> logger)
     {

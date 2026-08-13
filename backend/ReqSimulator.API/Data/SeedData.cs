@@ -54,9 +54,9 @@ public static class SeedData
     {
         var templates = new[]
         {
-            ("Business Owner", "Decision Maker", "Management"),
-            ("Process Expert", "Domain Specialist", "Operations"),
-            ("End User", "Operational User", "Delivery")
+            ("Chủ doanh nghiệp", "Người ra quyết định", "Quản lý"),
+            ("Chuyên gia Quy trình", "Chuyên viên Nghiệp vụ", "Vận hành"),
+            ("Người dùng cuối", "Người dùng Trực tiếp", "Thực thi")
         };
         foreach (var scenarioId in scenarioIds)
         {
@@ -69,13 +69,13 @@ public static class SeedData
                 {
                     Id = Guid.NewGuid(), ScenarioId = scenarioId, Name = role.Item1,
                     RoleTitle = role.Item2, Department = role.Item3,
-                    Description = $"Represents the {role.Item3} viewpoint."
+                    Description = $"Đại diện cho góc nhìn của khối {role.Item3}."
                 };
                 db.Stakeholders.Add(stakeholder);
                 foreach (var profile in new[]
                 {
-                    ("Collaborative", "collaborative", PersonaDifficulty.Easy, 1.00m),
-                    ("Challenging", "concise", PersonaDifficulty.Hard, 0.70m)
+                    ("Hợp tác", "collaborative", PersonaDifficulty.Easy, 1.00m),
+                    ("Khó tính", "concise", PersonaDifficulty.Hard, 0.70m)
                 })
                 {
                     db.Personas.Add(new Persona
@@ -328,16 +328,16 @@ public static class SeedData
     private static readonly ScenarioSeed HospitalScenario = new(
         Guid.Parse("44444444-4444-4444-8444-444444444444"),
         "hospital_appointment",
-        "Hospital Appointment System",
-        "CityCare Clinic wants an online appointment booking system to reduce front-desk workload and help patients manage appointments.",
-        "Healthcare",
+        "Hệ thống Đặt lịch khám Bệnh viện",
+        "Phòng khám CityCare cần một hệ thống đặt lịch trực tuyến để giảm tải công việc lễ tân và giúp bệnh nhân quản lý lịch hẹn.",
+        "Y tế",
         PersonaDifficulty.Hard,
         1);
 
     private static readonly PersonaSeed HospitalPersona = new(
         Guid.Parse("55555555-5555-4555-8555-555555555555"),
         "Ms. Tran",
-        "Clinic Operations Coordinator",
+        "Điều phối viên Vận hành",
         """{"traits":["rushed","clinical","risk_aware"],"jargon_level":"medium","cooperation_level":"medium","disclosure_style":"progressive","taboo_topics":["diagnosis","medical advice"]}""",
         "rushed-clinical",
         "high",
@@ -347,33 +347,33 @@ public static class SeedData
 
     private static readonly HiddenRequirementSeed[] HospitalRequirements =
     [
-        new(Guid.Parse("60000000-0000-4000-8000-000000000001"), "Patients must be able to book appointments online.", RequirementCategory.Functional, PersonaDifficulty.Easy, "General question about online appointment booking.", 0),
-        new(Guid.Parse("60000000-0000-4000-8000-000000000002"), "The system must show available doctor time slots before confirming an appointment.", RequirementCategory.Functional, PersonaDifficulty.Medium, "Question about doctor availability or appointment time slots.", 1),
-        new(Guid.Parse("60000000-0000-4000-8000-000000000003"), "Urgent symptoms must trigger guidance to contact emergency services instead of booking a routine appointment.", RequirementCategory.BusinessRule, PersonaDifficulty.Hard, "Question about urgent symptoms or emergency cases.", 3),
-        new(Guid.Parse("60000000-0000-4000-8000-000000000004"), "Patients can reschedule or cancel appointments up to 24 hours before the appointment time.", RequirementCategory.BusinessRule, PersonaDifficulty.Medium, "Question about changing or canceling appointments.", 1),
-        new(Guid.Parse("60000000-0000-4000-8000-000000000005"), "The system should send appointment reminders by SMS or email.", RequirementCategory.Functional, PersonaDifficulty.Easy, "Question about reminders or reducing no-shows.", 1),
-        new(Guid.Parse("60000000-0000-4000-8000-000000000006"), "The system must integrate with the existing EHR to retrieve patient demographics.", RequirementCategory.Functional, PersonaDifficulty.Medium, "Question about patient data or existing clinical systems.", 2),
-        new(Guid.Parse("60000000-0000-4000-8000-000000000007"), "The system should support insurance eligibility checks before appointment confirmation.", RequirementCategory.Functional, PersonaDifficulty.Hard, "Question about insurance or eligibility before confirmation.", 2),
-        new(Guid.Parse("60000000-0000-4000-8000-000000000008"), "Doctors must be able to block unavailable time slots.", RequirementCategory.Functional, PersonaDifficulty.Medium, "Question about doctor calendars or unavailable periods.", 1),
-        new(Guid.Parse("60000000-0000-4000-8000-000000000009"), "Access to patient appointment data must be role-based.", RequirementCategory.Constraint, PersonaDifficulty.Hard, "Question about privacy, roles, or patient data access.", 4),
-        new(Guid.Parse("60000000-0000-4000-8000-000000000010"), "Appointment changes must be auditable with timestamp and staff/user identity.", RequirementCategory.Constraint, PersonaDifficulty.Hard, "Question about tracking appointment changes.", 4),
-        new(Guid.Parse("60000000-0000-4000-8000-000000000011"), "The system should support both Vietnamese and English patient-facing screens.", RequirementCategory.NonFunctional, PersonaDifficulty.Medium, "Question about language support or patient diversity.", 4),
-        new(Guid.Parse("60000000-0000-4000-8000-000000000012"), "The system must support at least 200 concurrent booking requests during morning peak hours.", RequirementCategory.NonFunctional, PersonaDifficulty.Hard, "Question about peak load or performance.", 4)
+        new(Guid.Parse("60000000-0000-4000-8000-000000000001"), "Bệnh nhân phải có khả năng đặt lịch khám trực tuyến.", RequirementCategory.Functional, PersonaDifficulty.Easy, "Câu hỏi chung về đặt lịch khám trực tuyến.", 0),
+        new(Guid.Parse("60000000-0000-4000-8000-000000000002"), "Hệ thống phải hiển thị các khung giờ khám bệnh của bác sĩ trước khi xác nhận lịch hẹn.", RequirementCategory.Functional, PersonaDifficulty.Medium, "Câu hỏi về sự sẵn có của bác sĩ hoặc các khung giờ khám.", 1),
+        new(Guid.Parse("60000000-0000-4000-8000-000000000003"), "Các triệu chứng khẩn cấp phải kích hoạt hướng dẫn liên hệ dịch vụ cấp cứu thay vì đặt lịch khám thông thường.", RequirementCategory.BusinessRule, PersonaDifficulty.Hard, "Câu hỏi về các triệu chứng khẩn cấp hoặc trường hợp cấp cứu.", 3),
+        new(Guid.Parse("60000000-0000-4000-8000-000000000004"), "Bệnh nhân có thể đổi hoặc hủy lịch hẹn trước thời gian hẹn ít nhất 24 giờ.", RequirementCategory.BusinessRule, PersonaDifficulty.Medium, "Câu hỏi về việc thay đổi hoặc hủy lịch hẹn.", 1),
+        new(Guid.Parse("60000000-0000-4000-8000-000000000005"), "Hệ thống nên gửi nhắc nhở lịch hẹn qua SMS hoặc email.", RequirementCategory.Functional, PersonaDifficulty.Easy, "Câu hỏi về nhắc nhở hoặc giảm tỷ lệ bỏ lỡ cuộc hẹn.", 1),
+        new(Guid.Parse("60000000-0000-4000-8000-000000000006"), "Hệ thống phải tích hợp với EHR hiện tại để truy xuất dữ liệu nhân khẩu học của bệnh nhân.", RequirementCategory.Functional, PersonaDifficulty.Medium, "Câu hỏi về dữ liệu bệnh nhân hoặc các hệ thống lâm sàng hiện có.", 2),
+        new(Guid.Parse("60000000-0000-4000-8000-000000000007"), "Hệ thống nên hỗ trợ kiểm tra điều kiện bảo hiểm trước khi xác nhận lịch hẹn.", RequirementCategory.Functional, PersonaDifficulty.Hard, "Câu hỏi về bảo hiểm hoặc điều kiện trước khi xác nhận.", 2),
+        new(Guid.Parse("60000000-0000-4000-8000-000000000008"), "Bác sĩ phải có khả năng chặn các khung giờ không làm việc.", RequirementCategory.Functional, PersonaDifficulty.Medium, "Câu hỏi về lịch trình của bác sĩ hoặc các khoảng thời gian không khả dụng.", 1),
+        new(Guid.Parse("60000000-0000-4000-8000-000000000009"), "Quyền truy cập vào dữ liệu lịch hẹn của bệnh nhân phải dựa trên vai trò.", RequirementCategory.Constraint, PersonaDifficulty.Hard, "Câu hỏi về quyền riêng tư, vai trò hoặc truy cập dữ liệu bệnh nhân.", 4),
+        new(Guid.Parse("60000000-0000-4000-8000-000000000010"), "Các thay đổi lịch hẹn phải được lưu vết cùng với mốc thời gian và danh tính nhân viên/người dùng.", RequirementCategory.Constraint, PersonaDifficulty.Hard, "Câu hỏi về theo dõi thay đổi lịch hẹn.", 4),
+        new(Guid.Parse("60000000-0000-4000-8000-000000000011"), "Hệ thống nên hỗ trợ giao diện bệnh nhân bằng cả tiếng Việt và tiếng Anh.", RequirementCategory.NonFunctional, PersonaDifficulty.Medium, "Câu hỏi về hỗ trợ ngôn ngữ hoặc sự đa dạng của bệnh nhân.", 4),
+        new(Guid.Parse("60000000-0000-4000-8000-000000000012"), "Hệ thống phải hỗ trợ ít nhất 200 yêu cầu đặt lịch đồng thời trong giờ cao điểm buổi sáng.", RequirementCategory.NonFunctional, PersonaDifficulty.Hard, "Câu hỏi về tải cao điểm hoặc hiệu năng.", 4)
     ];
 
     private static readonly ScenarioSeed InventoryScenario = new(
         Guid.Parse("77777777-7777-4777-8777-777777777777"),
         "small_business_inventory",
-        "Small Business Inventory Management",
-        "A small retail shop wants to replace manual stock notes and spreadsheets with a simple inventory management system.",
-        "Retail",
+        "Hệ thống Quản lý Kho Cửa hàng nhỏ",
+        "Một cửa hàng bán lẻ nhỏ muốn thay thế việc ghi chép sổ sách và bảng tính Excel bằng một hệ thống quản lý kho đơn giản.",
+        "Bán lẻ",
         PersonaDifficulty.Easy,
         1);
 
     private static readonly PersonaSeed InventoryPersona = new(
         Guid.Parse("88888888-8888-4888-8888-888888888888"),
         "Mr. Lam",
-        "Shop Owner",
+        "Chủ cửa hàng",
         """{"traits":["friendly","practical","cost_conscious"],"jargon_level":"low","cooperation_level":"high","disclosure_style":"concrete_examples","taboo_topics":["complex enterprise architecture"]}""",
         "friendly-practical",
         "medium",
@@ -383,14 +383,14 @@ public static class SeedData
 
     private static readonly HiddenRequirementSeed[] InventoryRequirements =
     [
-        new(Guid.Parse("90000000-0000-4000-8000-000000000001"), "Staff must be able to view current stock levels for each product.", RequirementCategory.Functional, PersonaDifficulty.Easy, "General question about inventory tracking.", 0),
-        new(Guid.Parse("90000000-0000-4000-8000-000000000002"), "Staff must be able to record stock-in and stock-out transactions.", RequirementCategory.Functional, PersonaDifficulty.Easy, "Question about receiving or removing stock.", 1),
-        new(Guid.Parse("90000000-0000-4000-8000-000000000003"), "The system should alert the owner when product stock falls below a configurable threshold.", RequirementCategory.Functional, PersonaDifficulty.Medium, "Question about low stock or reorder alerts.", 1),
-        new(Guid.Parse("90000000-0000-4000-8000-000000000004"), "The system should support barcode scanning for faster product lookup.", RequirementCategory.Functional, PersonaDifficulty.Medium, "Question about faster product lookup or barcode scanning.", 2),
-        new(Guid.Parse("90000000-0000-4000-8000-000000000005"), "The system must support creating purchase orders for suppliers.", RequirementCategory.Functional, PersonaDifficulty.Medium, "Question about suppliers or reordering stock.", 2),
-        new(Guid.Parse("90000000-0000-4000-8000-000000000006"), "The inventory system should integrate with the existing sales system to reduce manual updates.", RequirementCategory.Functional, PersonaDifficulty.Hard, "Question about sales/POS integration.", 2),
-        new(Guid.Parse("90000000-0000-4000-8000-000000000007"), "Only the owner can edit product cost prices and supplier information.", RequirementCategory.Constraint, PersonaDifficulty.Medium, "Question about permission or sensitive inventory data.", 3),
-        new(Guid.Parse("90000000-0000-4000-8000-000000000008"), "The system should generate daily stock movement and low-stock reports.", RequirementCategory.Functional, PersonaDifficulty.Medium, "Question about daily reporting.", 3),
-        new(Guid.Parse("90000000-0000-4000-8000-000000000009"), "The system should continue recording transactions during temporary internet outages and sync later.", RequirementCategory.NonFunctional, PersonaDifficulty.Hard, "Question about offline use or internet outages.", 4)
+        new(Guid.Parse("90000000-0000-4000-8000-000000000001"), "Nhân viên phải có thể xem mức tồn kho hiện tại của từng sản phẩm.", RequirementCategory.Functional, PersonaDifficulty.Easy, "Câu hỏi chung về theo dõi tồn kho.", 0),
+        new(Guid.Parse("90000000-0000-4000-8000-000000000002"), "Nhân viên phải có thể ghi lại các giao dịch nhập kho và xuất kho.", RequirementCategory.Functional, PersonaDifficulty.Easy, "Câu hỏi về việc nhận hoặc xuất hàng.", 1),
+        new(Guid.Parse("90000000-0000-4000-8000-000000000003"), "Hệ thống nên cảnh báo chủ cửa hàng khi lượng tồn kho sản phẩm xuống dưới mức cấu hình.", RequirementCategory.Functional, PersonaDifficulty.Medium, "Câu hỏi về cảnh báo tồn kho thấp hoặc nhắc nhở đặt hàng.", 1),
+        new(Guid.Parse("90000000-0000-4000-8000-000000000004"), "Hệ thống nên hỗ trợ quét mã vạch để tra cứu sản phẩm nhanh hơn.", RequirementCategory.Functional, PersonaDifficulty.Medium, "Câu hỏi về việc tìm kiếm sản phẩm nhanh hơn hoặc quét mã vạch.", 2),
+        new(Guid.Parse("90000000-0000-4000-8000-000000000005"), "Hệ thống phải hỗ trợ tạo đơn đặt hàng mua (purchase orders) cho nhà cung cấp.", RequirementCategory.Functional, PersonaDifficulty.Medium, "Câu hỏi về nhà cung cấp hoặc việc đặt lại hàng.", 2),
+        new(Guid.Parse("90000000-0000-4000-8000-000000000006"), "Hệ thống kho nên tích hợp với hệ thống bán hàng hiện tại để giảm bớt việc cập nhật thủ công.", RequirementCategory.Functional, PersonaDifficulty.Hard, "Câu hỏi về tích hợp hệ thống bán hàng/POS.", 2),
+        new(Guid.Parse("90000000-0000-4000-8000-000000000007"), "Chỉ chủ cửa hàng mới có thể chỉnh sửa giá vốn sản phẩm và thông tin nhà cung cấp.", RequirementCategory.Constraint, PersonaDifficulty.Medium, "Câu hỏi về quyền hạn hoặc dữ liệu kho nhạy cảm.", 3),
+        new(Guid.Parse("90000000-0000-4000-8000-000000000008"), "Hệ thống nên tạo báo cáo biến động tồn kho và hàng tồn thấp hàng ngày.", RequirementCategory.Functional, PersonaDifficulty.Medium, "Câu hỏi về báo cáo hàng ngày.", 3),
+        new(Guid.Parse("90000000-0000-4000-8000-000000000009"), "Hệ thống nên tiếp tục ghi lại các giao dịch trong thời gian mất kết nối internet và đồng bộ lại sau.", RequirementCategory.NonFunctional, PersonaDifficulty.Hard, "Câu hỏi về sử dụng ngoại tuyến hoặc sự cố internet.", 4)
     ];
 }
