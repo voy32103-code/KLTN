@@ -42,12 +42,16 @@ class ApiClientManager:
         # 4. Đọc OpenRouter key
         self.openrouter_api_key = os.getenv("OPENROUTER_API_KEY")
 
+        # 5. Đọc OmniRoute key
+        self.omniroute_api_key = os.getenv("OMNIROUTE_API_KEY")
+
         logger.info(
             f"ApiClientManager initialized with {len(self.gemini_clients)} Gemini clients. "
             f"Groq API Key configured: {bool(self.groq_api_key)}. "
             f"DeepSeek API Key configured: {bool(self.deepseek_api_key)}. "
             f"Mimo API Key configured: {bool(self.mimo_api_key)}. "
-            f"OpenRouter API Key configured: {bool(self.openrouter_api_key)}."
+            f"OpenRouter API Key configured: {bool(self.openrouter_api_key)}. "
+            f"OmniRoute API Key configured: {bool(self.omniroute_api_key)}."
         )
 
     def _get_active_gemini_client_index(self) -> int | None:
@@ -357,6 +361,23 @@ class ApiClientManager:
                 response_format = {"type": "json_object"}
             return await self._call_openrouter(
                 model=model,
+                contents=contents,
+                system_instruction=effective_system_instruction,
+                temperature=effective_temperature,
+                max_output_tokens=effective_max_output_tokens,
+                response_format=response_format
+            )
+
+        # Nếu là OmniRoute -> Gọi qua OmniRoute Gateway
+        if model_lower.startswith("omniroute/"):
+            model_name = model[10:] # Bỏ chữ omniroute/
+            response_format = None
+            if config and config.response_mime_type == "application/json":
+                response_format = {"type": "json_object"}
+            return await self._call_openai_compatible(
+                base_url="https://api.omniroute.com/v1",
+                api_key=self.omniroute_api_key,
+                model=model_name,
                 contents=contents,
                 system_instruction=effective_system_instruction,
                 temperature=effective_temperature,
