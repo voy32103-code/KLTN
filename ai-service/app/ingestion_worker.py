@@ -87,6 +87,12 @@ def _safe_error_code(error: Exception) -> str:
         return "unsupported_media"
     if "gemini" in value or "api key" in value:
         return "provider_unavailable"
+    if "ffmpeg" in value:
+        return "missing_ffmpeg"
+    if "time" in value or "timeout" in value:
+        return "processing_timeout"
+    if "404" in value or "403" in value:
+        return "download_failed"
     return "processing_failed"
 
 

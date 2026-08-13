@@ -152,7 +152,7 @@ public class AdminController : ControllerBase
 
         var studentsQuery = await _db.Users
             .AsNoTracking()
-            .Where(u => u.Role == UserRole.Student && u.Sessions.Any(s => s.EvaluationResult != null))
+            .Where(u => u.Sessions.Any(s => s.EvaluationResult != null))
             .Select(u => new
             {
                 studentId = u.Id,
