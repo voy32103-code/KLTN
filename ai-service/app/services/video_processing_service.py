@@ -182,7 +182,8 @@ only JSON matching the supplied schema."""
                 await asyncio.to_thread(client.files.delete, name=uploaded_file.name)
             except Exception:
                 logger.warning("Could not delete the Gemini audio artifact.", exc_info=True)
-        try:
-            await aiofiles.os.remove(audio_path)
-        except FileNotFoundError:
-            pass
+        if cleanup_path:
+            try:
+                await aiofiles.os.remove(cleanup_path)
+            except FileNotFoundError:
+                pass
