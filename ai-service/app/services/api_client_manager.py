@@ -375,7 +375,7 @@ class ApiClientManager:
             if config and config.response_mime_type == "application/json":
                 response_format = {"type": "json_object"}
             return await self._call_openai_compatible(
-                base_url="https://api.omniroute.com/v1",
+                base_url=os.getenv("OMNIROUTE_BASE_URL", "https://api.omniroute.com/v1"),
                 api_key=self.omniroute_api_key,
                 model=model_name,
                 contents=contents,
