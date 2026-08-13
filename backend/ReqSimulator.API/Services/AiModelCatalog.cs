@@ -16,7 +16,10 @@ public static class AiModelCatalog
         "mimo-v2.5pro",
         "openrouter/meta-llama/llama-3.3-70b-instruct",
         "openrouter/deepseek/deepseek-chat",
-        "openrouter/google/gemini-2.5-flash"
+        "openrouter/google/gemini-2.5-flash",
+        "omniroute/meta-llama/llama-3.3-70b-instruct",
+        "omniroute/deepseek/deepseek-chat",
+        "omniroute/google/gemini-2.5-flash"
     };
 
     public static bool IsSupported(string? model) =>

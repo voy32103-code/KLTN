@@ -42,6 +42,9 @@ function getFriendlyModelName(modelId?: string): string {
     case 'openrouter/meta-llama/llama-3.3-70b-instruct': return 'Llama 3.3 70B (OpenRouter)'
     case 'openrouter/deepseek/deepseek-chat': return 'DeepSeek Chat (OpenRouter)'
     case 'openrouter/google/gemini-2.5-flash': return 'Gemini 2.5 Flash (OpenRouter)'
+    case 'omniroute/meta-llama/llama-3.3-70b-instruct': return 'Llama 3.3 70B (OmniRoute)'
+    case 'omniroute/deepseek/deepseek-chat': return 'DeepSeek Chat (OmniRoute)'
+    case 'omniroute/google/gemini-2.5-flash': return 'Gemini 2.5 Flash (OmniRoute)'
     default: return modelId
   }
 }
@@ -53,6 +56,7 @@ function getProviderClass(modelId: string): string {
   if (modelId.startsWith('llama')) return 'provider-llama';
   if (modelId.startsWith('mimo')) return 'provider-mimo';
   if (modelId.startsWith('openrouter')) return 'provider-openrouter';
+  if (modelId.startsWith('omniroute')) return 'provider-omniroute';
   return 'provider-generic';
 }
 
@@ -68,7 +72,10 @@ function renderModelGroups(state: AppState) {
     { id: 'mimo-v2.5pro', name: 'Mimo v2.5 Pro', provider: 'mimo', desc: 'Mimo Cloud - Tương thích ngược tốt' },
     { id: 'openrouter/meta-llama/llama-3.3-70b-instruct', name: 'Llama 3.3 70B (OR)', provider: 'openrouter', desc: 'Llama 3.3 Instruct qua OpenRouter' },
     { id: 'openrouter/deepseek/deepseek-chat', name: 'DeepSeek Chat (OR)', provider: 'openrouter', desc: 'DeepSeek Chat qua OpenRouter' },
-    { id: 'openrouter/google/gemini-2.5-flash', name: 'Gemini 2.5 Flash (OR)', provider: 'openrouter', desc: 'Gemini 2.5 Flash qua OpenRouter' }
+    { id: 'openrouter/google/gemini-2.5-flash', name: 'Gemini 2.5 Flash (OR)', provider: 'openrouter', desc: 'Gemini 2.5 Flash qua OpenRouter' },
+    { id: 'omniroute/meta-llama/llama-3.3-70b-instruct', name: 'Llama 3.3 70B (Omni)', provider: 'omniroute', desc: 'Llama 3.3 qua OmniRoute' },
+    { id: 'omniroute/deepseek/deepseek-chat', name: 'DeepSeek Chat (Omni)', provider: 'omniroute', desc: 'DeepSeek qua OmniRoute' },
+    { id: 'omniroute/google/gemini-2.5-flash', name: 'Gemini 2.5 Flash (Omni)', provider: 'omniroute', desc: 'Gemini 2.5 qua OmniRoute' }
   ];
 
   const providers: Record<string, { label: string; color: string }> = {
@@ -76,7 +83,8 @@ function renderModelGroups(state: AppState) {
     deepseek: { label: 'DeepSeek', color: 'var(--accent)' },
     llama: { label: 'Meta Llama (Groq)', color: 'var(--accent-amber)' },
     mimo: { label: 'Mimo Cloud', color: 'var(--pastel-yellow-text)' },
-    openrouter: { label: 'OpenRouter', color: 'var(--accent-rose)' }
+    openrouter: { label: 'OpenRouter', color: 'var(--accent-rose)' },
+    omniroute: { label: 'OmniRoute', color: 'var(--accent-indigo)' }
   };
 
   const grouped: Record<string, typeof models> = {};
@@ -990,6 +998,9 @@ function renderAdminScenarioSection(state: AppState) {
             <option value="openrouter/meta-llama/llama-3.3-70b-instruct">Llama 3.3 70B (OpenRouter)</option>
             <option value="openrouter/deepseek/deepseek-chat">DeepSeek Chat (OpenRouter)</option>
             <option value="openrouter/google/gemini-2.5-flash">Gemini 2.5 Flash (OpenRouter)</option>
+            <option value="omniroute/meta-llama/llama-3.3-70b-instruct">Llama 3.3 70B (OmniRoute)</option>
+            <option value="omniroute/deepseek/deepseek-chat">DeepSeek Chat (OmniRoute)</option>
+            <option value="omniroute/google/gemini-2.5-flash">Gemini 2.5 Flash (OmniRoute)</option>
           </select>
         </div>
 
