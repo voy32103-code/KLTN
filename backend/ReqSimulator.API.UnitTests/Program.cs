@@ -17,6 +17,7 @@ var tests = new (string Name, Func<Task> Run)[]
     ("pipeline_enhancement_migration_is_versioned_and_non_destructive", TestPipelineMigrationIsVersioned),
     ("published_scenario_catalog_contains_10_scenarios_and_100_requirements", TestPublishedScenarioCatalog),
     ("scenario_localization_catalog_covers_vi_and_en", TestScenarioLocalizationCatalog),
+    ("ai_model_catalog_accepts_verified_gemini_fallback_models", TestGeminiFallbackModelCatalog),
 };
 
 var failures = 0;
@@ -174,6 +175,29 @@ static Task TestScenarioLocalizationCatalog()
         Assert(scenario.Value.TryGetProperty("vi", out _) && scenario.Value.TryGetProperty("en", out _),
             $"scenario {scenario.Name} must provide both vi and en");
     }
+    return Task.CompletedTask;
+}
+
+static Task TestGeminiFallbackModelCatalog()
+{
+    var models = new[]
+    {
+        "gemini-2.5-flash",
+        "gemini-2.5-flash-lite",
+        "gemini-3-flash-preview",
+        "gemini-3.1-flash-lite",
+        "gemini-3.5-flash",
+        "gemini-3.5-flash-lite",
+        "gemini-3.6-flash",
+        "gemini-3.7-flash"
+    };
+    foreach (var model in models)
+    {
+        Assert(AiModelCatalog.IsSupported(model), $"Gemini fallback model must be supported: {model}");
+        Assert(AiModelCatalog.IsGemini(model), $"Gemini fallback model must route to Gemini: {model}");
+    }
+    Assert(!AiModelCatalog.IsSupported("gemini-3-flash"),
+        "display name must not be accepted as an API model ID; use gemini-3-flash-preview");
     return Task.CompletedTask;
 }
 static AiServiceClient CreateClient(HttpMessageHandler? handler = null)

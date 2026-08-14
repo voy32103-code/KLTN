@@ -10,6 +10,19 @@ import httpx
 
 logger = logging.getLogger(__name__)
 
+
+DEFAULT_GEMINI_MODEL_FALLBACKS = (
+    "gemini-3.1-flash-lite",
+    "gemini-3.5-flash-lite",
+    "gemini-2.5-flash-lite",
+    "gemini-2.5-flash",
+    "gemini-3-flash-preview",
+    "gemini-3.5-flash",
+    "gemini-3.6-flash",
+    "gemini-3.7-flash",
+)
+
+
 class GroqResponseShim:
     """Giả lập response object của Gemini để tương thích với code hiện tại."""
     def __init__(self, text: str):
@@ -30,7 +43,14 @@ class ApiClientManager:
                 self.gemini_keys = [single_key]
                 
         self.gemini_clients = [genai.Client(api_key=key) for key in self.gemini_keys]
-        self.blocked_until = {}  # dict: index -> timestamp (epoch seconds)
+        # General key blocks use an integer key. Model-specific quota blocks use
+        # (key_index, model_name), so one exhausted Gemini model does not disable
+        # the same API key for every other model.
+        self.blocked_until: dict[int | tuple[int, str], float] = {}
+        configured_fallbacks = os.getenv("GEMINI_MODEL_FALLBACKS", "")
+        self.gemini_model_fallbacks = self._unique_gemini_models(
+            configured_fallbacks.split(",") if configured_fallbacks else DEFAULT_GEMINI_MODEL_FALLBACKS
+        )
         
         # 2. Đọc Groq key
         self.groq_api_key = os.getenv("GROQ_API_KEY")
@@ -54,12 +74,66 @@ class ApiClientManager:
             f"OmniRoute API Key configured: {bool(self.omniroute_api_key)}."
         )
 
-    def _get_active_gemini_client_index(self) -> int | None:
+    @staticmethod
+    def _unique_gemini_models(models: Any) -> list[str]:
+        unique: list[str] = []
+        for value in models:
+            model = str(value).strip()
+            if model.startswith("gemini-") and model not in unique:
+                unique.append(model)
+        return unique
+
+    def _gemini_model_candidates(self, requested_model: str) -> list[str]:
+        return self._unique_gemini_models([requested_model, *self.gemini_model_fallbacks])
+
+    @staticmethod
+    def _classify_gemini_error(error: Exception) -> tuple[bool, bool, bool]:
+        """Return quota, transient and model-unavailable flags for a Gemini error."""
+        code = error.code if isinstance(error, APIError) else None
+        status = str(getattr(error, "status", "") or "").lower()
+        message = str(error).lower()
+
+        is_quota_error = (
+            code == 429
+            or status == "resource_exhausted"
+            or any(
+                marker in message
+                for marker in [
+                    "429", "quota", "rate limit", "exhausted",
+                    "resource_exhausted", "limit exceeded",
+                ]
+            )
+        )
+        is_transient_error = (
+            code in {408, 500, 502, 503, 504}
+            or status in {"deadline_exceeded", "internal", "unavailable"}
+            or any(
+                marker in message
+                for marker in [
+                    "408", "500", "502", "503", "504", "timeout",
+                    "timed out", "connection", "unavailable", "deadline",
+                ]
+            )
+        )
+        is_model_unavailable = (
+            code == 404
+            or any(
+                marker in message
+                for marker in [
+                    "404", "model not found", "model is not found",
+                    "unsupported model", "not supported for generatecontent",
+                ]
+            )
+        )
+        return is_quota_error, is_transient_error, is_model_unavailable
+
+    def _get_active_gemini_client_index(self, model: str | None = None) -> int | None:
         """Tìm index của client Gemini đầu tiên không bị block; trả None nếu không có client khả dụng."""
         now = time.time()
         for idx in range(len(self.gemini_clients)):
-            until = self.blocked_until.get(idx, 0)
-            if now >= until:
+            general_until = self.blocked_until.get(idx, 0)
+            model_until = self.blocked_until.get((idx, model), 0) if model else 0
+            if now >= general_until and now >= model_until:
                 return idx
         
         if self.gemini_clients:
@@ -67,12 +141,21 @@ class ApiClientManager:
             return None
         raise RuntimeError("No Gemini API keys are configured.")
 
-    def block_key(self, index: int, duration_seconds: int = 120):
-        """Block API key tại index trong 2 phút (120s) khi dính Quota / Rate Limit."""
+    def block_key(
+        self,
+        index: int,
+        duration_seconds: int = 120,
+        model: str | None = None,
+    ):
+        """Temporarily block one Gemini key globally or for a specific model."""
         until = time.time() + duration_seconds
-        self.blocked_until[index] = until
+        block_id: int | tuple[int, str] = (index, model) if model else index
+        self.blocked_until[block_id] = until
         logger.warning(
-            f"Blocked Gemini API key index {index} until {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(until))} due to rate limit/quota error."
+            "Blocked Gemini API key index %s%s until %s due to a retryable provider error.",
+            index,
+            f" for model {model}" if model else "",
+            time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(until)),
         )
 
     async def _call_groq(
@@ -386,60 +469,98 @@ class ApiClientManager:
                 response_format=response_format
             )
 
-        # Ngược lại -> Gọi Gemini với cơ chế xoay key và fallback sang Groq nếu tất cả key Gemini lỗi
-        attempts = 0
+        # Ngược lại -> gọi Gemini. Mỗi model thử tất cả key khả dụng trước,
+        # sau đó mới chuyển model khi gặp quota, model-unavailable hoặc lỗi tạm thời.
         max_attempts = len(self.gemini_clients)
-        
-        while attempts < max_attempts:
-            idx = self._get_active_gemini_client_index()
-            if idx is None:
-                break
-            client = self.gemini_clients[idx]
-            try:
-                logger.info(f"Calling Gemini API with model: {model} using key index {idx}")
-                
-                # Gọi đồng bộ trong thread pool để tránh block event loop
-                gen_config = config
-                if gen_config is None:
-                    gen_config = types.GenerateContentConfig(
-                        temperature=temperature,
-                        max_output_tokens=max_output_tokens,
-                        system_instruction=system_instruction,
+        stop_model_fallback = False
+        requested_model = model
+
+        for candidate_model in self._gemini_model_candidates(requested_model):
+            attempts = 0
+            while attempts < max_attempts:
+                idx = self._get_active_gemini_client_index(candidate_model)
+                if idx is None:
+                    break
+                client = self.gemini_clients[idx]
+                try:
+                    logger.info(
+                        "Calling Gemini API with model %s using key index %s (requested model: %s).",
+                        candidate_model,
+                        idx,
+                        requested_model,
                     )
-                else:
-                    # Đảm bảo các tham số mặc định được áp dụng nếu config không định nghĩa
-                    if gen_config.temperature is None:
-                        gen_config.temperature = temperature
-                    if gen_config.max_output_tokens is None:
-                        gen_config.max_output_tokens = max_output_tokens
-                    if gen_config.system_instruction is None and system_instruction is not None:
-                        gen_config.system_instruction = system_instruction
 
-                response = await asyncio.to_thread(
-                    client.models.generate_content,
-                    model=model,
-                    contents=contents,
-                    config=gen_config
-                )
-                return response
-            except Exception as e:
-                err_str = str(e).lower()
-                is_quota_error = any(
-                    word in err_str for word in ["429", "403", "quota", "rate limit", "exhausted", "resource_exhausted", "limit exceeded"]
-                )
-                
-                is_transient_error = any(
-                    word in err_str for word in ["408", "500", "502", "503", "504", "timeout", "timed out", "connection", "unavailable", "deadline"]
-                )
+                    # Gọi đồng bộ trong thread pool để tránh block event loop.
+                    gen_config = config
+                    if gen_config is None:
+                        gen_config = types.GenerateContentConfig(
+                            temperature=temperature,
+                            max_output_tokens=max_output_tokens,
+                            system_instruction=system_instruction,
+                        )
+                    else:
+                        if gen_config.temperature is None:
+                            gen_config.temperature = temperature
+                        if gen_config.max_output_tokens is None:
+                            gen_config.max_output_tokens = max_output_tokens
+                        if gen_config.system_instruction is None and system_instruction is not None:
+                            gen_config.system_instruction = system_instruction
 
-                if is_quota_error or is_transient_error:
-                    self.block_key(idx, duration_seconds=120 if is_quota_error else 15)
-                    attempts += 1
-                    if attempts < max_attempts:
-                        logger.info("Retrying with another Gemini API key (attempt %s/%s).", attempts + 1, max_attempts)
+                    response = await asyncio.to_thread(
+                        client.models.generate_content,
+                        model=candidate_model,
+                        contents=contents,
+                        config=gen_config,
+                    )
+                    if candidate_model != requested_model:
+                        logger.warning(
+                            "Gemini model fallback succeeded: requested=%s effective=%s.",
+                            requested_model,
+                            candidate_model,
+                        )
+                    return response
+                except Exception as e:
+                    (
+                        is_quota_error,
+                        is_transient_error,
+                        is_model_unavailable,
+                    ) = self._classify_gemini_error(e)
+
+                    if is_model_unavailable:
+                        logger.warning(
+                            "Gemini model %s is unavailable; trying the next configured model.",
+                            candidate_model,
+                        )
+                        break
+
+                    if is_quota_error or is_transient_error:
+                        self.block_key(
+                            idx,
+                            duration_seconds=120 if is_quota_error else 15,
+                            model=candidate_model,
+                        )
+                        attempts += 1
+                        if attempts < max_attempts:
+                            logger.info(
+                                "Retrying Gemini model %s with another key (attempt %s/%s).",
+                                candidate_model,
+                                attempts + 1,
+                                max_attempts,
+                            )
                         continue
-                
-                logger.error(f"Gemini API call failed: {e}. Fallback to Groq if possible.")
+
+                    # Validation, safety and malformed-request errors are not
+                    # availability failures. Switching models could hide the
+                    # real defect and consume quota, so stop the model chain.
+                    logger.error(
+                        "Gemini API rejected a non-retryable request for model %s.",
+                        candidate_model,
+                        exc_info=True,
+                    )
+                    stop_model_fallback = True
+                    break
+
+            if stop_model_fallback:
                 break
 
         # Fallback sang Groq
@@ -468,7 +589,7 @@ class ApiClientManager:
         max_attempts = len(self.gemini_clients)
         
         while attempts < max_attempts:
-            idx = self._get_active_gemini_client_index()
+            idx = self._get_active_gemini_client_index(model)
             if idx is None:
                 break
             client = self.gemini_clients[idx]
@@ -483,13 +604,14 @@ class ApiClientManager:
                 )
                 return response
             except Exception as e:
-                err_str = str(e).lower()
-                is_quota_error = any(
-                    word in err_str for word in ["429", "403", "quota", "rate limit", "exhausted", "resource_exhausted", "limit exceeded"]
-                )
-                
-                if is_quota_error:
-                    self.block_key(idx)
+                is_quota_error, is_transient_error, _ = self._classify_gemini_error(e)
+
+                if is_quota_error or is_transient_error:
+                    self.block_key(
+                        idx,
+                        duration_seconds=120 if is_quota_error else 15,
+                        model=model,
+                    )
                     attempts += 1
                     if attempts < max_attempts:
                         continue

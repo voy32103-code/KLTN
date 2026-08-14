@@ -9,6 +9,7 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch, MagicMock
 
 from google.genai import types
+from google.genai.errors import APIError
 from pydantic import ValidationError
 
 from app.services.admin_crawler_service import (
@@ -59,6 +60,40 @@ class SecurityRegressionTests(unittest.TestCase):
 
 
 class ProviderConfigRegressionTests(unittest.IsolatedAsyncioTestCase):
+    def test_structured_gemini_errors_are_classified_without_treating_permission_as_quota(self):
+        quota = APIError(
+            429,
+            {"error": {"code": 429, "status": "RESOURCE_EXHAUSTED", "message": "quota"}},
+        )
+        missing_model = APIError(
+            404,
+            {"error": {"code": 404, "status": "NOT_FOUND", "message": "model missing"}},
+        )
+        permission = APIError(
+            403,
+            {"error": {"code": 403, "status": "PERMISSION_DENIED", "message": "forbidden"}},
+        )
+
+        self.assertEqual(ApiClientManager._classify_gemini_error(quota), (True, False, False))
+        self.assertEqual(ApiClientManager._classify_gemini_error(missing_model), (False, False, True))
+        self.assertEqual(ApiClientManager._classify_gemini_error(permission), (False, False, False))
+
+    async def test_embedding_quota_does_not_block_text_generation_models(self):
+        class QuotaLimitedEmbeddingModels:
+            def embed_content(self, **kwargs):
+                raise RuntimeError("429 RESOURCE_EXHAUSTED: embedding quota exceeded")
+
+        with patch.dict(os.environ, {}, clear=True):
+            manager = ApiClientManager()
+        manager.gemini_clients = [SimpleNamespace(models=QuotaLimitedEmbeddingModels())]
+
+        with self.assertRaisesRegex(RuntimeError, "RESOURCE_EXHAUSTED"):
+            await manager.embed_content("gemini-embedding-001", ["input"])
+
+        self.assertIn((0, "gemini-embedding-001"), manager.blocked_until)
+        self.assertNotIn(0, manager.blocked_until)
+        self.assertEqual(manager._get_active_gemini_client_index("gemini-2.5-flash"), 0)
+
     async def test_groq_receives_structured_output_config(self):
         with patch.dict(os.environ, {}, clear=True):
             manager = ApiClientManager()
@@ -128,7 +163,51 @@ class ProviderConfigRegressionTests(unittest.IsolatedAsyncioTestCase):
         response = await manager.generate_content(model="gemini-2.5-flash", contents="input")
 
         self.assertEqual(response.text, "second key worked")
-        self.assertIn(0, manager.blocked_until)
+        self.assertIn((0, "gemini-2.5-flash"), manager.blocked_until)
+
+    async def test_quota_exhaustion_falls_back_to_another_gemini_model(self):
+        calls: list[str] = []
+
+        class ModelAwareClient:
+            def generate_content(self, **kwargs):
+                model = kwargs["model"]
+                calls.append(model)
+                if model == "gemini-2.5-flash":
+                    raise RuntimeError("429 RESOURCE_EXHAUSTED: model quota exceeded")
+                return GroqResponseShim("model fallback worked")
+
+        with patch.dict(os.environ, {}, clear=True):
+            manager = ApiClientManager()
+        manager.gemini_clients = [SimpleNamespace(models=ModelAwareClient())]
+        manager.gemini_model_fallbacks = ["gemini-3.1-flash-lite"]
+
+        response = await manager.generate_content(
+            model="gemini-2.5-flash",
+            contents="input",
+        )
+
+        self.assertEqual(response.text, "model fallback worked")
+        self.assertEqual(calls, ["gemini-2.5-flash", "gemini-3.1-flash-lite"])
+        self.assertIn((0, "gemini-2.5-flash"), manager.blocked_until)
+        self.assertNotIn((0, "gemini-3.1-flash-lite"), manager.blocked_until)
+
+    async def test_non_retryable_gemini_error_does_not_switch_models(self):
+        calls: list[str] = []
+
+        class InvalidRequestClient:
+            def generate_content(self, **kwargs):
+                calls.append(kwargs["model"])
+                raise RuntimeError("400 INVALID_ARGUMENT: malformed request")
+
+        with patch.dict(os.environ, {}, clear=True):
+            manager = ApiClientManager()
+        manager.gemini_clients = [SimpleNamespace(models=InvalidRequestClient())]
+        manager.gemini_model_fallbacks = ["gemini-3.1-flash-lite"]
+
+        with self.assertRaisesRegex(RuntimeError, "fallback is unavailable"):
+            await manager.generate_content(model="gemini-2.5-flash", contents="input")
+
+        self.assertEqual(calls, ["gemini-2.5-flash"])
 
 
 class VideoFileRegressionTests(unittest.IsolatedAsyncioTestCase):

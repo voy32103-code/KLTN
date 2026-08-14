@@ -100,6 +100,8 @@ Set these values before starting the services:
 
 For the ingestion feature, also configure `R2__*`, `Ingestion__WorkerKey`, `INGESTION_BACKEND_URL`, and `INGESTION_WORKER_KEY`. Every secret must be at least 32 random characters where indicated.
 
+Gemini text requests rotate configured API keys within the selected model first, then use `GEMINI_MODEL_FALLBACKS` when that model is quota-limited, unavailable, or temporarily failing. The default fallback list contains only model IDs verified through the Gemini model-list API; malformed-request and safety errors do not trigger model switching.
+
 ### 2. Start the AI service
 
 ```powershell

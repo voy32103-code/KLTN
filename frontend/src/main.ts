@@ -45,9 +45,17 @@ const SCENARIO_LANGUAGE_KEY = 'req_simulator_scenario_language'
 const storedToken = localStorage.getItem(TOKEN_KEY)
 const hasExpiredStoredToken = Boolean(storedToken && isTokenExpired(storedToken))
 const initialToken = hasExpiredStoredToken ? null : storedToken
-const initialModel = localStorage.getItem(MODEL_KEY) || 'gemini-2.5-flash'
+const storedModel = localStorage.getItem(MODEL_KEY)
+const isHiddenStoredModel = storedModel?.startsWith('omniroute/') || storedModel === 'gemini-2.5-pro'
+const initialModel = isHiddenStoredModel
+  ? 'gemini-2.5-flash'
+  : storedModel || 'gemini-2.5-flash'
 const initialScenarioLanguage: ScenarioLanguage =
   localStorage.getItem(SCENARIO_LANGUAGE_KEY) === 'en' ? 'en' : 'vi'
+
+if (isHiddenStoredModel) {
+  localStorage.removeItem(MODEL_KEY)
+}
 
 const state: AppState = {
   token: initialToken,

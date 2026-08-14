@@ -33,6 +33,13 @@ function getFriendlyModelName(modelId?: string): string {
   switch (modelId) {
     case 'gemini-2.5-flash': return 'Gemini 2.5 Flash'
     case 'gemini-2.5-pro': return 'Gemini 2.5 Pro'
+    case 'gemini-2.5-flash-lite': return 'Gemini 2.5 Flash Lite'
+    case 'gemini-3-flash-preview': return 'Gemini 3 Flash Preview'
+    case 'gemini-3.1-flash-lite': return 'Gemini 3.1 Flash Lite'
+    case 'gemini-3.5-flash': return 'Gemini 3.5 Flash'
+    case 'gemini-3.5-flash-lite': return 'Gemini 3.5 Flash Lite'
+    case 'gemini-3.6-flash': return 'Gemini 3.6 Flash'
+    case 'gemini-3.7-flash': return 'Gemini 3.7 Flash'
     case 'llama-3.3-70b-versatile': return 'Llama 3.3 70B (Groq)'
     case 'llama-3.1-8b-instant': return 'Llama 3.1 8B (Groq)'
     case 'deepseek-chat': return 'DeepSeek Chat'
@@ -84,7 +91,13 @@ function getProviderClass(modelId: string): string {
 function renderModelGroups(state: AppState) {
   const models = [
     { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', provider: 'gemini', desc: 'Khuyên dùng - Cổng bảo mật & Structured Output' },
-    { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', provider: 'gemini', desc: 'Mô hình Pro - Phân tích nghiệp vụ sâu hơn' },
+    { id: 'gemini-2.5-flash-lite', name: 'Gemini 2.5 Flash Lite', provider: 'gemini', desc: 'Nhẹ và tiết kiệm quota cho tác vụ đơn giản' },
+    { id: 'gemini-3-flash-preview', name: 'Gemini 3 Flash Preview', provider: 'gemini', desc: 'API ID đã xác minh cho Gemini 3 Flash' },
+    { id: 'gemini-3.1-flash-lite', name: 'Gemini 3.1 Flash Lite', provider: 'gemini', desc: 'Khuyên dùng khi cần hạn mức miễn phí cao hơn' },
+    { id: 'gemini-3.5-flash', name: 'Gemini 3.5 Flash', provider: 'gemini', desc: 'Phân tích nghiệp vụ nhanh với context lớn' },
+    { id: 'gemini-3.5-flash-lite', name: 'Gemini 3.5 Flash Lite', provider: 'gemini', desc: 'Lite thế hệ mới với hạn mức miễn phí cao' },
+    { id: 'gemini-3.6-flash', name: 'Gemini 3.6 Flash', provider: 'gemini', desc: 'Flash cho hội thoại và trích xuất yêu cầu' },
+    { id: 'gemini-3.7-flash', name: 'Gemini 3.7 Flash', provider: 'gemini', desc: 'Flash mới nhất trong danh sách API đã xác minh' },
     { id: 'deepseek-chat', name: 'DeepSeek Chat', provider: 'deepseek', desc: 'Mô hình DeepSeek V3 - Cực tốt cho nghiệp vụ' },
     { id: 'deepseek-v4flash', name: 'DeepSeek v4 Flash', provider: 'deepseek', desc: 'Deepseek Flash - Tốc độ cao' },
     { id: 'deepseek-v4pro', name: 'DeepSeek v4 Pro', provider: 'deepseek', desc: 'Deepseek Pro - Thông minh vượt trội' },
@@ -130,7 +143,7 @@ function renderModelGroups(state: AppState) {
   };
 
   const grouped: Record<string, typeof models> = {};
-  models.forEach(m => {
+  models.filter(m => m.provider !== 'omniroute').forEach(m => {
     if (!grouped[m.provider]) grouped[m.provider] = [];
     grouped[m.provider].push(m);
   });
@@ -1037,7 +1050,13 @@ function renderAdminScenarioSection(state: AppState) {
           <label for="admin-crawl-model-select" style="font-size: 13px; color: var(--text-secondary); font-weight: 500;">Mô hình AI xử lý:</label>
           <select id="admin-crawl-model-select" style="background: var(--surface-raised); color: var(--text-primary); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; font-size: 13px; cursor: pointer; outline: none; width: 100%;">
             <option value="gemini-2.5-flash">Gemini 2.5 Flash (Khuyên dùng - Structured Output)</option>
-            <option value="gemini-2.5-pro">Gemini 2.5 Pro (Thông minh hơn - Tốc độ chậm hơn)</option>
+            <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash Lite</option>
+            <option value="gemini-3-flash-preview">Gemini 3 Flash Preview</option>
+            <option value="gemini-3.1-flash-lite">Gemini 3.1 Flash Lite</option>
+            <option value="gemini-3.5-flash">Gemini 3.5 Flash</option>
+            <option value="gemini-3.5-flash-lite">Gemini 3.5 Flash Lite</option>
+            <option value="gemini-3.6-flash">Gemini 3.6 Flash</option>
+            <option value="gemini-3.7-flash">Gemini 3.7 Flash</option>
             <option value="llama-3.3-70b-versatile">Llama 3.3 70B (Groq Fallback - JSON mode)</option>
             <option value="llama-3.1-8b-instant">Llama 3.1 8B (Groq Fallback - Nhanh)</option>
             <option value="deepseek-chat">DeepSeek Chat</option>
@@ -1047,30 +1066,6 @@ function renderAdminScenarioSection(state: AppState) {
             <option value="openrouter/meta-llama/llama-3.3-70b-instruct">Llama 3.3 70B (OpenRouter)</option>
             <option value="openrouter/deepseek/deepseek-chat">DeepSeek Chat (OpenRouter)</option>
             <option value="openrouter/google/gemini-2.5-flash">Gemini 2.5 Flash (OpenRouter)</option>
-            <option value="omniroute/kmc/k3">Kimi K3</option>
-            <option value="omniroute/kmc/kimi-for-coding">Kimi for Coding</option>
-            <option value="omniroute/kmc/kimi-for-coding-highspeed">Kimi Coding Fast</option>
-            <option value="omniroute/cp/cline-pass/glm-5.2">GLM-5.2</option>
-            <option value="omniroute/cp/cline-pass/minimax-m3">MiniMax-M3</option>
-            <option value="omniroute/cp/cline-pass/deepseek-v4-pro">DeepSeek V4 Pro</option>
-            <option value="omniroute/cp/cline-pass/deepseek-v4-flash">DeepSeek V4 Flash</option>
-            <option value="omniroute/cp/cline-pass/kimi-k3">Kimi K3 CP</option>
-            <option value="omniroute/cp/cline-pass/kimi-k2.7-code">Kimi K2.7 Code</option>
-            <option value="omniroute/cp/cline-pass/mimo-v2.5-pro">MiMo-V2.5-Pro</option>
-            <option value="omniroute/cp/cline-pass/mimo-v2.5">MiMo-V2.5</option>
-            <option value="omniroute/cp/cline-pass/qwen3.7-max">Qwen3.7 Max</option>
-            <option value="omniroute/cp/cline-pass/qwen3.7-plus">Qwen3.7 Plus</option>
-            <option value="omniroute/kr/claude-sonnet-5">Claude Sonnet 5</option>
-            <option value="omniroute/kr/claude-sonnet-4.5">Claude Sonnet 4.5</option>
-            <option value="omniroute/kr/claude-haiku-4.5">Claude Haiku 4.5</option>
-            <option value="omniroute/kr/deepseek-3.2">DeepSeek V3.2</option>
-            <option value="omniroute/kr/minimax-m2.5">MiniMax M2.5</option>
-            <option value="omniroute/kr/minimax-m2.1">MiniMax M2.1</option>
-            <option value="omniroute/kr/glm-5">GLM-5</option>
-            <option value="omniroute/kr/qwen3-coder-next">Qwen3 Coder Next</option>
-            <option value="omniroute/kr/gpt-5.6-sol">GPT-5.6 Sol</option>
-            <option value="omniroute/kr/gpt-5.6-terra">GPT-5.6 Terra</option>
-            <option value="omniroute/kr/gpt-5.6-luna">GPT-5.6 Luna</option>
           </select>
         </div>
 
@@ -1100,7 +1095,13 @@ function renderAdminScenarioSection(state: AppState) {
           <label for="admin-video-model-select" style="font-size: 13px; color: var(--text-secondary); font-weight: 500;">Mô hình AI xử lý:</label>
           <select id="admin-video-model-select" style="background: var(--surface-raised); color: var(--text-primary); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; font-size: 13px; cursor: pointer; outline: none; width: 100%;">
             <option value="gemini-2.5-flash">Gemini 2.5 Flash (Khuyên dùng - Multimodal)</option>
-            <option value="gemini-2.5-pro">Gemini 2.5 Pro (Multimodal Pro)</option>
+            <option value="gemini-3.1-flash-lite">Gemini 3.1 Flash Lite (Hạn mức cao)</option>
+            <option value="gemini-3.5-flash-lite">Gemini 3.5 Flash Lite (Hạn mức cao)</option>
+            <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash Lite</option>
+            <option value="gemini-3-flash-preview">Gemini 3 Flash Preview</option>
+            <option value="gemini-3.5-flash">Gemini 3.5 Flash</option>
+            <option value="gemini-3.6-flash">Gemini 3.6 Flash</option>
+            <option value="gemini-3.7-flash">Gemini 3.7 Flash</option>
           </select>
         </div>
 
