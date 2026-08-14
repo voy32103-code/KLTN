@@ -40,12 +40,17 @@ public static class SeedData
         await SeedHiddenRequirements(db, scenario.Id);
         await SeedScenarioAsync(db, HospitalScenario, HospitalPersona, HospitalRequirements);
         await SeedScenarioAsync(db, InventoryScenario, InventoryPersona, InventoryRequirements);
+        var additionalScenarioIds = await ScenarioCatalogSeeder.SeedAdditionalAsync(db, logger);
         await EnsureStakeholderPersonas(
             db,
-            [scenario.Id, HospitalScenario.Id, InventoryScenario.Id]);
+            new[] { scenario.Id, HospitalScenario.Id, InventoryScenario.Id }
+                .Concat(additionalScenarioIds)
+                .ToArray());
         await db.SaveChangesAsync();
 
-        logger.LogInformation("Seeded baseline scenarios: university registration, hospital appointment, inventory management.");
+        logger.LogInformation(
+            "Seeded {ScenarioCount} catalog scenarios with 100 candidate ground-truth requirements.",
+            3 + additionalScenarioIds.Count);
     }
 
     private static async Task EnsureStakeholderPersonas(

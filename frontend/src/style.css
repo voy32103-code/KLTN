@@ -457,6 +457,32 @@ textarea:focus {
   transform: scale(0.98);
 }
 
+.scenario-head-actions,
+.scenario-language-switch {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.scenario-language-switch {
+  padding: 3px;
+  border: 1px solid var(--line-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+}
+
+.scenario-language-switch .ghost-button {
+  min-width: 44px;
+  min-height: 36px;
+  padding: 6px 10px;
+  border-color: transparent;
+}
+
+.scenario-language-switch .ghost-button.active {
+  color: #fff;
+  background: var(--accent-indigo);
+}
+
 .danger-button {
   width: 100%;
   color: var(--accent-rose);
@@ -1388,6 +1414,21 @@ kbd {
 
   .topbar-actions {
     justify-content: flex-start;
+  }
+
+  .scenario-head-actions {
+    width: 100%;
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .scenario-language-switch {
+    width: 100%;
+  }
+
+  .scenario-language-switch .ghost-button {
+    width: auto;
+    flex: 1 1 50%;
   }
 
   .user-pill,

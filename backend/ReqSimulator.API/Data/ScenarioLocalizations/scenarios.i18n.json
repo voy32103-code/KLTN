@@ -1,0 +1,127 @@
+{
+  "schemaVersion": 1,
+  "defaultLanguage": "vi",
+  "supportedLanguages": ["vi", "en"],
+  "scenarios": {
+    "bank_loan_application": {
+      "en": {
+        "title": "Bank Loan Application Workflow",
+        "description": "A retail bank needs a traceable loan application workflow covering identity, affordability, automated decisions, manual review, consent, security, and status communication.",
+        "domain": "Banking"
+      },
+      "vi": {
+        "title": "Quy trình Đăng ký Vay Ngân hàng",
+        "description": "Một ngân hàng bán lẻ cần quy trình đăng ký vay có khả năng truy vết, bao gồm xác minh danh tính, đánh giá khả năng chi trả, quyết định tự động, xét duyệt thủ công, chấp thuận, bảo mật và thông báo trạng thái.",
+        "domain": "Ngân hàng"
+      }
+    },
+    "ecommerce_returns": {
+      "en": {
+        "title": "E-commerce Returns and Refunds",
+        "description": "An online retailer needs a controlled returns and refunds workflow covering eligibility, evidence, approvals, exchanges, notifications, auditability, and peak demand.",
+        "domain": "Retail"
+      },
+      "vi": {
+        "title": "Đổi trả và Hoàn tiền Thương mại Điện tử",
+        "description": "Một nhà bán lẻ trực tuyến cần quy trình đổi trả và hoàn tiền có kiểm soát, bao gồm điều kiện hợp lệ, bằng chứng, phê duyệt, đổi hàng, thông báo, khả năng kiểm toán và nhu cầu cao điểm.",
+        "domain": "Bán lẻ"
+      }
+    },
+    "employee_leave_management": {
+      "en": {
+        "title": "Employee Leave Management System",
+        "description": "A medium-sized company needs a leave workflow covering balances, approvals, conflicts, evidence, escalation, calendars, payroll integration, auditability, and response time.",
+        "domain": "Human Resources"
+      },
+      "vi": {
+        "title": "Hệ thống Quản lý Nghỉ phép Nhân viên",
+        "description": "Một công ty quy mô vừa cần quy trình nghỉ phép bao gồm số dư ngày phép, phê duyệt, xung đột, minh chứng, chuyển cấp xử lý, lịch, tích hợp bảng lương, khả năng kiểm toán và thời gian phản hồi.",
+        "domain": "Nhân sự"
+      }
+    },
+    "food_delivery_operations": {
+      "en": {
+        "title": "Food Delivery Operations Platform",
+        "description": "A food delivery startup needs order placement and fulfillment covering menus, addresses, payment, restaurant response, courier assignment, cancellation, tracking, allergy notices, and peak capacity.",
+        "domain": "Food Delivery"
+      },
+      "vi": {
+        "title": "Nền tảng Vận hành Giao đồ ăn",
+        "description": "Một startup giao đồ ăn cần quy trình đặt và hoàn tất đơn hàng bao gồm thực đơn, địa chỉ, thanh toán, phản hồi của nhà hàng, phân công tài xế, hủy đơn, theo dõi, cảnh báo dị ứng và năng lực giờ cao điểm.",
+        "domain": "Giao đồ ăn"
+      }
+    },
+    "hospital_appointment": {
+      "en": {
+        "title": "Hospital Appointment System",
+        "description": "CityCare Clinic wants an online appointment booking system. The student interviews the clinic operations coordinator to understand appointment scheduling, patient safety, privacy, reminders, and integrations with existing clinic systems.",
+        "domain": "Healthcare"
+      },
+      "vi": {
+        "title": "Hệ thống Đặt lịch Khám Bệnh viện",
+        "description": "Phòng khám CityCare muốn xây dựng hệ thống đặt lịch trực tuyến. Sinh viên phỏng vấn điều phối viên vận hành để tìm hiểu việc xếp lịch, an toàn người bệnh, quyền riêng tư, nhắc lịch và tích hợp với các hệ thống hiện có của phòng khám.",
+        "domain": "Y tế"
+      }
+    },
+    "hotel_room_booking": {
+      "en": {
+        "title": "Hotel Room Booking System",
+        "description": "A regional hotel chain needs online room booking with controlled pricing, availability, cancellation, check-in, notifications, permissions, and peak-load behavior.",
+        "domain": "Hospitality"
+      },
+      "vi": {
+        "title": "Hệ thống Đặt phòng Khách sạn",
+        "description": "Một chuỗi khách sạn trong khu vực cần hệ thống đặt phòng trực tuyến với cơ chế kiểm soát giá, tình trạng phòng, hủy đặt phòng, nhận phòng, thông báo, phân quyền và khả năng xử lý tải cao điểm.",
+        "domain": "Khách sạn"
+      }
+    },
+    "public_library_management": {
+      "en": {
+        "title": "Public Library Management System",
+        "description": "A public library needs a member-facing catalog and circulation workflow with lending rules, reservations, fines, staff permissions, accessibility, and recovery controls.",
+        "domain": "Public Services"
+      },
+      "vi": {
+        "title": "Hệ thống Quản lý Thư viện Công cộng",
+        "description": "Một thư viện công cộng cần danh mục dành cho bạn đọc và quy trình lưu thông tài liệu, bao gồm quy tắc mượn, đặt trước, tiền phạt, quyền nhân viên, khả năng tiếp cận và cơ chế khôi phục.",
+        "domain": "Dịch vụ công"
+      }
+    },
+    "small_business_inventory": {
+      "en": {
+        "title": "Small Business Inventory Management",
+        "description": "A small retail shop wants to replace manual inventory notes and spreadsheets with a simple inventory management system. The student interviews the shop owner to understand stock tracking, daily operations, supplier handling, reporting, permissions, and offline needs.",
+        "domain": "Retail"
+      },
+      "vi": {
+        "title": "Quản lý Tồn kho Doanh nghiệp Nhỏ",
+        "description": "Một cửa hàng bán lẻ nhỏ muốn thay thế sổ ghi tồn kho và bảng tính thủ công bằng hệ thống quản lý tồn kho đơn giản. Sinh viên phỏng vấn chủ cửa hàng để tìm hiểu việc theo dõi hàng hóa, vận hành hằng ngày, nhà cung cấp, báo cáo, phân quyền và nhu cầu làm việc ngoại tuyến.",
+        "domain": "Bán lẻ"
+      }
+    },
+    "university_course_registration": {
+      "en": {
+        "title": "University Course Registration System",
+        "description": "HUFLIT is modernizing its course registration process with a new online course registration system. The student is interviewing the university registrar to understand business needs, constraints, and special cases in the registration workflow.",
+        "domain": "Education"
+      },
+      "vi": {
+        "title": "Hệ thống Đăng ký Học phần Đại học",
+        "description": "HUFLIT đang hiện đại hóa quy trình đăng ký học phần bằng một hệ thống trực tuyến mới. Sinh viên phỏng vấn cán bộ phụ trách đào tạo để tìm hiểu nhu cầu nghiệp vụ, các ràng buộc và trường hợp đặc biệt trong quy trình đăng ký.",
+        "domain": "Giáo dục"
+      }
+    },
+    "vehicle_service_appointment": {
+      "en": {
+        "title": "Vehicle Service Appointment System",
+        "description": "An automotive service center needs online appointment planning with vehicle history, estimates, parts, reminders, cancellation rules, and protected service records.",
+        "domain": "Automotive Services"
+      },
+      "vi": {
+        "title": "Hệ thống Đặt lịch Bảo dưỡng Xe",
+        "description": "Một trung tâm dịch vụ ô tô cần hệ thống đặt lịch trực tuyến, bao gồm lịch sử xe, báo giá, phụ tùng, nhắc lịch, quy tắc hủy và bảo vệ hồ sơ dịch vụ.",
+        "domain": "Dịch vụ ô tô"
+      }
+    }
+  }
+}

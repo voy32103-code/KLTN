@@ -27,6 +27,7 @@ frontend/dist/
 backend/ReqSimulator.API/.keys/
 .keys/
 backup.sql
+replacements.txt
 
 # IDE
 .vs/

@@ -15,6 +15,7 @@ import type {
   ReviewSessionDetail,
   ReviewSessionSummary,
   ScenarioDetail,
+  ScenarioLanguage,
   ScenarioDraft,
   IngestionJob,
   PersonaTemplate,
@@ -40,10 +41,13 @@ if (!root) throw new Error('Missing #app root')
 const app: HTMLDivElement = root
 
 const MODEL_KEY = 'req_simulator_selected_model'
+const SCENARIO_LANGUAGE_KEY = 'req_simulator_scenario_language'
 const storedToken = localStorage.getItem(TOKEN_KEY)
 const hasExpiredStoredToken = Boolean(storedToken && isTokenExpired(storedToken))
 const initialToken = hasExpiredStoredToken ? null : storedToken
 const initialModel = localStorage.getItem(MODEL_KEY) || 'gemini-2.5-flash'
+const initialScenarioLanguage: ScenarioLanguage =
+  localStorage.getItem(SCENARIO_LANGUAGE_KEY) === 'en' ? 'en' : 'vi'
 
 const state: AppState = {
   token: initialToken,
@@ -55,6 +59,7 @@ const state: AppState = {
   selectedPersonaId: null,
   session: null,
   selectedModel: initialModel,
+  scenarioLanguage: initialScenarioLanguage,
   messages: [],
   evaluation: null,
   reviewSessions: [],
@@ -240,7 +245,8 @@ function bindEvents() {
       const userId = button.dataset.userId ?? ''
       const model = button.dataset.model ?? ''
       const jobId = button.dataset.jobId ?? ''
-      void handleAction(action, { tab, userId, model, jobId })
+      const language = button.dataset.language ?? ''
+      void handleAction(action, { tab, userId, model, jobId, language })
     })
   })
 
@@ -303,7 +309,7 @@ function closeEndSessionModal() {
   requestAnimationFrame(() => modalReturnFocus?.focus())
 }
 
-async function handleAction(action: string, options: { tab?: string; userId?: string; model?: string; jobId?: string } = {}) {
+async function handleAction(action: string, options: { tab?: string; userId?: string; model?: string; jobId?: string; language?: string } = {}) {
   if (state.busy) return
   switch (action) {
     case 'logout':
@@ -323,6 +329,11 @@ async function handleAction(action: string, options: { tab?: string; userId?: st
       break
     case 'refresh-scenarios':
       await loadScenarios()
+      break
+    case 'set-scenario-language':
+      if (options.language === 'vi' || options.language === 'en') {
+        await switchScenarioLanguage(options.language)
+      }
       break
     case 'start-session':
       await startSession()
@@ -488,7 +499,7 @@ async function submitAuth(form: FormData) {
 
 async function loadScenarios(showLoading = true) {
   await withBusy(async () => {
-    const scenarios = await api.request<ScenarioSummary[]>('/api/Scenarios')
+    const scenarios = await api.request<ScenarioSummary[]>(`/api/Scenarios?lang=${state.scenarioLanguage}`)
     state.scenarios = scenarios
     if (state.selectedScenario && !scenarios.some((item) => item.id === state.selectedScenario?.id)) {
       state.selectedScenario = null
@@ -501,12 +512,31 @@ async function loadScenarios(showLoading = true) {
 async function selectScenario(scenarioId: string) {
   if (state.busy) return
   await withBusy(async () => {
-    const scenario = await api.request<ScenarioDetail>(`/api/Scenarios/${scenarioId}`)
+    const scenario = await api.request<ScenarioDetail>(
+      `/api/Scenarios/${scenarioId}?lang=${state.scenarioLanguage}`
+    )
     state.selectedScenario = scenario
     state.selectedPersonaId = scenario.personas[0]?.id ?? null
     state.evaluation = null
     clearNotice()
   })
+}
+
+async function switchScenarioLanguage(language: ScenarioLanguage) {
+  if (language === state.scenarioLanguage) return
+  const selectedScenarioId = state.selectedScenario?.id
+  state.scenarioLanguage = language
+  localStorage.setItem(SCENARIO_LANGUAGE_KEY, language)
+  await loadScenarios(false)
+  if (selectedScenarioId) {
+    await selectScenario(selectedScenarioId)
+  }
+  setNotice(
+    'success',
+    language === 'vi'
+      ? 'Đã chuyển nội dung kịch bản sang tiếng Việt.'
+      : 'Scenario content switched to English.'
+  )
 }
 
 async function startSession() {

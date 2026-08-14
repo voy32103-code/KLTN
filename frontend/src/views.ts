@@ -280,15 +280,22 @@ function renderAuth(state: AppState) {
 
 function renderScenarioPicker(state: AppState) {
   const scenario = state.selectedScenario
+  const language = state.scenarioLanguage
   return `
     <section class="section-head" data-animate="fade-up" style="--index: 0">
       <div>
         <p class="section-kicker">Thiết lập kịch bản</p>
         <h2>Chọn tình huống và đối tác phỏng vấn</h2>
       </div>
-      <button class="ghost-button" data-action="refresh-scenarios" type="button" ${state.busy ? 'disabled' : ''}>
-        Tải lại kịch bản
-      </button>
+      <div class="scenario-head-actions">
+        <div class="scenario-language-switch" role="group" aria-label="Ngôn ngữ nội dung kịch bản">
+          <button class="ghost-button ${language === 'vi' ? 'active' : ''}" data-action="set-scenario-language" data-language="vi" type="button" aria-pressed="${language === 'vi'}" ${state.busy ? 'disabled' : ''}>VI</button>
+          <button class="ghost-button ${language === 'en' ? 'active' : ''}" data-action="set-scenario-language" data-language="en" type="button" aria-pressed="${language === 'en'}" ${state.busy ? 'disabled' : ''}>EN</button>
+        </div>
+        <button class="ghost-button" data-action="refresh-scenarios" type="button" ${state.busy ? 'disabled' : ''}>
+          Tải lại kịch bản
+        </button>
+      </div>
     </section>
     <section class="picker-layout">
       <aside class="scenario-list" data-animate="fade-up" style="--index: 1">        <div class="panel-heading">

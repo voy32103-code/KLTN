@@ -2,6 +2,7 @@ using System.Net;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using ReqSimulator.API.Data;
 using Microsoft.Extensions.Logging.Abstractions;
 using ReqSimulator.API.Services;
@@ -14,6 +15,8 @@ var tests = new (string Name, Func<Task> Run)[]
     ("schema_bootstrap_never_deletes_duplicate_evaluations", TestSchemaBootstrapIsNonDestructive),
     ("extract_request_serializes_scenario_glossary", TestExtractRequestSerializesGlossaryAsync),
     ("pipeline_enhancement_migration_is_versioned_and_non_destructive", TestPipelineMigrationIsVersioned),
+    ("published_scenario_catalog_contains_10_scenarios_and_100_requirements", TestPublishedScenarioCatalog),
+    ("scenario_localization_catalog_covers_vi_and_en", TestScenarioLocalizationCatalog),
 };
 
 var failures = 0;
@@ -113,6 +116,64 @@ static Task TestPipelineMigrationIsVersioned()
         "migration must create reusable personas and review evidence tables");
     Assert(!sql.Contains("DELETE FROM", StringComparison.OrdinalIgnoreCase),
         "pipeline migration must not delete existing scenario data");
+    return Task.CompletedTask;
+}
+
+static Task TestPublishedScenarioCatalog()
+{
+    var assemblyDirectory = Path.GetDirectoryName(typeof(SeedData).Assembly.Location)
+        ?? throw new InvalidOperationException("Could not resolve API assembly directory.");
+    var catalogDirectory = Path.Combine(assemblyDirectory, "Data", "ScenarioCatalog");
+    var files = Directory.GetFiles(catalogDirectory, "*.json").OrderBy(path => path).ToArray();
+    Assert(files.Length == 10, $"published catalog must have 10 scenarios, found {files.Length}");
+    var requirementCount = files.Sum(path =>
+    {
+        using var document = JsonDocument.Parse(File.ReadAllText(path));
+        return document.RootElement.GetProperty("requirements").GetArrayLength();
+    });
+    Assert(requirementCount == 100,
+        $"published catalog must have 100 requirements, found {requirementCount}");
+    return Task.CompletedTask;
+}
+
+static Task TestScenarioLocalizationCatalog()
+{
+    var catalog = new ScenarioLocalizationCatalog(NullLogger<ScenarioLocalizationCatalog>.Instance);
+    var vietnamese = catalog.Resolve(
+        "bank_loan_application",
+        "fallback",
+        "fallback",
+        "fallback",
+        "vi");
+    var english = catalog.Resolve(
+        "bank_loan_application",
+        "fallback",
+        "fallback",
+        "fallback",
+        "en");
+    Assert(vietnamese.Title == "Quy trình Đăng ký Vay Ngân hàng",
+        "Vietnamese scenario title must come from the localization catalog");
+    Assert(english.Title == "Bank Loan Application Workflow",
+        "English scenario title must come from the localization catalog");
+    Assert(ScenarioLocalizationCatalog.NormalizeLanguage("fr") == "vi",
+        "unsupported languages must fail safely to Vietnamese");
+
+    var assemblyDirectory = Path.GetDirectoryName(typeof(SeedData).Assembly.Location)
+        ?? throw new InvalidOperationException("Could not resolve API assembly directory.");
+    var path = Path.Combine(
+        assemblyDirectory,
+        "Data",
+        "ScenarioLocalizations",
+        "scenarios.i18n.json");
+    using var document = JsonDocument.Parse(File.ReadAllText(path));
+    var scenarios = document.RootElement.GetProperty("scenarios");
+    Assert(scenarios.EnumerateObject().Count() == 10,
+        "localization catalog must cover all 10 scenarios");
+    foreach (var scenario in scenarios.EnumerateObject())
+    {
+        Assert(scenario.Value.TryGetProperty("vi", out _) && scenario.Value.TryGetProperty("en", out _),
+            $"scenario {scenario.Name} must provide both vi and en");
+    }
     return Task.CompletedTask;
 }
 static AiServiceClient CreateClient(HttpMessageHandler? handler = null)

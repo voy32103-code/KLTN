@@ -62,6 +62,24 @@ jobs:
       - name: Run regression tests
         run: python -m unittest discover -s tests -v
 
+      - name: Verify scenario catalog snapshot and evaluation lock
+        working-directory: .
+        run: |
+          python tools/sync_scenario_catalog.py --check
+          python tools/build_evaluation_artifacts.py --check
+
+      - name: Upload locked evaluation bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: reqsimulator-evaluation-${{ github.sha }}
+          path: |
+            evaluation-artifacts/
+            ai-service/app/scenarios/
+            tools/build_evaluation_artifacts.py
+            tools/score_evaluation_run.py
+          if-no-files-found: error
+          retention-days: 90
+
   frontend:
     name: Frontend build and contract tests
     runs-on: ubuntu-latest

@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "policy": "Targets copied from the report are hypotheses, not observed results. A claim becomes verified only when raw inputs, raw outputs, scorer version, catalog lock, and an immutable run manifest are attached.",
+  "claims": [
+    {
+      "id": "extraction_matching_f1_baseline",
+      "metric": "micro_f1",
+      "target_value": 0.8718,
+      "observed_value": null,
+      "status": "unverified",
+      "evidence_refs": []
+    },
+    {
+      "id": "extraction_matching_f1_improved",
+      "metric": "micro_f1",
+      "target_value": 0.8857,
+      "observed_value": null,
+      "status": "unverified",
+      "evidence_refs": []
+    },
+    {
+      "id": "gating_accuracy",
+      "metric": "accuracy",
+      "target_value": 0.9,
+      "observed_value": null,
+      "status": "unverified",
+      "evidence_refs": []
+    },
+    {
+      "id": "feedback_ab_preference",
+      "metric": "paired_preference_rate",
+      "target_value": null,
+      "observed_value": null,
+      "status": "not_run",
+      "evidence_refs": []
+    }
+  ]
+}

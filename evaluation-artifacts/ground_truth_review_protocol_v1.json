@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "protocol_id": "ground-truth-review-v1",
+  "status": "pending",
+  "review_unit": "one scenario requirement",
+  "reviewers": {
+    "minimum_independent_reviewers": 2,
+    "must_be_distinct": true,
+    "recommended_background": "requirements engineering or the scenario business domain",
+    "blind_to_model_output": true
+  },
+  "criteria": [
+    "correct and unambiguous wording",
+    "one atomic requirement",
+    "valid actor-action-object-condition decomposition",
+    "correct functional, non-functional, business-rule, or constraint category",
+    "defensible priority and reveal difficulty",
+    "no semantic duplicate inside the same scenario",
+    "gate and reveal condition do not expose hidden knowledge too early"
+  ],
+  "decisions": ["approve", "revise", "reject"],
+  "adjudication": "Any disagreement is resolved by a third reviewer. Preserve both independent forms and the adjudication record as run evidence.",
+  "final_registry": "ground_truth_reviews_v1.csv",
+  "approval_rule": "A CSV row may become approved only after two matching approvals or documented third-reviewer adjudication.",
+  "provenance_rule": "Synthetic fixtures must remain labelled synthetic and must not be described as observations from real users."
+}

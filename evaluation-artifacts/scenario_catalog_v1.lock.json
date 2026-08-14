@@ -1,0 +1,125 @@
+{
+  "abProtocolId": "feedback-ab-v1",
+  "catalogSha256": "5bb3046305543514b8ff0b1a12eacf61a189956895cd4578662dcc75c80a20a0",
+  "catalogVersion": "scenario-catalog-v1",
+  "claimable": false,
+  "claims": [
+    {
+      "id": "extraction_matching_f1_baseline",
+      "observedValue": null,
+      "status": "unverified"
+    },
+    {
+      "id": "extraction_matching_f1_improved",
+      "observedValue": null,
+      "status": "unverified"
+    },
+    {
+      "id": "gating_accuracy",
+      "observedValue": null,
+      "status": "unverified"
+    },
+    {
+      "id": "feedback_ab_preference",
+      "observedValue": null,
+      "status": "not_run"
+    }
+  ],
+  "evidenceFiles": {
+    "evaluation-artifacts/ab_feedback_protocol_v1.json": "7b117f00c7363e6d17331326f0dcefb3e436b5cc2e0e2df2cfac17ecf1663d55",
+    "evaluation-artifacts/claims_registry_v1.json": "47902a3fd98efb9436e9692cb82ed2757662494b04b106422f6fb5bac16e1e24",
+    "evaluation-artifacts/ground_truth_review_protocol_v1.json": "817fd500c19f134f9bdc76557ef1dfecbd5d26827993287a265b55019fa63267",
+    "evaluation-artifacts/ground_truth_reviews_v1.csv": "c17092af653bc510bc14da21dff4a5b16b4b1fbfce1c0cdbc3bb5277232b7cd1",
+    "evaluation-artifacts/run_manifest_schema_v1.json": "9efc73ef75e953d1ba5895ae78d14c56802f77f56c17e387ea1b4079b34f8688",
+    "tools/score_evaluation_run.py": "e02aea8ca7930b6051cb88cb35775caa1bff36990a0ebf7518a7399cf88abe96"
+  },
+  "groundTruthStatus": "provisional",
+  "requirementCount": 100,
+  "reviewSummary": {
+    "provisional": 100
+  },
+  "scenarioCount": 10,
+  "scenarios": [
+    {
+      "file": "ai-service/app/scenarios/bank_loan_application.json",
+      "requirementCount": 10,
+      "reviewStatus": "provisional",
+      "scenarioKey": "bank_loan_application",
+      "sha256": "56c7f69f8e17619ddf862adf05fa4d8755d1829226c5ceaeee1494a6f87d125f",
+      "sourceKind": "synthetic"
+    },
+    {
+      "file": "ai-service/app/scenarios/ecommerce_returns.json",
+      "requirementCount": 10,
+      "reviewStatus": "provisional",
+      "scenarioKey": "ecommerce_returns",
+      "sha256": "67b7fa8c61b48e00f4cb798c7e2f7fd083248c2b1d9c42e0ed67be0daa962e51",
+      "sourceKind": "synthetic"
+    },
+    {
+      "file": "ai-service/app/scenarios/employee_leave_management.json",
+      "requirementCount": 10,
+      "reviewStatus": "provisional",
+      "scenarioKey": "employee_leave_management",
+      "sha256": "c18e0270eee0b92128c4b4a0948f41e18bfee1f38fe5a89dce91cc396c001f84",
+      "sourceKind": "synthetic"
+    },
+    {
+      "file": "ai-service/app/scenarios/food_delivery_operations.json",
+      "requirementCount": 10,
+      "reviewStatus": "provisional",
+      "scenarioKey": "food_delivery_operations",
+      "sha256": "c2055f0169df61389b263997339385b372bcd511e660e7da26f0b6323a3b522f",
+      "sourceKind": "synthetic"
+    },
+    {
+      "file": "ai-service/app/scenarios/hospital_appointment.json",
+      "requirementCount": 12,
+      "reviewStatus": "provisional",
+      "scenarioKey": "hospital_appointment",
+      "sha256": "7faed98b014e02f42b3d63496c902e9b686b9e1109d503de29bffdfc4f41e8e7",
+      "sourceKind": "synthetic"
+    },
+    {
+      "file": "ai-service/app/scenarios/hotel_room_booking.json",
+      "requirementCount": 10,
+      "reviewStatus": "provisional",
+      "scenarioKey": "hotel_room_booking",
+      "sha256": "69f83cbeb9c14d158131593aa6ada9eb246a7f816fcb1abf2dc158e5bed2bfd6",
+      "sourceKind": "synthetic"
+    },
+    {
+      "file": "ai-service/app/scenarios/public_library_management.json",
+      "requirementCount": 10,
+      "reviewStatus": "provisional",
+      "scenarioKey": "public_library_management",
+      "sha256": "bf2c9d636787f15a421579b4804d14c8157ccd5c73322b717b77662dfb72f35d",
+      "sourceKind": "synthetic"
+    },
+    {
+      "file": "ai-service/app/scenarios/small_business_inventory.json",
+      "requirementCount": 9,
+      "reviewStatus": "provisional",
+      "scenarioKey": "small_business_inventory",
+      "sha256": "3a144910da554c5d2901c6cc9501bf5472bf245525b26829d782f33858b0ee12",
+      "sourceKind": "synthetic"
+    },
+    {
+      "file": "ai-service/app/scenarios/university_course_registration.json",
+      "requirementCount": 10,
+      "reviewStatus": "provisional",
+      "scenarioKey": "university_course_registration",
+      "sha256": "e90b0f8049f797bc09d8e78bc4293134191a746ad29321a7085da1baaef74e64",
+      "sourceKind": "synthetic"
+    },
+    {
+      "file": "ai-service/app/scenarios/vehicle_service_appointment.json",
+      "requirementCount": 9,
+      "reviewStatus": "provisional",
+      "scenarioKey": "vehicle_service_appointment",
+      "sha256": "0cfe7c7a3e4525ce5b302c3e84120766585c49afce5445d1b929a3aa8d9e3dab",
+      "sourceKind": "synthetic"
+    }
+  ],
+  "schemaVersion": 1
+}

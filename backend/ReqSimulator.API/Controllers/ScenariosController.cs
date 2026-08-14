@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ReqSimulator.API.Data;
+using ReqSimulator.API.Services;
 
 namespace ReqSimulator.API.Controllers;
 
@@ -12,27 +13,52 @@ namespace ReqSimulator.API.Controllers;
 public class ScenariosController : ControllerBase
 {
     private readonly AppDbContext _db;
-    public ScenariosController(AppDbContext db) => _db = db;
+    private readonly ScenarioLocalizationCatalog _localizations;
+
+    public ScenariosController(AppDbContext db, ScenarioLocalizationCatalog localizations)
+    {
+        _db = db;
+        _localizations = localizations;
+    }
 
     /// <summary>Lấy danh sách scenarios (cho student chọn)</summary>
     [HttpGet]
-    public async Task<IActionResult> GetAll()
+    public async Task<IActionResult> GetAll([FromQuery] string? lang = null)
     {
         var scenarios = await _db.Scenarios
             .Where(s => s.IsActive)
             .Select(s => new
             {
-                s.Id, s.Title, s.Description, s.Domain, s.Difficulty,
+                s.Id, s.ScenarioKey, s.Title, s.Description, s.Domain, s.Difficulty,
                 PersonaCount = s.Personas.Count,
                 RequirementCount = s.HiddenRequirements.Count
             })
             .ToListAsync();
-        return Ok(scenarios);
+        return Ok(scenarios.Select(scenario =>
+        {
+            var display = _localizations.Resolve(
+                scenario.ScenarioKey,
+                scenario.Title,
+                scenario.Description,
+                scenario.Domain,
+                lang);
+            return new
+            {
+                scenario.Id,
+                display.Title,
+                display.Description,
+                display.Domain,
+                scenario.Difficulty,
+                scenario.PersonaCount,
+                scenario.RequirementCount,
+                display.Language
+            };
+        }));
     }
 
     /// <summary>Chi tiết scenario + personas (KHÔNG trả hidden requirements cho student)</summary>
     [HttpGet("{id}")]
-    public async Task<IActionResult> GetById(Guid id)
+    public async Task<IActionResult> GetById(Guid id, [FromQuery] string? lang = null)
     {
         var role = User.FindFirst(ClaimTypes.Role)?.Value;
         var canViewInactive = role is "Lecturer" or "Admin";
@@ -44,11 +70,18 @@ public class ScenariosController : ControllerBase
 
         if (scenario == null) return NotFound();
 
+        var display = _localizations.Resolve(
+            scenario.ScenarioKey,
+            scenario.Title,
+            scenario.Description,
+            scenario.Domain,
+            lang);
+
         return Ok(new
         {
             scenario.Id, scenario.ScenarioKey, scenario.Version,
-            scenario.Title, scenario.Description,
-            scenario.Domain, scenario.Difficulty,
+            display.Title, display.Description,
+            display.Domain, scenario.Difficulty, display.Language,
             PersonaCount = scenario.Personas.Count,
             RequirementCount = await _db.HiddenRequirements.CountAsync(r => r.ScenarioId == id),
             Personas = scenario.Personas.Select(p => new

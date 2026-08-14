@@ -16,6 +16,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Npgsql;
 using ReqSimulator.API.Controllers;
 using ReqSimulator.API.Data;
@@ -1635,7 +1636,9 @@ internal static class Program
         {
             await using var scope = provider.CreateAsyncScope();
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            var controller = new ScenariosController(db)
+            var localizations = new ScenarioLocalizationCatalog(
+                NullLogger<ScenarioLocalizationCatalog>.Instance);
+            var controller = new ScenariosController(db, localizations)
             {
                 ControllerContext = CreateAuthorizedControllerContext(principal)
             };
@@ -1647,7 +1650,9 @@ internal static class Program
         {
             await using var scope = provider.CreateAsyncScope();
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            var controller = new ScenariosController(db)
+            var localizations = new ScenarioLocalizationCatalog(
+                NullLogger<ScenarioLocalizationCatalog>.Instance);
+            var controller = new ScenariosController(db, localizations)
             {
                 ControllerContext = CreateAuthorizedControllerContext(principal)
             };

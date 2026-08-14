@@ -1,6 +1,7 @@
 export type AuthMode = 'login' | 'register'
 export type AppView = 'auth' | 'scenarios' | 'chat' | 'review' | 'admin'
 export type Sender = 'Student' | 'Stakeholder'
+export type ScenarioLanguage = 'vi' | 'en'
 
 export type ScenarioSummary = {
   id: string
@@ -10,6 +11,7 @@ export type ScenarioSummary = {
   difficulty: string
   personaCount: number
   requirementCount: number
+  language?: ScenarioLanguage
 }
 
 export type Persona = {
@@ -350,6 +352,7 @@ export type AppState = {
   selectedPersonaId: string | null
   session: SessionState | null
   selectedModel: string
+  scenarioLanguage: ScenarioLanguage
   messages: ChatMessage[]
   evaluation: EvaluationResult | null
   reviewSessions: ReviewSessionSummary[]

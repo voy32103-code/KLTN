@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "protocol_id": "feedback-ab-v1",
+  "status": "not_run",
+  "hypothesis": "Structured, requirement-linked feedback is preferred over generic feedback.",
+  "unit_of_analysis": "one finalized interview session",
+  "variant_a": "current generic feedback",
+  "variant_b": "structured feedback linked to matched and missed ground-truth requirements",
+  "primary_metric": "paired_preference_rate_excluding_ties",
+  "secondary_metrics": ["clarity_1_to_5", "actionability_1_to_5", "grounding_1_to_5"],
+  "design": {
+    "method": "blinded pairwise review",
+    "position_balance": "Each pair is shown twice across the study population with A/B order counterbalanced.",
+    "minimum_independent_reviewers_per_pair": 2,
+    "minimum_pairs_before_claim": 30,
+    "tie_option": true,
+    "reviewer_roles": ["lecturer", "requirements_engineering_reviewer"],
+    "exclusion_rules": [
+      "reviewer recognizes the variant implementation",
+      "session lacks a locked scenario catalog hash",
+      "either variant failed to generate"
+    ]
+  },
+  "reporting": {
+    "required": ["wins_a", "wins_b", "ties", "preference_rate", "confidence_interval_95", "raw_anonymized_ratings"],
+    "prohibited": [
+      "claiming improvement from model-as-judge scores alone",
+      "discarding ties without reporting their count",
+      "changing the primary metric after viewing results"
+    ]
+  }
+}

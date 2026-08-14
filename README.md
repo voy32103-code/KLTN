@@ -17,6 +17,7 @@ This repository is an academic pilot. AI-generated scenarios are always drafts u
 - Lets administrators ingest public web URLs or video/audio sources into scenario drafts.
 - Supports JavaScript-rendered public websites with an HTTP crawler plus a Playwright fallback.
 - Processes uploaded video as **audio only**: private R2 object storage → FFmpeg → Gemini Files API → draft → human review.
+- Provides deterministic Vietnamese/English scenario display text through `?lang=vi|en` and a persisted VI/EN switch in the student UI; ground-truth text remains canonical for reproducible scoring.
 
 ## Architecture
 
@@ -156,6 +157,17 @@ pnpm run test:a11y
 ```
 
 The integration-test project needs a dedicated PostgreSQL database with `test` or `integration` in its name. Do not point it at a shared Neon production branch.
+
+## Reproducible evaluation
+
+The versioned catalog contains 10 scenarios and 100 candidate ground-truth requirements. The AI service and backend publish the same byte-identical catalog snapshot, and CI rejects drift:
+
+```powershell
+python tools/sync_scenario_catalog.py --check
+python tools/build_evaluation_artifacts.py --check
+```
+
+Quantitative targets such as 87.18%/88.57% micro-F1 and 90% gating accuracy remain explicitly `unverified` until the candidate ground truth has two-reviewer validation and the raw run manifests are scored. See [evaluation-artifacts/README.md](evaluation-artifacts/README.md) for the catalog hash, review sheet, scoring command, evidence rules, and blinded A/B protocol.
 
 ## Deployment configuration
 
