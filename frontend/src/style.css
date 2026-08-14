@@ -1656,6 +1656,127 @@ kbd {
   margin-top: 8px;
 }
 
+.tutorial-card {
+  max-width: 560px;
+}
+
+.tutorial-icon {
+  background: var(--pastel-blue-bg);
+  color: var(--pastel-blue-text);
+  font-family: var(--font-heading);
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.tutorial-progress {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-secondary);
+}
+
+.tutorial-progress small {
+  margin-left: 6px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.tutorial-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--line);
+}
+
+.tutorial-dot.active {
+  width: 22px;
+  border-radius: 999px;
+  background: var(--accent);
+}
+
+.tutorial-body {
+  min-height: 130px;
+  padding: 8px 0;
+}
+
+.tutorial-body h3 {
+  margin: 0 0 10px;
+  color: var(--text-primary);
+  font-family: var(--font-heading);
+  font-size: 19px;
+}
+
+.tutorial-actions {
+  align-items: center;
+}
+
+.student-history-layout {
+  align-items: start;
+}
+
+.history-score {
+  color: var(--accent-emerald);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.history-score-compare {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 20px;
+  padding: 16px;
+  border: 1px solid var(--line-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-raised);
+}
+
+.history-score-compare div:not(.history-score-arrow) {
+  display: grid;
+  gap: 4px;
+}
+
+.history-score-compare small {
+  color: var(--text-secondary);
+}
+
+.history-score-compare strong {
+  color: var(--accent-emerald);
+  font-family: var(--font-mono);
+  font-size: 21px;
+}
+
+.history-score-arrow {
+  color: var(--muted);
+  font-size: 20px;
+}
+
+@media (max-width: 560px) {
+  .tutorial-card {
+    width: calc(100% - 24px);
+    padding: 20px;
+  }
+
+  .history-score-compare {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .history-score-arrow {
+    transform: rotate(90deg);
+  }
+
+  .tutorial-actions {
+    flex-wrap: wrap;
+  }
+
+  .tutorial-actions span[style*="flex:1"] {
+    display: none;
+  }
+}
+
 @keyframes modalFadeIn {
   from { opacity: 0; }
   to { opacity: 1; }

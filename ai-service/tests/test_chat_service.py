@@ -1,12 +1,46 @@
 import unittest
+from app.models.schemas import ChatRequest, PersonaProfile
 from types import SimpleNamespace
 from typing import Any
 
-from app.services.chat_service import apply_consistency_guard, build_fallback_reply
+from app.services.chat_service import apply_consistency_guard, build_fallback_reply, build_system_prompt
 from app.services.scenario_config_service import get_scenario_config
 
 
 class ChatServiceFallbackTests(unittest.TestCase):
+    def test_system_prompt_requires_complete_professional_vietnamese_replies(self):
+        request = ChatRequest(
+            sessionId="session",
+            scenarioTitle="University Course Registration System",
+            studentMessage="Đăng nhập mà không cần đăng ký hả?",
+            history=[],
+            persona=PersonaProfile(
+                name="Stakeholder",
+                roleTitle="Registrar",
+                traits='{"traits":["impatient"]}',
+                style="formal-busy",
+                mood="neutral_busy",
+                patience=0.65,
+            ),
+            availableRequirements=["Students must be able to register for courses online."],
+        )
+
+        prompt = build_system_prompt(
+            request,
+            {"mood": "neutral_busy", "patience": 0.65, "turn_count": 1},
+            "OpenEnded",
+            ["Students must be able to register for courses online."],
+            [],
+            [],
+            get_scenario_config("University Course Registration System", []),
+            "on_topic",
+            "R1",
+        )
+
+        self.assertIn("complete grammatical sentences", prompt)
+        self.assertIn("without being rude", prompt)
+        self.assertIn("Do not output internal labels", prompt)
+
     def test_fallback_reply_uses_only_newly_revealed_requirement(self):
         req: Any = SimpleNamespace(studentMessage="What is the main purpose?")
 

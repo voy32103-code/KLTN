@@ -290,6 +290,103 @@ public class SessionsController : ControllerBase
         return Ok(sessions);
     }
 
+    /// <summary>Returns only the signed-in student's own interview history.</summary>
+    [HttpGet("mine")]
+    public async Task<IActionResult> StudentSessions([FromQuery] int limit = 50)
+    {
+        var userId = GetCurrentUserId();
+        if (userId is null) return Unauthorized();
+        var safeLimit = Math.Clamp(limit, 1, 100);
+
+        var sessions = await _db.SimulationSessions
+            .AsNoTracking()
+            .Where(s => s.StudentId == userId.Value)
+            .OrderByDescending(s => s.StartedAt)
+            .Take(safeLimit)
+            .Select(s => new
+            {
+                s.Id,
+                s.StartedAt,
+                s.EndedAt,
+                s.IsActive,
+                FinalizationStatus = s.FinalizationStatus.ToString(),
+                Scenario = new { s.Scenario.Id, s.Scenario.Title, s.Scenario.Domain },
+                Persona = new { s.Persona.Id, s.Persona.Name, s.Persona.RoleTitle },
+                MessageCount = s.Messages.Count,
+                Evaluation = s.EvaluationResult == null ? null : new
+                {
+                    s.EvaluationResult.CoverageScore,
+                    s.EvaluationResult.OverriddenCoverageScore,
+                    FinalScore = s.EvaluationResult.OverriddenCoverageScore ?? s.EvaluationResult.CoverageScore,
+                    s.EvaluationResult.OverriddenAt,
+                    s.EvaluationResult.MatchedCount,
+                    s.EvaluationResult.PartialCount,
+                    s.EvaluationResult.MissedCount,
+                    s.EvaluationResult.EvaluatedAt
+                }
+            })
+            .ToListAsync();
+
+        return Ok(sessions);
+    }
+
+    /// <summary>Returns a student's own transcript and non-sensitive evaluation history.</summary>
+    [HttpGet("mine/{sessionId:guid}")]
+    public async Task<IActionResult> StudentSessionDetail(Guid sessionId)
+    {
+        var userId = GetCurrentUserId();
+        if (userId is null) return Unauthorized();
+
+        var session = await _db.SimulationSessions
+            .AsNoTracking()
+            .Where(s => s.Id == sessionId && s.StudentId == userId.Value)
+            .Select(s => new
+            {
+                s.Id,
+                s.StartedAt,
+                s.EndedAt,
+                s.IsActive,
+                FinalizationStatus = s.FinalizationStatus.ToString(),
+                Scenario = new { s.Scenario.Id, s.Scenario.Title, s.Scenario.Description, s.Scenario.Domain },
+                Persona = new { s.Persona.Id, s.Persona.Name, s.Persona.RoleTitle }
+            })
+            .FirstOrDefaultAsync();
+
+        if (session is null) return NotFound();
+
+        var messages = await _db.Messages
+            .AsNoTracking()
+            .Where(m => m.SessionId == sessionId)
+            .OrderBy(m => m.Timestamp)
+            .Select(m => new
+            {
+                Sender = m.Sender.ToString(),
+                m.Content,
+                DetectedQuestionType = m.DetectedQuestionType.HasValue ? m.DetectedQuestionType.ToString() : null,
+                m.DetectedTopic,
+                m.QuestionQuality,
+                m.Timestamp
+            })
+            .ToListAsync();
+
+        var evaluation = await _db.EvaluationResults
+            .AsNoTracking()
+            .FirstOrDefaultAsync(e => e.SessionId == sessionId);
+        object? evaluationResponse = null;
+        if (evaluation is not null)
+        {
+            var extractedCount = await _db.ExtractedRequirements.AsNoTracking().CountAsync(r => r.SessionId == sessionId);
+            // Do not expose hidden requirement text/match details to students.
+            evaluationResponse = ToEvaluationResponse(
+                evaluation,
+                DeserializeFeedback(evaluation.Feedback),
+                extractedCount,
+                matches: []);
+        }
+
+        return Ok(new { Session = session, Messages = messages, Evaluation = evaluationResponse });
+    }
+
     [HttpGet("review/{sessionId}")]
     [Authorize(Roles = "Lecturer,Admin")]
     public async Task<IActionResult> ReviewSessionDetail(Guid sessionId)

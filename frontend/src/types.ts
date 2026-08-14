@@ -1,5 +1,5 @@
 export type AuthMode = 'login' | 'register'
-export type AppView = 'auth' | 'scenarios' | 'chat' | 'review' | 'admin'
+export type AppView = 'auth' | 'scenarios' | 'chat' | 'history' | 'review' | 'admin'
 export type Sender = 'Student' | 'Stakeholder'
 export type ScenarioLanguage = 'vi' | 'en'
 
@@ -177,6 +177,41 @@ export type ReviewSessionDetail = {
   messages: ChatMessage[]
   extractedRequirements: ReviewExtractedRequirement[]
   hiddenRequirements: ReviewHiddenRequirement[]
+  evaluation?: EvaluationResult | null
+}
+
+export type StudentSessionSummary = {
+  id: string
+  startedAt: string
+  endedAt?: string | null
+  isActive: boolean
+  finalizationStatus: string
+  scenario: { id: string; title: string; domain?: string | null }
+  persona: { id: string; name: string; roleTitle?: string | null }
+  messageCount: number
+  evaluation?: {
+    coverageScore?: number | null
+    overriddenCoverageScore?: number | null
+    finalScore?: number | null
+    overriddenAt?: string | null
+    matchedCount: number
+    partialCount: number
+    missedCount: number
+    evaluatedAt: string
+  } | null
+}
+
+export type StudentSessionDetail = {
+  session: {
+    id: string
+    startedAt: string
+    endedAt?: string | null
+    isActive: boolean
+    finalizationStatus: string
+    scenario: StudentSessionSummary['scenario'] & { description?: string | null }
+    persona: StudentSessionSummary['persona']
+  }
+  messages: ChatMessage[]
   evaluation?: EvaluationResult | null
 }
 
@@ -358,9 +393,14 @@ export type AppState = {
   reviewSessions: ReviewSessionSummary[]
   selectedReviewSessionId: string | null
   reviewDetail: ReviewSessionDetail | null
+  studentHistory: StudentSessionSummary[]
+  selectedStudentSessionId: string | null
+  studentHistoryDetail: StudentSessionDetail | null
   adminState: AdminState | null
   busy: boolean
   notice: Notice | null
   confirmEndSession?: boolean
   modelDropdownOpen?: boolean
+  tutorialOpen?: boolean
+  tutorialStep?: number
 }

@@ -83,8 +83,9 @@ Current patience level: {state["patience"]}/1.0
 Turn count so far: {state["turn_count"]}
 
 Behavior rules:
-- If patience is low, give shorter answers.
-- If mood is rushed or irritated, sound busy and less detailed.
+- If patience is low, give shorter answers, but always use complete grammatical sentences.
+- If mood is rushed or irritated, sound busy and less detailed without being rude, dismissive, or sarcastic.
+- Never punish the student for asking a clarifying question; answer the business question first.
 - If the student asks a technical implementation question, redirect to business concerns.
 
 === LAYER 4: INFORMATION GATING ===
@@ -121,6 +122,9 @@ Response guidelines:
 - Respond naturally as a real person would.
 - Keep responses to 1-4 sentences unless clarification truly needs more detail.
 - Prioritize business language over system design language.
+- Every response must contain at least one complete Vietnamese sentence and must not end as a fragment.
+- Do not output internal labels, JSON, markdown headings, or analysis such as "Topic", "Quality", "OpenEnded", or "Probing".
+- Do not comment on the student's manner, workload, or question quality; express urgency only through concise professional wording.
 """ 
 
 

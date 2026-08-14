@@ -182,9 +182,11 @@ export function renderApp(state: AppState) {
         ${state.view === 'auth' ? renderAuth(state) : ''}
         ${state.view === 'scenarios' ? renderScenarioPicker(state) : ''}
         ${state.view === 'chat' ? renderChat(state) : ''}
+        ${state.view === 'history' ? renderStudentHistory(state) : ''}
         ${state.view === 'review' ? renderReviewDashboard(state) : ''}
         ${state.view === 'admin' ? renderAdminDashboard(state) : ''}
       </main>
+      ${state.token && state.tutorialOpen ? renderTutorialModal(state) : ''}
     </div>
   `
 }
@@ -194,6 +196,7 @@ function renderTopbar(state: AppState) {
     auth: 'Cổng truy cập',
     scenarios: 'Lựa chọn kịch bản',
     chat: state.evaluation ? 'Báo cáo đánh giá' : 'Phỏng vấn trực tiếp',
+    history: 'Lịch sử phỏng vấn',
     review: 'Bảng Review Giảng viên',
     admin: 'Quản trị hệ thống (Admin)'
   }
@@ -214,6 +217,8 @@ function renderTopbar(state: AppState) {
       <div class="topbar-actions" style="display: flex; align-items: center; gap: 12px;">
         <span class="view-pill" style="background: var(--surface-raised); border: 1px solid var(--line-subtle); color: var(--accent-indigo); font-weight: 600; font-size: 12px; padding: 4px 12px; border-radius: 20px;">${escapeHtml(viewLabels[state.view])}</span>
         ${state.user?.email ? `<span class="user-pill" style="background: var(--surface-raised); border: 1px solid var(--line-subtle); color: var(--text-primary); font-size: 12px; font-weight: 500; padding: 4px 14px; border-radius: 20px;">${escapeHtml(state.user.email)} <span style="color: var(--accent-emerald); font-weight: 700; margin-left: 4px;">(${escapeHtml(t(state.user.role ?? 'Student', i18n.roles, 'Sinh viên'))})</span></span>` : ''}
+        ${state.token ? `<button class="ghost-button" data-action="open-tutorial" type="button" ${state.busy ? 'disabled' : ''}>Hướng dẫn</button>` : ''}
+        ${state.user?.role === 'Student' && state.view !== 'history' ? `<button class="ghost-button" data-action="open-student-history" type="button" ${state.busy ? 'disabled' : ''}>Lịch sử</button>` : ''}
         ${state.token && state.view !== 'scenarios' ? `<button class="ghost-button" data-action="open-student-lab" type="button" ${state.busy ? 'disabled' : ''}>Phòng thực hành</button>` : ''}
         ${canReview && state.view !== 'review' ? `<button class="ghost-button" data-action="open-review" type="button" ${state.busy ? 'disabled' : ''}>Review Giảng viên</button>` : ''}
         ${isAdmin && state.view !== 'admin' ? `<button class="ghost-button" data-action="open-admin" type="button" ${state.busy ? 'disabled' : ''} style="border-color: var(--accent-amber); color: var(--accent-amber);">Admin Console</button>` : ''}
@@ -421,6 +426,47 @@ function renderPersonaCard(persona: Persona, state: AppState, index: number) {
   `
 }
 
+function renderStudentHistory(state: AppState) {
+  const detail = state.studentHistoryDetail
+  return `
+    <section class="section-head" data-animate="fade-up" style="--index: 0">
+      <div>
+        <p class="section-kicker">Theo dõi tiến bộ</p>
+        <h2>Lịch sử phỏng vấn</h2>
+        <p>Xem lại transcript, điểm AI ban đầu và điểm sau khi giảng viên review.</p>
+      </div>
+      <div class="scenario-head-actions">
+        <button class="ghost-button" data-action="refresh-student-history" type="button" ${state.busy ? 'disabled' : ''}>Làm mới</button>
+        <button class="primary-button" data-action="open-student-lab" type="button">Phỏng vấn mới</button>
+      </div>
+    </section>
+    <section class="review-layout student-history-layout">
+      <aside class="review-list" data-animate="fade-up" style="--index: 1">
+        <div class="panel-heading"><div><p class="section-kicker">Các phiên đã lưu</p><h2>${state.studentHistory.length} phiên</h2></div></div>
+        <div class="list-stack">
+          ${state.studentHistory.length === 0
+            ? renderEmpty('Chưa có phiên phỏng vấn nào.', 'Hãy thực hiện một phiên mới để kết quả xuất hiện ở đây.')
+            : state.studentHistory.map((session) => {
+              const score = session.evaluation?.finalScore ?? session.evaluation?.coverageScore
+              return `<button class="review-session-item ${session.id === state.selectedStudentSessionId ? 'active' : ''}" data-student-session-id="${escapeAttribute(session.id)}" type="button" ${state.busy ? 'disabled' : ''}>
+                <span><strong>${escapeHtml(session.scenario.title)}</strong><small>${escapeHtml(session.persona.name)} · ${formatTime(session.startedAt)}</small></span>
+                <span class="history-score">${typeof score === 'number' ? formatScore(score) : 'Chưa chấm'}</span>
+              </button>`
+            }).join('')}
+        </div>
+      </aside>
+      <section class="review-detail student-history-detail" data-animate="fade-up" style="--index: 2">
+        ${detail ? `
+          <div class="review-detail-header"><div><p class="section-kicker">${escapeHtml(detail.session.scenario.domain ?? 'Nghiệp vụ')}</p><h2>${escapeHtml(detail.session.scenario.title)}</h2><p>Stakeholder: <strong>${escapeHtml(detail.session.persona.name)}</strong></p></div><span class="view-pill">${detail.session.isActive ? 'Đang tiến hành' : 'Đã kết thúc'}</span></div>
+          ${detail.evaluation ? `<div class="history-score-compare"><div><small>Điểm AI ban đầu</small><strong>${formatScore(detail.evaluation.coverageScore ?? null)}</strong></div><div class="history-score-arrow">→</div><div><small>Điểm sau review</small><strong>${typeof detail.evaluation.overriddenCoverageScore === 'number' ? formatScore(detail.evaluation.overriddenCoverageScore) : 'Chưa review'}</strong></div></div>` : renderEmpty('Phiên chưa có điểm.', 'Kết thúc phiên để hệ thống đánh giá.')}
+          <section class="review-block"><div class="panel-heading"><h3>Transcript</h3><span>${detail.messages.length} tin nhắn</span></div><div class="review-transcript">${detail.messages.map((message, index) => renderMessage(message, index)).join('')}</div></section>
+          ${detail.evaluation ? renderEvaluation(detail.evaluation) : ''}
+        ` : renderEmpty('Chọn một phiên để xem lại.', 'Transcript và điểm số sẽ hiển thị tại đây.')}
+      </section>
+    </section>
+  `
+}
+
 function renderChat(state: AppState) {
   const scenario = state.selectedScenario
   const persona = scenario?.personas.find((item) => item.id === state.selectedPersonaId)
@@ -527,6 +573,74 @@ function renderEndSessionModal(state: AppState) {
           </button>
         </div>
       </div>
+    </div>
+  `
+}
+
+function renderTutorialModal(state: AppState) {
+  const role = state.user?.role ?? 'Student'
+  const tutorial = role === 'Admin'
+    ? {
+        eyebrow: 'Hướng dẫn quản trị viên',
+        title: 'Tạo và kiểm duyệt tri thức nghiệp vụ',
+        steps: [
+          ['1. Chọn nguồn', 'Mở Admin Console, chọn URL công khai hoặc tải video/audio cuộc họp để bắt đầu nạp tri thức.'],
+          ['2. Theo dõi xử lý', 'Kiểm tra trạng thái job trong Lịch sử nạp tri thức. Video được chuyển thành audio-only trước khi gửi AI.'],
+          ['3. Kiểm tra bản nháp', 'Mở preview, rà scenario, stakeholder và các yêu cầu; chỉnh sửa nếu nội dung chưa chính xác.'],
+          ['4. Publish', 'Ghi chú kiểm duyệt rồi publish phiên bản scenario để sinh viên có thể sử dụng.'],
+        ],
+      }
+    : role === 'Lecturer'
+      ? {
+          eyebrow: 'Hướng dẫn giảng viên',
+          title: 'Review kết quả luyện tập',
+          steps: [
+            ['1. Mở Review', 'Chọn Review Giảng viên trên thanh điều hướng để xem các phiên sinh viên đã hoàn thành.'],
+            ['2. Đọc transcript', 'Mở một phiên để xem câu hỏi, câu trả lời stakeholder và các requirement đã phát hiện.'],
+            ['3. Kiểm tra matching', 'Đối chiếu kết quả matching với Ground Truth; chọn loại match phù hợp nếu hệ thống đánh giá chưa đúng.'],
+            ['4. Lưu và xuất', 'Nhập nhận xét, lưu override và xuất JSON/CSV khi cần làm minh chứng hoặc phản hồi cho sinh viên.'],
+          ],
+        }
+      : {
+          eyebrow: 'Hướng dẫn sinh viên',
+          title: 'Bắt đầu một phiên phỏng vấn',
+          steps: [
+            ['1. Chọn scenario', 'Tại Phòng thực hành, chọn một kịch bản nghiệp vụ phù hợp với bài tập của bạn.'],
+            ['2. Chọn stakeholder', 'Đọc vai trò, độ khó và phong cách giao tiếp rồi chọn stakeholder để phỏng vấn.'],
+            ['3. Đặt câu hỏi', 'Bắt đầu bằng câu hỏi mở, sau đó hỏi làm rõ ngoại lệ, điều kiện và quy tắc nghiệp vụ.'],
+            ['4. Kết thúc và xem điểm', 'Khi đủ thông tin, kết thúc phiên để xem requirement matching, coverage score và gợi ý cải thiện.'],
+          ],
+        }
+  const step = Math.max(0, Math.min(state.tutorialStep ?? 0, tutorial.steps.length - 1))
+  const current = tutorial.steps[step]
+  return `
+    <div class="modal-overlay tutorial-overlay" id="tutorial-modal-overlay">
+      <section class="modal-card tutorial-card" id="tutorial-modal" role="dialog" aria-modal="true" aria-labelledby="tutorial-title" aria-describedby="tutorial-description" tabindex="-1">
+        <div class="modal-header">
+          <div class="modal-icon tutorial-icon" aria-hidden="true">?</div>
+          <div style="min-width:0; flex:1;">
+            <p class="section-kicker" style="margin:0 0 4px;">${escapeHtml(tutorial.eyebrow)}</p>
+            <h2 id="tutorial-title" style="margin:0; font-size:20px; color:var(--text-primary);">${escapeHtml(tutorial.title)}</h2>
+          </div>
+          <button class="icon-button" data-action="tutorial-close" type="button" aria-label="Đóng hướng dẫn">×</button>
+        </div>
+        <div class="tutorial-progress" aria-label="Tiến trình hướng dẫn">
+          ${tutorial.steps.map((_, index) => `<span class="tutorial-dot ${index === step ? 'active' : ''}" aria-hidden="true"></span>`).join('')}
+          <small>Bước ${step + 1}/${tutorial.steps.length}</small>
+        </div>
+        <div class="modal-body tutorial-body">
+          <h3>${escapeHtml(current[0])}</h3>
+          <p id="tutorial-description">${escapeHtml(current[1])}</p>
+        </div>
+        <div class="modal-actions tutorial-actions">
+          <button class="ghost-button" data-action="tutorial-close" type="button">Bỏ qua</button>
+          <span style="flex:1"></span>
+          ${step > 0 ? '<button class="ghost-button" data-action="tutorial-prev" type="button">Quay lại</button>' : ''}
+          ${step < tutorial.steps.length - 1
+            ? '<button class="primary-button" data-action="tutorial-next" type="button">Tiếp theo</button>'
+            : '<button class="primary-button" data-action="tutorial-close" type="button">Bắt đầu</button>'}
+        </div>
+      </section>
     </div>
   `
 }

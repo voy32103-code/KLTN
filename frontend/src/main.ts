@@ -24,6 +24,8 @@ import type {
   ScenarioSummary,
   SessionState,
   SessionsOverTimeData,
+  StudentSessionDetail,
+  StudentSessionSummary,
   TopStudentItem,
 } from './types'
 import { getErrorMessage, isPrivilegedRole, isTokenExpired, readUserFromToken } from './utils'
@@ -42,6 +44,7 @@ const app: HTMLDivElement = root
 
 const MODEL_KEY = 'req_simulator_selected_model'
 const SCENARIO_LANGUAGE_KEY = 'req_simulator_scenario_language'
+const TUTORIAL_KEY_PREFIX = 'req_simulator_tutorial_seen_v1_'
 const storedToken = localStorage.getItem(TOKEN_KEY)
 const hasExpiredStoredToken = Boolean(storedToken && isTokenExpired(storedToken))
 const initialToken = hasExpiredStoredToken ? null : storedToken
@@ -73,10 +76,15 @@ const state: AppState = {
   reviewSessions: [],
   selectedReviewSessionId: null,
   reviewDetail: null,
+  studentHistory: [],
+  selectedStudentSessionId: null,
+  studentHistoryDetail: null,
   adminState: null,
   busy: false,
   notice: null,
   modelDropdownOpen: false,
+  tutorialOpen: false,
+  tutorialStep: 0,
 }
 
 let modalReturnFocus: HTMLElement | null = null
@@ -133,6 +141,10 @@ function render() {
         messagesContainer.scrollTop = messagesContainer.scrollHeight
       }
     })
+  }
+
+  if (state.tutorialOpen) {
+    requestAnimationFrame(() => document.querySelector<HTMLElement>('#tutorial-modal')?.focus())
   }
 }
 
@@ -264,6 +276,19 @@ function bindEvents() {
     }
   })
 
+  document.querySelectorAll<HTMLButtonElement>('[data-student-session-id]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const sessionId = button.dataset.studentSessionId
+      if (sessionId) void selectStudentHistorySession(sessionId)
+    })
+  })
+
+  document.querySelector('#tutorial-modal-overlay')?.addEventListener('click', (event) => {
+    if (event.target === event.currentTarget) {
+      closeTutorial()
+    }
+  })
+
   document.querySelector('#messages')?.scrollTo({ top: 999999 })
 
   // Đóng dropdown khi bấm ra ngoài vùng dropdown container
@@ -282,6 +307,11 @@ function bindEvents() {
     (window as any).hasAccessibilityKeyboardListener = true
     document.addEventListener('keydown', (event) => {
       if (event.key === 'Escape') {
+        if (state.tutorialOpen) {
+          event.preventDefault()
+          closeTutorial()
+          return
+        }
         if (state.confirmEndSession) {
           event.preventDefault()
           closeEndSessionModal()
@@ -317,9 +347,33 @@ function closeEndSessionModal() {
   requestAnimationFrame(() => modalReturnFocus?.focus())
 }
 
+function closeTutorial() {
+  const role = state.user?.role ?? 'Student'
+  localStorage.setItem(`${TUTORIAL_KEY_PREFIX}${role}`, '1')
+  state.tutorialOpen = false
+  state.tutorialStep = 0
+  render()
+}
+
 async function handleAction(action: string, options: { tab?: string; userId?: string; model?: string; jobId?: string; language?: string } = {}) {
   if (state.busy) return
   switch (action) {
+    case 'open-tutorial':
+      state.tutorialOpen = true
+      state.tutorialStep = 0
+      render()
+      break
+    case 'tutorial-next':
+      state.tutorialStep = Math.min((state.tutorialStep ?? 0) + 1, 3)
+      render()
+      break
+    case 'tutorial-prev':
+      state.tutorialStep = Math.max((state.tutorialStep ?? 0) - 1, 0)
+      render()
+      break
+    case 'tutorial-close':
+      closeTutorial()
+      break
     case 'logout':
       logout()
       break
@@ -374,6 +428,12 @@ async function handleAction(action: string, options: { tab?: string; userId?: st
       clearNotice()
       render()
       if (state.scenarios.length === 0) await loadScenarios(false)
+      break
+    case 'open-student-history':
+      await openStudentHistory()
+      break
+    case 'refresh-student-history':
+      await loadStudentHistory()
       break
     case 'refresh-review':
       await loadReviewSessions()
@@ -493,6 +553,9 @@ async function submitAuth(form: FormData) {
     state.token = result.token
     state.user = readUserFromToken(result.token)
     localStorage.setItem(TOKEN_KEY, result.token)
+    const tutorialRole = state.user?.role ?? 'Student'
+    state.tutorialOpen = !localStorage.getItem(`${TUTORIAL_KEY_PREFIX}${tutorialRole}`)
+    state.tutorialStep = 0
     setNotice('success', 'Đăng nhập thành công.')
     if (state.user?.role === 'Admin') {
       await openAdminDashboard()
@@ -577,6 +640,44 @@ async function openReviewDashboard() {
   clearNotice()
   render()
   await loadReviewSessions(false)
+}
+
+async function openStudentHistory() {
+  if (!state.token || state.user?.role !== 'Student') {
+    setNotice('error', 'Lịch sử phỏng vấn chỉ dành cho tài khoản sinh viên.')
+    return
+  }
+  state.view = 'history'
+  state.selectedStudentSessionId = null
+  state.studentHistoryDetail = null
+  clearNotice()
+  render()
+  await loadStudentHistory(false)
+}
+
+async function loadStudentHistory(showLoading = true) {
+  await withBusy(async () => {
+    const sessions = await api.request<StudentSessionSummary[]>('/api/Sessions/mine')
+    state.studentHistory = sessions
+    if (state.selectedStudentSessionId && !sessions.some(item => item.id === state.selectedStudentSessionId)) {
+      state.selectedStudentSessionId = null
+      state.studentHistoryDetail = null
+    }
+    if (!state.selectedStudentSessionId && sessions[0]) {
+      state.selectedStudentSessionId = sessions[0].id
+      state.studentHistoryDetail = await api.request<StudentSessionDetail>(`/api/Sessions/mine/${sessions[0].id}`)
+    }
+    if (showLoading) setNotice('success', 'Đã tải lịch sử phỏng vấn.')
+  })
+}
+
+async function selectStudentHistorySession(sessionId: string) {
+  if (state.busy) return
+  await withBusy(async () => {
+    state.selectedStudentSessionId = sessionId
+    state.studentHistoryDetail = await api.request<StudentSessionDetail>(`/api/Sessions/mine/${sessionId}`)
+    clearNotice()
+  })
 }
 
 async function loadReviewSessions(showLoading = true) {
