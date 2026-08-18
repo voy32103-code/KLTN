@@ -200,6 +200,48 @@ public class AdminController : ControllerBase
         return Ok(new { exact, semantic, partial, missed });
     }
 
+    /// <summary>Ch? b�o th?ng k� �? r� so�t �i?u ch?nh �i?m; kh�ng k?t lu?n gi?ng vi�n thi�n v?.</summary>
+    [HttpGet("stats/grading-review")]
+    public async Task<IActionResult> GetGradingReview()
+    {
+        const int minimumReviews = 5;
+        const decimal meanAdjustmentThreshold = 15m;
+        const decimal highAdjustmentThreshold = 25m;
+
+        var overrides = await _db.LecturerOverrides.AsNoTracking()
+            .Where(o => o.OriginalCoverageScore != null && o.NewCoverageScore != null)
+            .Select(o => new { o.LecturerId, LecturerName = o.Lecturer.Name, Original = o.OriginalCoverageScore!.Value, Final = o.NewCoverageScore!.Value })
+            .ToListAsync();
+
+        var reviewers = overrides.GroupBy(item => new { item.LecturerId, item.LecturerName }).Select(group =>
+        {
+            var adjustments = group.Select(item => item.Final - item.Original).ToList();
+            var absoluteAdjustments = adjustments.Select(Math.Abs).ToList();
+            var reviewCount = adjustments.Count;
+            var averageAdjustment = adjustments.Average();
+            var averageAbsoluteAdjustment = absoluteAdjustments.Average();
+            var highAdjustmentCount = absoluteAdjustments.Count(value => value >= highAdjustmentThreshold);
+            var hasSufficientData = reviewCount >= minimumReviews;
+            var requiresReview = hasSufficientData && (Math.Abs(averageAdjustment) >= meanAdjustmentThreshold || highAdjustmentCount * 2 >= reviewCount);
+
+            return new
+            {
+                lecturerId = group.Key.LecturerId, lecturerName = group.Key.LecturerName, reviewCount,
+                averageAiScore = Math.Round(group.Average(item => item.Original), 1),
+                averageFinalScore = Math.Round(group.Average(item => item.Final), 1),
+                averageAdjustment = Math.Round(averageAdjustment, 1),
+                averageAbsoluteAdjustment = Math.Round(averageAbsoluteAdjustment, 1),
+                highAdjustmentCount, hasSufficientData, requiresReview,
+                status = !hasSufficientData ? "InsufficientData" : requiresReview ? "ReviewRecommended" : "WithinExpectedRange"
+            };
+        }).OrderByDescending(item => item.requiresReview).ThenByDescending(item => item.averageAbsoluteAdjustment).ToList();
+
+        return Ok(new
+        {
+            methodology = new { minimumReviews, meanAdjustmentThreshold, highAdjustmentThreshold, disclaimer = "Ch? b�o th?ng k� d�ng �? m?i r� so�t; kh�ng x�c �?nh ho?c k?t lu?n gi?ng vi�n thi�n v?." },
+            reviewers
+        });
+    }
     [HttpGet("stats/feedback-experiment")]
     public async Task<IActionResult> GetFeedbackExperimentStats()
     {

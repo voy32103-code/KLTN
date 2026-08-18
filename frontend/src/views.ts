@@ -77,102 +77,6 @@ function getFriendlyModelName(modelId?: string): string {
   }
 }
 
-function getProviderClass(modelId: string): string {
-  if (!modelId) return 'provider-generic';
-  if (modelId.startsWith('gemini')) return 'provider-gemini';
-  if (modelId.startsWith('deepseek')) return 'provider-deepseek';
-  if (modelId.startsWith('llama')) return 'provider-llama';
-  if (modelId.startsWith('mimo')) return 'provider-mimo';
-  if (modelId.startsWith('openrouter')) return 'provider-openrouter';
-  if (modelId.startsWith('omniroute')) return 'provider-omniroute';
-  return 'provider-generic';
-}
-
-function renderModelGroups(state: AppState) {
-  const models = [
-    { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', provider: 'gemini', desc: 'Khuyên dùng - Cổng bảo mật & Structured Output' },
-    { id: 'gemini-2.5-flash-lite', name: 'Gemini 2.5 Flash Lite', provider: 'gemini', desc: 'Nhẹ và tiết kiệm quota cho tác vụ đơn giản' },
-    { id: 'gemini-3-flash-preview', name: 'Gemini 3 Flash Preview', provider: 'gemini', desc: 'API ID đã xác minh cho Gemini 3 Flash' },
-    { id: 'gemini-3.1-flash-lite', name: 'Gemini 3.1 Flash Lite', provider: 'gemini', desc: 'Khuyên dùng khi cần hạn mức miễn phí cao hơn' },
-    { id: 'gemini-3.5-flash', name: 'Gemini 3.5 Flash', provider: 'gemini', desc: 'Phân tích nghiệp vụ nhanh với context lớn' },
-    { id: 'gemini-3.5-flash-lite', name: 'Gemini 3.5 Flash Lite', provider: 'gemini', desc: 'Lite thế hệ mới với hạn mức miễn phí cao' },
-    { id: 'gemini-3.6-flash', name: 'Gemini 3.6 Flash', provider: 'gemini', desc: 'Flash cho hội thoại và trích xuất yêu cầu' },
-    { id: 'gemini-3.7-flash', name: 'Gemini 3.7 Flash', provider: 'gemini', desc: 'Flash mới nhất trong danh sách API đã xác minh' },
-    { id: 'deepseek-chat', name: 'DeepSeek Chat', provider: 'deepseek', desc: 'Mô hình DeepSeek V3 - Cực tốt cho nghiệp vụ' },
-    { id: 'deepseek-v4flash', name: 'DeepSeek v4 Flash', provider: 'deepseek', desc: 'Deepseek Flash - Tốc độ cao' },
-    { id: 'deepseek-v4pro', name: 'DeepSeek v4 Pro', provider: 'deepseek', desc: 'Deepseek Pro - Thông minh vượt trội' },
-    { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B (Groq)', provider: 'llama', desc: 'Mô hình mã nguồn mở tốt nhất qua Groq' },
-    { id: 'llama-3.1-8b-instant', name: 'Llama 3.1 8B (Groq)', provider: 'llama', desc: 'Groq Cloud - Tốc độ phản hồi tức thì' },
-    { id: 'mimo-v2.5pro', name: 'Mimo v2.5 Pro', provider: 'mimo', desc: 'Mimo Cloud - Tương thích ngược tốt' },
-    { id: 'openrouter/meta-llama/llama-3.3-70b-instruct', name: 'Llama 3.3 70B (OR)', provider: 'openrouter', desc: 'Llama 3.3 Instruct qua OpenRouter' },
-    { id: 'openrouter/deepseek/deepseek-chat', name: 'DeepSeek Chat (OR)', provider: 'openrouter', desc: 'DeepSeek Chat qua OpenRouter' },
-    { id: 'openrouter/google/gemini-2.5-flash', name: 'Gemini 2.5 Flash (OR)', provider: 'openrouter', desc: 'Gemini 2.5 Flash qua OpenRouter' },
-    { id: 'omniroute/kmc/k3', name: 'Kimi K3 (Omni)', provider: 'omniroute', desc: 'Kimi K3 qua OmniRoute' },
-    { id: 'omniroute/kmc/kimi-for-coding', name: 'Kimi for Coding (Omni)', provider: 'omniroute', desc: 'Kimi for Coding qua OmniRoute' },
-    { id: 'omniroute/kmc/kimi-for-coding-highspeed', name: 'Kimi Coding Fast (Omni)', provider: 'omniroute', desc: 'Kimi for Coding Highspeed qua OmniRoute' },
-    { id: 'omniroute/cp/cline-pass/glm-5.2', name: 'GLM-5.2 (Omni)', provider: 'omniroute', desc: 'GLM-5.2 qua OmniRoute' },
-    { id: 'omniroute/cp/cline-pass/minimax-m3', name: 'MiniMax-M3 (Omni)', provider: 'omniroute', desc: 'MiniMax-M3 qua OmniRoute' },
-    { id: 'omniroute/cp/cline-pass/deepseek-v4-pro', name: 'DeepSeek V4 Pro (Omni)', provider: 'omniroute', desc: 'DeepSeek V4 Pro qua OmniRoute' },
-    { id: 'omniroute/cp/cline-pass/deepseek-v4-flash', name: 'DeepSeek V4 Flash (Omni)', provider: 'omniroute', desc: 'DeepSeek V4 Flash qua OmniRoute' },
-    { id: 'omniroute/cp/cline-pass/kimi-k3', name: 'Kimi K3 CP (Omni)', provider: 'omniroute', desc: 'Kimi K3 qua OmniRoute' },
-    { id: 'omniroute/cp/cline-pass/kimi-k2.7-code', name: 'Kimi K2.7 Code (Omni)', provider: 'omniroute', desc: 'Kimi K2.7 Code qua OmniRoute' },
-    { id: 'omniroute/cp/cline-pass/mimo-v2.5-pro', name: 'MiMo-V2.5-Pro (Omni)', provider: 'omniroute', desc: 'MiMo-V2.5-Pro qua OmniRoute' },
-    { id: 'omniroute/cp/cline-pass/mimo-v2.5', name: 'MiMo-V2.5 (Omni)', provider: 'omniroute', desc: 'MiMo-V2.5 qua OmniRoute' },
-    { id: 'omniroute/cp/cline-pass/qwen3.7-max', name: 'Qwen3.7 Max (Omni)', provider: 'omniroute', desc: 'Qwen3.7 Max qua OmniRoute' },
-    { id: 'omniroute/cp/cline-pass/qwen3.7-plus', name: 'Qwen3.7 Plus (Omni)', provider: 'omniroute', desc: 'Qwen3.7 Plus qua OmniRoute' },
-    { id: 'omniroute/kr/claude-sonnet-5', name: 'Claude Sonnet 5 (Omni)', provider: 'omniroute', desc: 'Claude Sonnet 5 qua OmniRoute' },
-    { id: 'omniroute/kr/claude-sonnet-4.5', name: 'Claude Sonnet 4.5 (Omni)', provider: 'omniroute', desc: 'Claude Sonnet 4.5 qua OmniRoute' },
-    { id: 'omniroute/kr/claude-haiku-4.5', name: 'Claude Haiku 4.5 (Omni)', provider: 'omniroute', desc: 'Claude Haiku 4.5 qua OmniRoute' },
-    { id: 'omniroute/kr/deepseek-3.2', name: 'DeepSeek V3.2 (Omni)', provider: 'omniroute', desc: 'DeepSeek V3.2 qua OmniRoute' },
-    { id: 'omniroute/kr/minimax-m2.5', name: 'MiniMax M2.5 (Omni)', provider: 'omniroute', desc: 'MiniMax M2.5 qua OmniRoute' },
-    { id: 'omniroute/kr/minimax-m2.1', name: 'MiniMax M2.1 (Omni)', provider: 'omniroute', desc: 'MiniMax M2.1 qua OmniRoute' },
-    { id: 'omniroute/kr/glm-5', name: 'GLM-5 (Omni)', provider: 'omniroute', desc: 'GLM-5 qua OmniRoute' },
-    { id: 'omniroute/kr/qwen3-coder-next', name: 'Qwen3 Coder Next (Omni)', provider: 'omniroute', desc: 'Qwen3 Coder Next qua OmniRoute' },
-    { id: 'omniroute/kr/gpt-5.6-sol', name: 'GPT-5.6 Sol (Omni)', provider: 'omniroute', desc: 'GPT-5.6 Sol qua OmniRoute' },
-    { id: 'omniroute/kr/gpt-5.6-terra', name: 'GPT-5.6 Terra (Omni)', provider: 'omniroute', desc: 'GPT-5.6 Terra qua OmniRoute' },
-    { id: 'omniroute/kr/gpt-5.6-luna', name: 'GPT-5.6 Luna (Omni)', provider: 'omniroute', desc: 'GPT-5.6 Luna qua OmniRoute' }
-  ];
-
-  const providers: Record<string, { label: string; color: string }> = {
-    gemini: { label: 'Google Gemini', color: 'var(--accent-emerald)' },
-    deepseek: { label: 'DeepSeek', color: 'var(--accent)' },
-    llama: { label: 'Meta Llama (Groq)', color: 'var(--accent-amber)' },
-    mimo: { label: 'Mimo Cloud', color: 'var(--pastel-yellow-text)' },
-    openrouter: { label: 'OpenRouter', color: 'var(--accent-rose)' },
-    omniroute: { label: 'OmniRoute', color: 'var(--accent-indigo)' }
-  };
-
-  const grouped: Record<string, typeof models> = {};
-  models.filter(m => m.provider !== 'omniroute').forEach(m => {
-    if (!grouped[m.provider]) grouped[m.provider] = [];
-    grouped[m.provider].push(m);
-  });
-
-  return Object.entries(grouped).map(([prov, items]) => {
-    const info = providers[prov];
-    return `
-      <div style="border-bottom: 1px solid var(--line-subtle); padding-bottom: 6px; margin-bottom: 6px; display: flex; flex-direction: column; gap: 2px;">
-        <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); font-weight: 700; padding: 4px 8px; display: flex; align-items: center; gap: 6px;">
-          <span style="width: 5px; height: 5px; border-radius: 50%; background: ${info.color}; display: inline-block;"></span>
-          ${info.label}
-        </div>
-        ${items.map(m => {
-          const active = state.selectedModel === m.id;
-          return `
-            <button class="dropdown-item-btn ${active ? 'active' : ''}" data-action="select-model" data-model="${m.id}" role="option" aria-selected="${active}" type="button">
-              <span style="font-weight: 600; display: flex; align-items: center; gap: 6px; justify-content: space-between; width: 100%;">
-                ${m.name}
-                ${active ? '<span style="font-size: 11px; color: var(--accent);">✓</span>' : ''}
-              </span>
-              <span style="font-size: 10px; color: var(--muted); font-weight: normal;">${m.desc}</span>
-            </button>
-          `;
-        }).join('')}
-      </div>
-    `;
-  }).join('');
-}
-
 export function renderApp(state: AppState) {
   return `
     <div class="shell">
@@ -388,22 +292,7 @@ function renderScenarioDetail(scenario: ScenarioDetail, state: AppState) {
         <span>${selectedPersona ? 'Phiên mô phỏng phỏng vấn phác thảo sẽ bắt đầu với nhân vật này.' : 'Vui lòng lựa chọn một đối tác phỏng vấn để bắt đầu.'}</span>
       </div>
       <div style="display: flex; gap: var(--spacing-sm); align-items: center; flex-wrap: wrap; position: relative;">
-        <!-- Custom Dropdown Container -->
-        <div class="custom-dropdown">
-          <button data-action="toggle-model-dropdown" type="button" aria-haspopup="listbox" aria-expanded="${state.modelDropdownOpen}" aria-controls="model-dropdown-menu" style="display: flex; align-items: center; gap: 8px; padding: 0.625rem 1rem; border-radius: var(--radius-md); border: 1px solid var(--line); background: var(--surface); color: var(--text-primary); font-size: 0.875rem; cursor: pointer; outline: none; font-weight: 500;">
-            <span class="model-provider-badge ${getProviderClass(state.selectedModel)}"></span>
-            <span>${getFriendlyModelName(state.selectedModel)}</span>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-left: 4px; transform: ${state.modelDropdownOpen ? 'rotate(180deg)' : 'rotate(0)'}; transition: transform 0.2s;"><polyline points="6 9 12 15 18 9"></polyline></svg>
-          </button>
-          
-          <!-- Dropdown menu -->
-          ${state.modelDropdownOpen ? `
-            <div class="dropdown-menu glass-panel" id="model-dropdown-menu" role="listbox" aria-label="Chọn mô hình AI" style="position: absolute; bottom: 100%; right: 0; margin-bottom: 8px; width: 340px; max-height: 380px; overflow-y: auto; border: 1px solid var(--line); background: var(--surface-raised); border-radius: var(--radius-lg); box-shadow: var(--shadow-subtle); z-index: 1000; padding: 8px; display: flex; flex-direction: column; gap: 4px;">
-              ${renderModelGroups(state)}
-            </div>
-          ` : ''}
-        </div>
-
+        <span style="font-size: 13px; color: var(--text-secondary);">AI được hệ thống tự chọn theo quota khả dụng.</span>
         <button class="primary-button" data-action="start-session" type="button" ${!state.selectedPersonaId || state.busy ? 'disabled' : ''}>
           ${state.busy ? 'Đang khởi tạo...' : 'Bắt đầu phỏng vấn'}
         </button>
@@ -1480,6 +1369,20 @@ function renderAdminOverviewSection(admin: AdminState) {
         ${admin.feedbackExperiment?.warning ? `<small>${escapeHtml(admin.feedbackExperiment.warning)}</small>` : ''}
       </div>
 
+      <div class="top-students-card" style="background: var(--surface); padding: 20px; border-radius: 10px; border: 1px solid var(--line); box-shadow: var(--shadow-subtle);">
+        <h3 style="margin-bottom: 6px; font-size: 16px; color: var(--text-primary);">R� so�t nh?t qu�n �i?u ch?nh �i?m</h3>
+        <p style="margin: 0 0 12px; color: var(--text-secondary); font-size: 13px;">So s�nh �i?m AI g?c v?i �i?m sau review. ${escapeHtml(admin.gradingReview?.methodology.disclaimer ?? 'Ch? b�o th?ng k�, kh�ng ph?i k?t lu?n thi�n v?.')}</p>
+        <div style="overflow-x: auto;">
+          <table style="width: 100%; border-collapse: collapse; font-size: 13px; text-align: left;">
+            <thead><tr style="border-bottom: 1px solid var(--line); color: var(--text-secondary);"><th style="padding: 10px;">Ng�?i review</th><th style="padding: 10px; text-align: center;">S? l?n</th><th style="padding: 10px; text-align: center;">AI TB</th><th style="padding: 10px; text-align: center;">Sau review TB</th><th style="padding: 10px; text-align: center;">Ch�nh TB</th><th style="padding: 10px; text-align: center;">Tr?ng th�i</th></tr></thead>
+            <tbody>
+              ${(admin.gradingReview?.reviewers ?? []).length === 0 ? '<tr><td colspan="6" style="padding: 20px; text-align: center; color: var(--muted);">Ch�a c� d? li?u �i?u ch?nh �i?m �? ph�n t�ch.</td></tr>' : (admin.gradingReview?.reviewers ?? []).map(item => `
+                <tr style="border-bottom: 1px solid var(--line-subtle);"><td style="padding: 10px; font-weight: 600; color: var(--text-primary);">${escapeHtml(item.lecturerName)}</td><td style="padding: 10px; text-align: center;">${item.reviewCount}</td><td style="padding: 10px; text-align: center;">${item.averageAiScore}%</td><td style="padding: 10px; text-align: center;">${item.averageFinalScore}%</td><td style="padding: 10px; text-align: center; font-weight: 600; color: ${item.averageAdjustment > 0 ? 'var(--pastel-green-text)' : item.averageAdjustment < 0 ? 'var(--accent-rose)' : 'var(--text-secondary)'};">${item.averageAdjustment > 0 ? '+' : ''}${item.averageAdjustment} �i?m</td><td style="padding: 10px; text-align: center;">${item.requiresReview ? '<span style="color: var(--accent-rose); font-weight: 700;">C?n r� so�t</span>' : item.hasSufficientData ? '<span style="color: var(--pastel-green-text);">Trong ng�?ng</span>' : '<span style="color: var(--text-secondary);">Ch�a �? d? li?u</span>'}</td></tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+        <small style="display:block; margin-top: 10px; color: var(--muted);">Ng�?ng: t?i thi?u ${admin.gradingReview?.methodology.minimumReviews ?? 5} l?n review; c? khi ch�nh trung b?nh t? �${admin.gradingReview?.methodology.meanAdjustmentThreshold ?? 15} �i?m ho?c �t nh?t m?t n?a s? l?n l?ch t? ${admin.gradingReview?.methodology.highAdjustmentThreshold ?? 25} �i?m.</small>
+      </div>
       <!-- Charts 2x2 Grid -->
       <div class="admin-charts-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
         <div class="chart-card" style="background: var(--surface); padding: 16px; border-radius: 10px; border: 1px solid var(--line); height: 320px; box-shadow: var(--shadow-subtle);">

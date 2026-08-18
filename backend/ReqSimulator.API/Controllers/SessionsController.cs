@@ -672,10 +672,9 @@ public class SessionsController : ControllerBase
         if (persona is null)
             return BadRequest("Stakeholder không thuộc kịch bản đã chọn.");
 
-        if (!AiModelCatalog.IsSupported(dto.SelectedModel))
-            return BadRequest("Mô hình AI không được hỗ trợ.");
-
-        var selectedModel = AiModelCatalog.NormalizeOrDefault(dto.SelectedModel);
+        // Model is assigned by the server. Client-provided values are deliberately ignored
+        // so quota-aware fallback remains consistent for every interview session.
+        var selectedModel = AiModelCatalog.DefaultModel;
         var session = new SimulationSession
         {
             StudentId = userId.Value,

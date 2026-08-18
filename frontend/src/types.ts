@@ -260,6 +260,24 @@ export type MatchTypeBreakdownData = {
   missed: number
 }
 
+export type GradingReviewItem = {
+  lecturerId: string
+  lecturerName: string
+  reviewCount: number
+  averageAiScore: number
+  averageFinalScore: number
+  averageAdjustment: number
+  averageAbsoluteAdjustment: number
+  highAdjustmentCount: number
+  hasSufficientData: boolean
+  requiresReview: boolean
+  status: 'InsufficientData' | 'ReviewRecommended' | 'WithinExpectedRange'
+}
+
+export type GradingReviewReport = {
+  methodology: { minimumReviews: number; meanAdjustmentThreshold: number; highAdjustmentThreshold: number; disclaimer: string }
+  reviewers: GradingReviewItem[]
+}
 export type AdminUserItem = {
   id: string
   name: string
@@ -339,6 +357,7 @@ export type AdminState = {
   scenarioStats: ScenarioStatItem[]
   topStudents: TopStudentItem[]
   matchTypeBreakdown: MatchTypeBreakdownData | null
+  gradingReview: GradingReviewReport | null
   users: AdminUserItem[]
   userSearch: string
   userRoleFilter: string
@@ -400,7 +419,6 @@ export type AppState = {
   busy: boolean
   notice: Notice | null
   confirmEndSession?: boolean
-  modelDropdownOpen?: boolean
   tutorialOpen?: boolean
   tutorialStep?: number
 }

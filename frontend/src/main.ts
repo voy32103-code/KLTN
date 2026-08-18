@@ -10,6 +10,7 @@ import type {
   ChatMessage,
   CoverageDistributionBin,
   EvaluationResult,
+  GradingReviewReport,
   MatchTypeBreakdownData,
   Notice,
   ReviewSessionDetail,
@@ -42,23 +43,13 @@ const root = document.querySelector<HTMLDivElement>('#app')
 if (!root) throw new Error('Missing #app root')
 const app: HTMLDivElement = root
 
-const MODEL_KEY = 'req_simulator_selected_model'
 const SCENARIO_LANGUAGE_KEY = 'req_simulator_scenario_language'
 const TUTORIAL_KEY_PREFIX = 'req_simulator_tutorial_seen_v1_'
 const storedToken = localStorage.getItem(TOKEN_KEY)
 const hasExpiredStoredToken = Boolean(storedToken && isTokenExpired(storedToken))
 const initialToken = hasExpiredStoredToken ? null : storedToken
-const storedModel = localStorage.getItem(MODEL_KEY)
-const isHiddenStoredModel = storedModel?.startsWith('omniroute/') || storedModel === 'gemini-2.5-pro'
-const initialModel = isHiddenStoredModel
-  ? 'gemini-2.5-flash'
-  : storedModel || 'gemini-2.5-flash'
 const initialScenarioLanguage: ScenarioLanguage =
   localStorage.getItem(SCENARIO_LANGUAGE_KEY) === 'en' ? 'en' : 'vi'
-
-if (isHiddenStoredModel) {
-  localStorage.removeItem(MODEL_KEY)
-}
 
 const state: AppState = {
   token: initialToken,
@@ -69,7 +60,7 @@ const state: AppState = {
   selectedScenario: null,
   selectedPersonaId: null,
   session: null,
-  selectedModel: initialModel,
+  selectedModel: 'automatic',
   scenarioLanguage: initialScenarioLanguage,
   messages: [],
   evaluation: null,
@@ -82,7 +73,6 @@ const state: AppState = {
   adminState: null,
   busy: false,
   notice: null,
-  modelDropdownOpen: false,
   tutorialOpen: false,
   tutorialStep: 0,
 }
@@ -292,17 +282,6 @@ function bindEvents() {
   document.querySelector('#messages')?.scrollTo({ top: 999999 })
 
   // Đóng dropdown khi bấm ra ngoài vùng dropdown container
-  if (!(window as any).hasDropdownCloseListener) {
-    (window as any).hasDropdownCloseListener = true
-    document.addEventListener('click', (event) => {
-      const target = event.target as HTMLElement
-      if (state.modelDropdownOpen && !target.closest('.custom-dropdown')) {
-        state.modelDropdownOpen = false
-        render()
-      }
-    })
-  }
-
   if (!(window as any).hasAccessibilityKeyboardListener) {
     (window as any).hasAccessibilityKeyboardListener = true
     document.addEventListener('keydown', (event) => {
@@ -316,10 +295,6 @@ function bindEvents() {
           event.preventDefault()
           closeEndSessionModal()
           return
-        }
-        if (state.modelDropdownOpen) {
-          state.modelDropdownOpen = false
-          render()
         }
       }
 
@@ -376,18 +351,6 @@ async function handleAction(action: string, options: { tab?: string; userId?: st
       break
     case 'logout':
       logout()
-      break
-    case 'toggle-model-dropdown':
-      state.modelDropdownOpen = !state.modelDropdownOpen
-      render()
-      break
-    case 'select-model':
-      if (options.model) {
-        state.selectedModel = options.model
-        localStorage.setItem(MODEL_KEY, options.model)
-        state.modelDropdownOpen = false
-        render()
-      }
       break
     case 'refresh-scenarios':
       await loadScenarios()
@@ -619,7 +582,6 @@ async function startSession() {
       body: {
         scenarioId: state.selectedScenario?.id,
         personaId: state.selectedPersonaId,
-        selectedModel: state.selectedModel,
       },
     })
     state.session = session
@@ -839,6 +801,7 @@ async function openAdminDashboard() {
       scenarioStats: [],
       topStudents: [],
       matchTypeBreakdown: null,
+      gradingReview: null,
       users: [],
       userSearch: '',
       userRoleFilter: '',
@@ -854,13 +817,14 @@ async function openAdminDashboard() {
     clearNotice()
 
     // Fetch Overview metrics & charts in parallel
-    const [ov, distResp, time, scen, top, breakdown, userList, feedbackExperiment, ingestionJobs, personaTemplates] = await Promise.all([
+    const [ov, distResp, time, scen, top, breakdown, gradingReview, userList, feedbackExperiment, ingestionJobs, personaTemplates] = await Promise.all([
       api.request<AdminOverview>('/api/Admin/stats/overview'),
       api.request<{ bins: CoverageDistributionBin[] } | CoverageDistributionBin[]>('/api/Admin/stats/coverage-distribution'),
       api.request<SessionsOverTimeData>('/api/Admin/stats/sessions-over-time'),
       api.request<ScenarioStatItem[]>('/api/Admin/stats/by-scenario'),
       api.request<TopStudentItem[]>('/api/Admin/stats/top-students'),
       api.request<MatchTypeBreakdownData>('/api/Admin/stats/match-type-breakdown'),
+      api.request<GradingReviewReport>('/api/Admin/stats/grading-review'),
       api.request<AdminUserItem[]>('/api/Admin/users'),
       api.request<NonNullable<AdminState['feedbackExperiment']>>('/api/Admin/stats/feedback-experiment'),
       api.request<IngestionJob[]>('/api/admin-ingestion/jobs').catch(() => []),
@@ -874,6 +838,7 @@ async function openAdminDashboard() {
     state.adminState.topStudents = Array.isArray(top) ? top : []
     state.adminState.feedbackExperiment = feedbackExperiment
     state.adminState.matchTypeBreakdown = breakdown
+    state.adminState.gradingReview = gradingReview
     state.adminState.users = Array.isArray(userList) ? userList : []
     state.adminState.ingestionJobs = ingestionJobs
     state.adminState.personaTemplates = personaTemplates.filter(template => template.isActive)

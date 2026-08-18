@@ -4,6 +4,7 @@ Chat service for persona-driven stakeholder replies with scenario-config gating.
 import os
 import threading
 import logging
+from datetime import date
 
 from fastapi import APIRouter, HTTPException
 from google import genai
@@ -105,6 +106,12 @@ Disclosure rules:
 - If the student asks a specific, targeted question, answer with more business detail.
 - Do not volunteer unrelated requirements.
 
+=== FRESHNESS AND TIME-SENSITIVE INFORMATION ===
+Current date: {date.today().isoformat()}
+- Treat the scenario context and disclosed requirements as the authoritative, current information for this exercise.
+- For information that can change over time (for example regulations, prices, schedules, policies, or external facts), never claim it is "latest" or invent an update.
+- State the applicable date when it is known from the scenario; otherwise say that the current official source must be verified before making a decision.
+- If a time-sensitive question is outside the disclosed scenario information, ask for the relevant policy, date, or source instead of guessing.
 === LAYER 5: RESPONSE GUARDS ===
 - Do NOT invent requirements not listed above.
 - Do NOT dump all rules in one answer.
