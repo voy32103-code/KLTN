@@ -712,7 +712,7 @@ function renderReviewSessionDetail(detail: ReviewSessionDetail) {
       </section>
       <section class="review-block" data-animate="fade-up" style="--index: 5">
         <div class="subsection-heading">
-          <h3>Yêu cầu ẩn (Hidden)</h3>
+          <h3>Yêu cầu ẩn</h3>
           <span>${detail.hiddenRequirements.length} mục</span>
         </div>
         ${renderHiddenRequirements(detail.hiddenRequirements)}
@@ -747,9 +747,9 @@ function renderHiddenRequirements(requirements: ReviewHiddenRequirement[]) {
     <div class="artifact-list">
       ${requirements.map((requirement) => `
         <article>
-          <strong>${escapeHtml(requirement.requirementText)}</strong>
-          <small>Cấp độ: ${requirement.gateOrder} · Nhóm: ${escapeHtml(requirement.category)} · Độ khó: ${escapeHtml(requirement.revealDifficulty)}</small>
-          ${requirement.revealCondition ? `<small>Điều kiện: ${escapeHtml(requirement.revealCondition)}</small>` : ''}
+          <strong>${escapeHtml(localizeRequirementText(requirement.requirementText))}</strong>
+          <small>Cổng mở khóa: ${requirement.gateOrder} · Nhóm: ${escapeHtml(localizeRequirementCategory(requirement.category))} · Độ khó: ${escapeHtml(localizePersonaDifficulty(requirement.revealDifficulty))}</small>
+          ${requirement.revealCondition ? `<small>Điều kiện: ${escapeHtml(localizeRevealCondition(requirement.revealCondition))}</small>` : ''}
         </article>
       `).join('')}
     </div>
@@ -1048,6 +1048,46 @@ const IT_REQUIREMENT_VI: Record<string, string> = {
 
 function localizeRequirementText(text: string) {
   return IT_REQUIREMENT_VI[text] ?? text
+}
+
+function localizeRequirementCategory(category: string) {
+  const labels: Record<string, string> = {
+    Functional: 'Chức năng',
+    NonFunctional: 'Phi chức năng',
+    BusinessRule: 'Quy tắc nghiệp vụ',
+    Constraint: 'Ràng buộc',
+  }
+  return labels[category] ?? category
+}
+
+function localizePersonaDifficulty(difficulty: string) {
+  const labels: Record<string, string> = { Easy: 'Dễ', Medium: 'Trung bình', Hard: 'Khó' }
+  return labels[difficulty] ?? difficulty
+}
+
+const IT_REVEAL_CONDITION_VI: Record<string, string> = {
+  'Ask how a customer creates an order.': 'Hỏi cách khách hàng tạo đơn hàng.',
+  'Ask what happens when stock changes during checkout.': 'Hỏi điều gì xảy ra khi tồn kho thay đổi trong lúc thanh toán.',
+  'Ask how the API handles network retries.': 'Hỏi API xử lý việc gửi lại yêu cầu do lỗi mạng như thế nào.',
+  'Ask who can access an order.': 'Hỏi ai được phép truy cập đơn hàng.',
+  'Ask how API errors are returned to clients.': 'Hỏi API trả lỗi cho phía khách như thế nào.',
+  'Ask about non-functional requirements and traceability.': 'Hỏi về yêu cầu phi chức năng và khả năng truy vết.',
+  'Ask what happens when code is merged for release.': 'Hỏi điều gì xảy ra khi mã được gộp để phát hành.',
+  'Ask about production authorization and credentials.': 'Hỏi về quyền phê duyệt production và thông tin xác thực.',
+  'Ask what happens when a deployment is unhealthy.': 'Hỏi điều gì xảy ra khi một bản triển khai không đạt trạng thái khỏe mạnh.',
+  'Ask how schema changes are handled during rollback.': 'Hỏi cách xử lý thay đổi schema khi rollback.',
+  'Ask how the team detects and measures production problems.': 'Hỏi đội ngũ phát hiện và đo lường vấn đề production như thế nào.',
+  'Ask about release accountability.': 'Hỏi về trách nhiệm giải trình khi phát hành.',
+  'Ask what information is required when reporting a defect.': 'Hỏi cần những thông tin gì khi báo cáo lỗi.',
+  'Ask how the team reproduces a reported defect.': 'Hỏi đội ngũ tái hiện lỗi đã báo cáo như thế nào.',
+  'Ask how critical defects are classified and escalated.': 'Hỏi cách phân loại và escalation các lỗi production nghiêm trọng.',
+  'Ask how defect ownership and status changes are communicated.': 'Hỏi việc phân công xử lý lỗi và thay đổi trạng thái được thông báo như thế nào.',
+  'Ask what happens after a developer marks a defect resolved.': 'Hỏi điều gì xảy ra sau khi developer đánh dấu lỗi đã xử lý.',
+  'Ask about accountability and access control.': 'Hỏi về khả năng giải trình và kiểm soát quyền truy cập.',
+}
+
+function localizeRevealCondition(condition: string) {
+  return IT_REVEAL_CONDITION_VI[condition] ?? condition
 }
 
 function renderFeedbackList(title: string, items: string[]) {
