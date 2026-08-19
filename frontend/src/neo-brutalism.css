@@ -432,7 +432,42 @@ th, td { border: 1px solid #151515 !important; }
   animation: none !important;
 }
 
-.modal-stats { border: 2px solid #151515 !important; border-radius: 0 !important; box-shadow: none !important; }
+.modal-stats {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px !important;
+  background: #ffffff !important;
+  border: 3px solid #151515 !important;
+  border-radius: 0 !important;
+  box-shadow: 3px 3px 0 #151515 !important;
+}
+
+.modal-stats > .modal-stat-label,
+.modal-stats > .modal-stat-value {
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.modal-stat-label {
+  color: #151515 !important;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.modal-stat-value {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 4px 9px;
+  border: 2px solid #151515 !important;
+  background: #c8f7d4 !important;
+  color: #075c3b !important;
+  font: 800 14px var(--font-mono);
+  white-space: nowrap;
+}
 .modal-card .danger-button, .modal-card .ghost-button { border: 2px solid #151515 !important; border-radius: 0 !important; }
 
 .scenario-draft-advanced,

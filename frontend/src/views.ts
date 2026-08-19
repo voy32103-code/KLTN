@@ -485,8 +485,8 @@ function renderEndSessionModal(state: AppState) {
           <p style="margin-top: 8px; font-size: 13px;">Hệ thống AI sẽ tự động trích xuất các yêu cầu phần mềm đã trao đổi và tiến hành chấm điểm bài làm của bạn. Sau khi nộp bài, bạn không thể tiếp tục gửi câu hỏi trong phiên này.</p>
         </div>
         <div class="modal-stats">
-          <span style="font-size:13px; color:var(--text-secondary);">Số câu hỏi đã trao đổi:</span>
-          <span style="font-weight:700; color:var(--accent-emerald); font-size:14px; font-family: var(--font-mono);">${studentMessageCount} lượt hỏi</span>
+          <span class="modal-stat-label">Số câu hỏi đã trao đổi</span>
+          <span class="modal-stat-value">${studentMessageCount} lượt hỏi</span>
         </div>
         <div class="modal-actions">
           <button class="ghost-button" data-action="cancel-end-session" type="button" ${state.busy ? 'disabled' : ''}>
