@@ -698,7 +698,7 @@ function renderReviewSessionDetail(detail: ReviewSessionDetail) {
           <h3>Báo cáo chấm điểm</h3>
           <span>${detail.evaluation ? 'Đã lưu' : 'Chưa đánh giá'}</span>
         </div>
-        ${detail.evaluation ? renderEvaluation(detail.evaluation) : renderEmpty('Phiên phỏng vấn chưa được chấm điểm.', 'Kết thúc phiên phỏng vấn để tiến hành đánh giá.')}
+        ${detail.evaluation ? renderEvaluation(detail.evaluation, false, true) : renderEmpty('Phiên phỏng vấn chưa được chấm điểm.', 'Kết thúc phiên phỏng vấn để tiến hành đánh giá.')}
       </section>
       <section class="review-block" data-animate="fade-up" style="--index: 4">
         <div class="subsection-heading">
@@ -785,7 +785,7 @@ function formatNullablePercent(value?: number | null) {
   return typeof value === 'number' ? formatScore(value * 100) : 'N/A'
 }
 
-function renderEvaluation(evaluation: EvaluationResult, showSurvey = false) {
+function renderEvaluation(evaluation: EvaluationResult, showSurvey = false, canOverride = false) {
   const feedback = evaluation.feedback
   const total = evaluation.matchedCount + evaluation.partialCount + evaluation.missedCount
   const design = feedback?.designSuggestions
@@ -896,7 +896,7 @@ function renderEvaluation(evaluation: EvaluationResult, showSurvey = false) {
       </div>
  
       <div class="eval-tab-content" id="tab-matching" style="display: none;">
-        ${evaluation.matches?.length ? renderRequirementReport(evaluation.matches) : ''}
+        ${evaluation.matches?.length ? renderRequirementReport(evaluation.matches, canOverride) : ''}
       </div>
     </section>
   `
@@ -957,11 +957,11 @@ function renderAiEvaluationProvenance(provenance: NonNullable<EvaluationResult['
   `
 }
 
-function renderRequirementReport(matches: RequirementMatchReport[]) {
+function renderRequirementReport(matches: RequirementMatchReport[], canOverride = false) {
   return `
     <div class="requirement-report">
       <div class="subsection-heading">
-        <h3>Báo cáo so khớp chi tiết & Đánh giá lại (Lecturer Override)</h3>
+        <h3>${canOverride ? 'Báo cáo so khớp chi tiết & Điều chỉnh điểm' : 'Báo cáo so khớp chi tiết'}</h3>
         <span>${matches.length} mục</span>
       </div>
       <form id="override-form" class="report-table">
@@ -974,18 +974,18 @@ function renderRequirementReport(matches: RequirementMatchReport[]) {
                 <div style="display: flex; align-items: center; gap: 8px;">
                   ${match.overriddenMatchType ? '<span class="override-badge">Đã chỉnh</span>' : ''}
                   ${renderMatchBadge(match.overriddenMatchType || match.matchType, match.score)}
-                  <select class="override-type-select" data-match-id="${escapeAttribute(match.matchId)}" style="background: var(--surface-raised); color: var(--text-primary); border: 1px solid var(--line); border-radius: 4px; padding: 2px 6px; font-size: 12px;">
-                    <option value="exact" ${activeType === 'exact' ? 'selected' : ''}>Exact</option>
-                    <option value="semantic" ${activeType === 'semantic' ? 'selected' : ''}>Semantic</option>
-                    <option value="partial" ${activeType === 'partial' ? 'selected' : ''}>Partial</option>
-                    <option value="missed" ${activeType === 'missed' ? 'selected' : ''}>Missed</option>
-                  </select>
+                  ${canOverride ? `<select class="override-type-select" data-match-id="${escapeAttribute(match.matchId)}" style="background: var(--surface-raised); color: var(--text-primary); border: 1px solid var(--line); border-radius: 4px; padding: 2px 6px; font-size: 12px;">
+                    <option value="exact" ${activeType === 'exact' ? 'selected' : ''}>Khớp hoàn toàn</option>
+                    <option value="semantic" ${activeType === 'semantic' ? 'selected' : ''}>Khớp ngữ nghĩa</option>
+                    <option value="partial" ${activeType === 'partial' ? 'selected' : ''}>Khớp một phần</option>
+                    <option value="missed" ${activeType === 'missed' ? 'selected' : ''}>Chưa khớp</option>
+                  </select>` : ''}
                 </div>
               </div>
-              <p>${escapeHtml(match.hiddenText ?? 'Yêu cầu ẩn')}</p>
+              <p>${escapeHtml(localizeRequirementText(match.hiddenText ?? 'Yêu cầu ẩn'))}</p>
               <div class="evidence-line">
-                <span>Bằng chứng hội thoại (Extracted)</span>
-                <small>${escapeHtml(match.extractedText ?? 'Không tìm thấy thông tin trùng khớp')}</small>
+                <span>Bằng chứng từ hội thoại</span>
+                <small>${escapeHtml(match.extractedText ? localizeRequirementText(match.extractedText) : 'Không tìm thấy thông tin trùng khớp')}</small>
               </div>
               <div class="evidence-line">
                 <span>Lý do đối soát</span>
@@ -994,7 +994,7 @@ function renderRequirementReport(matches: RequirementMatchReport[]) {
             </article>
           `
         }).join('')}
-        <div class="override-action-panel" style="margin-top: 16px; padding: 16px; background: var(--surface-raised); border-radius: 8px; border: 1px solid var(--line);">
+        ${canOverride ? `<div class="override-action-panel" style="margin-top: 16px; padding: 16px; background: var(--surface-raised); border-radius: 8px; border: 1px solid var(--line);">
           <h4 style="margin-bottom: 8px; color: var(--accent);">Lưu thay đổi đánh giá của Giảng viên</h4>
           <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px;">Hệ thống sẽ tự động tính lại <strong>Coverage Score</strong> dựa trên loại so khớp (MatchType) mới được chọn ở trên.</p>
           <div style="margin-bottom: 12px;">
@@ -1002,14 +1002,49 @@ function renderRequirementReport(matches: RequirementMatchReport[]) {
             <textarea id="override-comment" rows="2" required maxlength="1000" style="width: 100%; background: var(--surface); color: var(--text-primary); border: 1px solid var(--line); border-radius: 6px; padding: 8px; font-family: var(--font-sans); font-size: 13px;" placeholder="Nêu căn cứ điều chỉnh theo transcript hoặc rubric..."></textarea>
           </div>
           <button class="primary-button" data-action="submit-override" type="button">Lưu & Tính lại điểm số</button>
-        </div>
+        </div>` : ''}
       </form>
     </div>
   `
 }
 
 function renderMatchBadge(matchType: string, score: number) {
-  return `<span class="match-badge ${escapeAttribute(matchType.toLowerCase())}">${escapeHtml(matchType)} · ${Math.round(score * 100)}%</span>`
+  return `<span class="match-badge ${escapeAttribute(matchType.toLowerCase())}">${escapeHtml(localizeMatchType(matchType))} · ${Math.round(score * 100)}%</span>`
+}
+
+function localizeMatchType(matchType: string) {
+  switch (matchType.trim().toLowerCase()) {
+    case 'exact': return 'Khớp hoàn toàn'
+    case 'semantic': return 'Khớp ngữ nghĩa'
+    case 'partial': return 'Khớp một phần'
+    case 'missed': return 'Chưa khớp'
+    default: return matchType
+  }
+}
+
+const IT_REQUIREMENT_VI: Record<string, string> = {
+  'Authenticated customers must create an order with validated items, delivery address and payment method.': 'Khách hàng đã xác thực phải tạo được đơn hàng với sản phẩm, địa chỉ giao hàng và phương thức thanh toán hợp lệ.',
+  'The API must validate stock and reserve inventory before confirming an order.': 'API phải kiểm tra tồn kho và giữ hàng trước khi xác nhận đơn hàng.',
+  'Create-order requests must support idempotency to prevent duplicate orders after client retries.': 'Yêu cầu tạo đơn hàng phải hỗ trợ idempotency để tránh tạo trùng khi phía khách gửi lại yêu cầu.',
+  'Only authorized users can view or update their own orders, while staff permissions are role based.': 'Chỉ người dùng được phân quyền mới được xem hoặc cập nhật đơn hàng của mình; quyền của nhân viên phải theo vai trò.',
+  'The API must return consistent error codes for validation, stock conflict, payment failure and unauthorized access.': 'API phải trả mã lỗi nhất quán cho lỗi xác thực dữ liệu, xung đột tồn kho, thanh toán thất bại và truy cập trái phép.',
+  'Order state changes must be audited and the read API should meet the agreed latency target.': 'Thay đổi trạng thái đơn hàng phải được lưu vết; API đọc phải đáp ứng mục tiêu độ trễ đã thỏa thuận.',
+  'Every merge to the release branch must trigger build, unit tests, security checks and a versioned deployment artifact.': 'Mỗi lần gộp mã vào nhánh phát hành phải kích hoạt build, unit test, kiểm tra bảo mật và tạo artifact triển khai có phiên bản.',
+  'Production deployment requires an approved change request and secrets must be read from a managed secret store.': 'Triển khai production phải có yêu cầu thay đổi được phê duyệt; secret phải được đọc từ kho secret được quản lý.',
+  'The platform must support rollback to the previous stable release when health checks fail.': 'Nền tảng phải hỗ trợ rollback về bản phát hành ổn định trước đó khi health check thất bại.',
+  'Database migrations must be backward compatible and have a documented recovery procedure.': 'Migration cơ sở dữ liệu phải tương thích ngược và có quy trình khôi phục được tài liệu hóa.',
+  'Production services must expose monitoring, error alerts and SLO dashboards for each release.': 'Dịch vụ production phải có monitoring, cảnh báo lỗi và dashboard SLO cho mỗi lần phát hành.',
+  'Deployment and rollback actions must be logged with actor, time, version and approval reference.': 'Thao tác triển khai và rollback phải được ghi log gồm người thực hiện, thời gian, phiên bản và tham chiếu phê duyệt.',
+  'Tester must create a defect with title, steps to reproduce, expected result, actual result and affected build.': 'Tester phải tạo lỗi với tiêu đề, bước tái hiện, kết quả mong đợi, kết quả thực tế và bản build bị ảnh hưởng.',
+  'The system must record browser, device, operating system and test environment for each defect.': 'Hệ thống phải ghi nhận trình duyệt, thiết bị, hệ điều hành và môi trường kiểm thử cho mỗi lỗi.',
+  'Defects must have separate severity and priority values with a documented escalation rule for critical production issues.': 'Lỗi phải có mức độ nghiêm trọng và độ ưu tiên riêng, kèm quy tắc escalation được tài liệu hóa cho lỗi production nghiêm trọng.',
+  'Assigned developers must receive notifications and the reporter must be notified when a defect changes status.': 'Developer được giao phải nhận thông báo; người báo lỗi cũng phải được thông báo khi trạng thái lỗi thay đổi.',
+  'Resolved defects require retesting evidence before closure and can be reopened when the issue persists.': 'Lỗi đã xử lý cần có bằng chứng kiểm thử lại trước khi đóng và có thể mở lại nếu vấn đề còn tồn tại.',
+  'All defect changes must be auditable and access must follow project roles.': 'Mọi thay đổi của lỗi phải có thể kiểm tra/audit và quyền truy cập phải theo vai trò trong dự án.',
+}
+
+function localizeRequirementText(text: string) {
+  return IT_REQUIREMENT_VI[text] ?? text
 }
 
 function renderFeedbackList(title: string, items: string[]) {
