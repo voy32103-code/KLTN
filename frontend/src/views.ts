@@ -446,7 +446,10 @@ function renderChat(state: AppState) {
           ${thinkingHtml}
         </div>
         <form class="composer" id="message-form">
-          <textarea name="content" rows="3" maxlength="4000" placeholder="Nhập câu hỏi nghiệp vụ gửi cho đối tác phỏng vấn..." ${state.busy || Boolean(state.evaluation) ? 'disabled' : ''}></textarea>
+          <div class="composer-input">
+            <textarea name="content" rows="3" maxlength="4000" aria-label="Câu hỏi gửi cho đối tác phỏng vấn" placeholder="Nhập câu hỏi nghiệp vụ gửi cho đối tác phỏng vấn..." ${state.busy || Boolean(state.evaluation) ? 'disabled' : ''}></textarea>
+            <small><kbd>Enter</kbd> gửi · <kbd>Shift + Enter</kbd> xuống dòng</small>
+          </div>
           <button class="primary-button" type="submit" ${state.busy || Boolean(state.evaluation) ? 'disabled' : ''}>
             ${state.busy ? 'Đang gửi...' : 'Gửi'}
           </button>

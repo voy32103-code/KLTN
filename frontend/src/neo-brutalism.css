@@ -330,12 +330,75 @@ select:focus,
 }
 
 .message.student { background: #c9f1ff !important; }
-.message.stakeholder { background: #ffffff !important; }
+.message.stakeholder {
+  padding: 18px 20px !important;
+  border-left: 8px solid #3526b9 !important;
+  background: #ffffff !important;
+}
+.message.stakeholder .message-meta {
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #151515;
+}
+.message.stakeholder .message-meta span {
+  color: #3526b9 !important;
+  font-weight: 800;
+}
+.message.stakeholder p {
+  font-family: var(--font-body) !important;
+  font-size: 16px !important;
+  font-weight: 500;
+  line-height: 1.65 !important;
+}
 .message.thinking { background: #fff8b2 !important; }
 
 .composer {
-  border-top: 3px solid #151515 !important;
+  border: 3px solid #151515 !important;
   background: #ffde59 !important;
+  border-radius: 0 !important;
+  box-shadow: 5px 5px 0 #151515 !important;
+}
+
+.composer-input { min-width: 0; }
+
+.composer textarea {
+  width: 100%;
+  min-height: 92px !important;
+  padding: 12px 14px !important;
+  border: 2px solid #151515 !important;
+  border-radius: 0 !important;
+  background: #ffffff !important;
+  box-shadow: inset 3px 3px 0 #e7e1d6 !important;
+  color: #151515 !important;
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.composer textarea::placeholder { color: #595959; opacity: 1; }
+
+.composer textarea:focus {
+  border-color: #151515 !important;
+  outline: 3px solid #3526b9 !important;
+  outline-offset: 2px;
+  box-shadow: none !important;
+}
+
+.composer-input small {
+  display: block;
+  margin-top: 8px;
+  color: #151515;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.composer-input kbd {
+  border: 1px solid #151515;
+  border-radius: 0;
+  background: #ffffff;
+  color: #151515;
+  font-size: 11px;
 }
 
 .status-dot, .tutorial-dot { border-radius: 0 !important; }

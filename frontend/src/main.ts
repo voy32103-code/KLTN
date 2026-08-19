@@ -214,6 +214,13 @@ function bindEvents() {
     event.preventDefault()
     void sendMessage(new FormData(event.currentTarget as HTMLFormElement))
   })
+  document.querySelector<HTMLTextAreaElement>('#message-form textarea[name="content"]')?.addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter' || event.shiftKey || event.isComposing || state.busy) return
+    const textarea = event.currentTarget
+    if (!(textarea instanceof HTMLTextAreaElement)) return
+    event.preventDefault()
+    textarea.form?.requestSubmit()
+  })
   document.querySelector<HTMLButtonElement>('#admin-add-requirement')?.addEventListener('click', () => {
     if (!state.adminState || state.busy) return
     try {
