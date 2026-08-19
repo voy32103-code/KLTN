@@ -27,6 +27,7 @@ from app.services.normalization_service import normalize_and_deduplicate
 from app.utils.retry_handler import JSONParsingError, parse_json_with_retry
 
 router = APIRouter()
+EXTRACTION_PROMPT_VERSION = "structured-extraction-v1"
 logger = logging.getLogger(__name__)
 from app.services.api_client_manager import client_manager
 MODEL = os.getenv("MODEL_NAME", "gemini-2.5-flash")
@@ -91,11 +92,13 @@ async def extract_requirements(req: ExtractRequest):
         structured_requirements: list[StructuredRequirement] = []
         normalized_requirements = []
         used_fallback = False
+        selected_model = req.selectedModel or MODEL
+        effective_model: str | None = None
+        fallback_reason: str | None = None
         max_retries = 3
 
         for attempt in range(max_retries):
             try:
-                selected_model = req.selectedModel or MODEL
                 response = await client_manager.generate_content(
                     model=selected_model,
                     contents=build_extraction_prompt([
@@ -105,6 +108,8 @@ async def extract_requirements(req: ExtractRequest):
                     temperature=0.2,
                     max_output_tokens=2000,
                 )
+                effective_model = getattr(response, "effective_model", selected_model)
+                fallback_reason = getattr(response, "fallback_reason", None)
                 structured_requirements = await _parse_structured_extraction_json(
                     getattr(response, "text", "") or ""
                 )
@@ -142,6 +147,10 @@ async def extract_requirements(req: ExtractRequest):
             isFallback=used_fallback,
             structuredRequirements=structured_requirements,
             normalizedRequirements=normalized_requirements,
+            requestedModel=selected_model,
+            effectiveModel=effective_model,
+            promptVersion=EXTRACTION_PROMPT_VERSION,
+            fallbackReason=fallback_reason,
         )
     except Exception as e:
         logger.exception("Requirement extraction error.")

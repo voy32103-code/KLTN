@@ -445,6 +445,12 @@ async function handleAction(action: string, options: { tab?: string; userId?: st
     case 'submit-override':
       await submitLecturerOverride()
       break
+    case 'finalize-review':
+      await finalizeReview()
+      break
+    case 'reveal-review-identity':
+      await revealReviewIdentity()
+      break
     case 'submit-feedback-survey':
       await submitFeedbackSurvey()
       break
@@ -765,15 +771,32 @@ async function submitLecturerOverride() {
 
   const matchSelects = form.querySelectorAll<HTMLSelectElement>('.override-type-select')
   const overrides: { matchId: string; matchType: string }[] = []
+  const currentMatchTypes = new Map(
+    (state.reviewDetail.evaluation?.matches ?? []).map((match) => [
+      match.matchId,
+      (match.overriddenMatchType ?? match.matchType).toLowerCase(),
+    ]),
+  )
   matchSelects.forEach((select) => {
     const matchId = select.dataset.matchId
-    if (matchId && matchId !== '00000000-0000-0000-0000-000000000000') {
+    if (matchId && matchId !== '00000000-0000-0000-0000-000000000000' &&
+      select.value.toLowerCase() !== currentMatchTypes.get(matchId)) {
       overrides.push({ matchId, matchType: select.value })
     }
   })
 
   const commentInput = document.querySelector<HTMLTextAreaElement>('#override-comment')
   const comment = commentInput?.value?.trim() ?? ''
+
+  if (overrides.length === 0) {
+    setNotice('error', 'Hãy thay đổi ít nhất một kết quả so khớp trước khi lưu.')
+    return
+  }
+  if (!comment) {
+    setNotice('error', 'Vui lòng nêu lý do điều chỉnh điểm.')
+    commentInput?.focus()
+    return
+  }
 
   await withBusy(async () => {
     const updatedEval = await api.request<EvaluationResult>(`/api/Sessions/review/${state.reviewDetail?.session.id}/override`, {
@@ -1081,6 +1104,54 @@ function createEmptyRequirement(index: number): ScenarioDraft['requirements'][nu
   }
 }
 
+function normalizeScenarioDraft(draft: ScenarioDraft): ScenarioDraft {
+  const asStringList = (value: unknown): string[] =>
+    Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : []
+
+  return {
+    ...draft,
+    general_keywords: asStringList(draft.general_keywords),
+    gate_keyword_groups: draft.gate_keyword_groups ?? {},
+    question_type_gate_map: draft.question_type_gate_map ?? {},
+    requirements: Array.isArray(draft.requirements)
+      ? draft.requirements.map(requirement => ({
+          ...requirement,
+          keywords: asStringList(requirement.keywords),
+          question_types: asStringList(requirement.question_types),
+          requires: asStringList(requirement.requires),
+          actor: requirement.actor ?? '',
+          action: requirement.action ?? '',
+          object: requirement.object ?? '',
+        }))
+      : [],
+  }
+}
+
+async function finalizeReview() {
+  const reviewDetail = state.reviewDetail
+  if (!reviewDetail) return
+  await withBusy(async () => {
+    const result = await api.request<{ reviewFinalizedAt: string }>(
+      `/api/Sessions/review/${reviewDetail.session.id}/finalize`,
+      { method: 'POST' },
+    )
+    if (reviewDetail.evaluation) reviewDetail.evaluation.reviewFinalizedAt = result.reviewFinalizedAt
+    setNotice('success', 'Đã chốt review ẩn danh. Có thể mở danh tính sinh viên khi cần hoàn tất phản hồi.')
+  })
+}
+
+async function revealReviewIdentity() {
+  const reviewDetail = state.reviewDetail
+  if (!reviewDetail) return
+  await withBusy(async () => {
+    const result = await api.request<{ student: ReviewSessionDetail['session']['student'] }>(
+      `/api/Sessions/review/${reviewDetail.session.id}/identity`,
+    )
+    reviewDetail.session.student = result.student
+    setNotice('info', 'Danh tính sinh viên đã được mở sau khi chốt review.')
+  })
+}
+
 function readScenarioDraftForm(): ScenarioDraft {
   if (!state.adminState?.scenarioDraft) {
     throw new Error('Không có bản scenario preview để chỉnh sửa.')
@@ -1246,7 +1317,9 @@ async function openPublishedScenarioDraft() {
   const scenarioTitle = select?.selectedOptions[0]?.textContent?.trim() ?? 'Scenario đang hoạt động'
   await withBusy(async () => {
     clearNotice()
-    const draft = await api.request<ScenarioDraft>(`/api/AdminScenarios/${scenarioId}/draft`)
+    const draft = normalizeScenarioDraft(
+      await api.request<ScenarioDraft>(`/api/AdminScenarios/${scenarioId}/draft`)
+    )
     if (!state.adminState) return
     state.adminState.scenarioDraft = draft
     state.adminState.scenarioDraftSource = `${scenarioTitle} — bản nháp từ phiên bản đang publish`
@@ -1321,7 +1394,7 @@ async function waitForIngestion(jobId: string, source: string) {
     }
     if (job.status === 'AwaitingReview' && job.draft) {
       if (state.adminState) {
-        state.adminState.scenarioDraft = job.draft
+        state.adminState.scenarioDraft = normalizeScenarioDraft(job.draft)
         state.adminState.scenarioDraftSource = source
       }
       setNotice('success', 'Bản nháp đã sẵn sàng. Hãy kiểm tra trước khi publish.')
@@ -1354,7 +1427,7 @@ async function openIngestionJob(jobId: string) {
       setNotice('info', `Job hiện ở trạng thái ${job.status}.`)
       return
     }
-    state.adminState.scenarioDraft = job.draft
+    state.adminState.scenarioDraft = normalizeScenarioDraft(job.draft)
     state.adminState.scenarioDraftSource = job.sourceLabel ?? 'Ingestion job'
     setNotice('success', 'Đã mở bản nháp scenario để kiểm tra trước khi publish.')
   })
@@ -1381,7 +1454,7 @@ async function runAdminCrawl() {
       body: urls.length > 1 ? { urls, selectedModel } : { url, selectedModel }
     })
     if (!state.adminState) return
-    state.adminState.scenarioDraft = result.scenario
+    state.adminState.scenarioDraft = normalizeScenarioDraft(result.scenario)
     state.adminState.scenarioDraftSource = urls.join(', ')
     setNotice('success', 'Đã tạo bản preview. Hãy kiểm tra, chỉnh sửa và xác nhận publish.')
   })

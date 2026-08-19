@@ -207,6 +207,16 @@ public static class SchemaBootstrapper
         ALTER TABLE evaluation_results
         ADD COLUMN IF NOT EXISTS overridden_at timestamp with time zone NULL;
 
+        -- Immutable metadata required to explain which AI configuration produced a score.
+        ALTER TABLE evaluation_results
+        ADD COLUMN IF NOT EXISTS ai_provenance jsonb NULL;
+
+        ALTER TABLE evaluation_results
+        ADD COLUMN IF NOT EXISTS review_finalized_by_lecturer_id uuid NULL;
+
+        ALTER TABLE evaluation_results
+        ADD COLUMN IF NOT EXISTS review_finalized_at timestamp with time zone NULL;
+
         -- Add lecturer override column to requirement_matches
         ALTER TABLE requirement_matches
         ADD COLUMN IF NOT EXISTS overridden_match_type match_type NULL;

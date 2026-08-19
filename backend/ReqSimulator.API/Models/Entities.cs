@@ -273,6 +273,15 @@ public class EvaluationResult
 
     public DateTime EvaluatedAt { get; set; } = DateTime.UtcNow;
 
+    /// <summary>
+    /// Immutable provenance for the automated assessment. It records the model
+    /// route and prompt/policy versions without retaining a duplicate transcript.
+    /// </summary>
+    [Column(TypeName = "jsonb")] public string? AiProvenance { get; set; }
+
+    public Guid? ReviewFinalizedByLecturerId { get; set; }
+    public DateTime? ReviewFinalizedAt { get; set; }
+
     // === Lecturer override fields ===
     /// <summary>Coverage score sau khi giảng viên chỉnh sửa matchType (auto-recalculated)</summary>
     public decimal? OverriddenCoverageScore { get; set; }
@@ -281,6 +290,7 @@ public class EvaluationResult
 
     [ForeignKey(nameof(SessionId))] public SimulationSession Session { get; set; } = null!;
     [ForeignKey(nameof(OverriddenByLecturerId))] public User? OverriddenByLecturer { get; set; }
+    [ForeignKey(nameof(ReviewFinalizedByLecturerId))] public User? ReviewFinalizedByLecturer { get; set; }
     public ICollection<RequirementMatch> Matches { get; set; } = [];
     public ICollection<LecturerOverride> LecturerOverrides { get; set; } = [];
 }

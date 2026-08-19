@@ -52,8 +52,12 @@ public class AdminScenariosController : ControllerBase
             try
             {
                 var draft = JsonSerializer.Deserialize<ScenarioConfigJson>(scenario.SerializedConfig);
-                if (draft is not null && draft.Requirements.Count > 0)
-                    return Ok(draft with { ReviewNotes = null });
+                if (draft is not null)
+                {
+                    draft = NormalizeEditableDraft(draft);
+                    if (draft.Requirements.Count > 0)
+                        return Ok(draft with { ReviewNotes = null });
+                }
             }
             catch (JsonException exception)
             {
@@ -180,4 +184,20 @@ public class AdminScenariosController : ControllerBase
             return null;
         }
     }
+
+    private static ScenarioConfigJson NormalizeEditableDraft(ScenarioConfigJson draft) => draft with
+    {
+        GeneralKeywords = draft.GeneralKeywords ?? [],
+        GateKeywordGroups = draft.GateKeywordGroups ?? new Dictionary<string, List<string>>(),
+        QuestionTypeGateMap = draft.QuestionTypeGateMap ?? new Dictionary<string, List<int>>(),
+        Requirements = (draft.Requirements ?? []).Select(rule => rule with
+        {
+            Keywords = rule.Keywords ?? [],
+            QuestionTypes = rule.QuestionTypes ?? [],
+            Requires = rule.Requires ?? []
+        }).ToList(),
+        SourceUrls = draft.SourceUrls ?? [],
+        PersonaTemplateKeys = draft.PersonaTemplateKeys ?? [],
+        NormalizationGlossary = draft.NormalizationGlossary ?? new Dictionary<string, Dictionary<string, string>>()
+    };
 }

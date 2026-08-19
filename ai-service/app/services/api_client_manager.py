@@ -28,6 +28,14 @@ class GroqResponseShim:
     def __init__(self, text: str):
         self.text = text
 
+
+class GeneratedContentResponse:
+    """Stable provider-neutral text response with the effective model route."""
+    def __init__(self, response: Any, effective_model: str, fallback_reason: str | None = None):
+        self.text = getattr(response, "text", "") or ""
+        self.effective_model = effective_model
+        self.fallback_reason = fallback_reason
+
 class ApiClientManager:
     def __init__(self):
         # 1. Đọc và khởi tạo các key Gemini
@@ -85,6 +93,14 @@ class ApiClientManager:
 
     def _gemini_model_candidates(self, requested_model: str) -> list[str]:
         return self._unique_gemini_models([requested_model, *self.gemini_model_fallbacks])
+
+    @staticmethod
+    def _with_effective_model(
+        response: Any,
+        effective_model: str,
+        fallback_reason: str | None = None,
+    ) -> GeneratedContentResponse:
+        return GeneratedContentResponse(response, effective_model, fallback_reason)
 
     @staticmethod
     def _classify_gemini_error(error: Exception) -> tuple[bool, bool, bool]:
@@ -401,7 +417,7 @@ class ApiClientManager:
         
         # Nếu là model Llama -> Gọi Groq
         if model_lower.startswith("llama"):
-            return await self._call_groq(
+            response = await self._call_groq(
                 model=model,
                 contents=contents,
                 system_instruction=effective_system_instruction,
@@ -409,13 +425,14 @@ class ApiClientManager:
                 max_output_tokens=effective_max_output_tokens,
                 response_format=response_format,
             )
+            return self._with_effective_model(response, model)
 
         # Nếu là DeepSeek -> Gọi DeepSeek
         if model_lower.startswith("deepseek"):
             response_format = None
             if config and config.response_mime_type == "application/json":
                 response_format = {"type": "json_object"}
-            return await self._call_deepseek(
+            response = await self._call_deepseek(
                 model=model,
                 contents=contents,
                 system_instruction=effective_system_instruction,
@@ -423,13 +440,14 @@ class ApiClientManager:
                 max_output_tokens=effective_max_output_tokens,
                 response_format=response_format
             )
+            return self._with_effective_model(response, model)
 
         # Nếu là Mimo -> Gọi Mimo
         if model_lower.startswith("mimo"):
             response_format = None
             if config and config.response_mime_type == "application/json":
                 response_format = {"type": "json_object"}
-            return await self._call_mimo(
+            response = await self._call_mimo(
                 model=model,
                 contents=contents,
                 system_instruction=effective_system_instruction,
@@ -437,13 +455,14 @@ class ApiClientManager:
                 max_output_tokens=effective_max_output_tokens,
                 response_format=response_format
             )
+            return self._with_effective_model(response, model)
 
         # Nếu là OpenRouter -> Gọi OpenRouter
         if model_lower.startswith("openrouter") or ("/" in model_lower and not model_lower.startswith("omniroute/")):
             response_format = None
             if config and config.response_mime_type == "application/json":
                 response_format = {"type": "json_object"}
-            return await self._call_openrouter(
+            response = await self._call_openrouter(
                 model=model,
                 contents=contents,
                 system_instruction=effective_system_instruction,
@@ -451,6 +470,7 @@ class ApiClientManager:
                 max_output_tokens=effective_max_output_tokens,
                 response_format=response_format
             )
+            return self._with_effective_model(response, model)
 
         # Nếu là OmniRoute -> Gọi qua OmniRoute Gateway
         if model_lower.startswith("omniroute/"):
@@ -458,7 +478,7 @@ class ApiClientManager:
             response_format = None
             if config and config.response_mime_type == "application/json":
                 response_format = {"type": "json_object"}
-            return await self._call_openai_compatible(
+            response = await self._call_openai_compatible(
                 base_url=os.getenv("OMNIROUTE_BASE_URL", "https://api.omniroute.com/v1"),
                 api_key=self.omniroute_api_key,
                 model=model_name,
@@ -468,6 +488,7 @@ class ApiClientManager:
                 max_output_tokens=effective_max_output_tokens,
                 response_format=response_format
             )
+            return self._with_effective_model(response, model)
 
         # Ngược lại -> gọi Gemini. Mỗi model thử tất cả key khả dụng trước,
         # sau đó mới chuyển model khi gặp quota, model-unavailable hoặc lỗi tạm thời.
@@ -518,7 +539,11 @@ class ApiClientManager:
                             requested_model,
                             candidate_model,
                         )
-                    return response
+                    return self._with_effective_model(
+                        response,
+                        candidate_model,
+                        "gemini_model_fallback" if candidate_model != requested_model else None,
+                    )
                 except Exception as e:
                     (
                         is_quota_error,
@@ -570,7 +595,7 @@ class ApiClientManager:
             response_format = None
             if config and config.response_mime_type == "application/json":
                 response_format = {"type": "json_object"}
-            return await self._call_groq(
+            response = await self._call_groq(
                 model=fallback_model,
                 contents=contents,
                 system_instruction=effective_system_instruction,
@@ -578,6 +603,7 @@ class ApiClientManager:
                 max_output_tokens=effective_max_output_tokens,
                 response_format=response_format
             )
+            return self._with_effective_model(response, fallback_model, "gemini_capacity_fallback")
             
         raise RuntimeError("All Gemini API keys failed and Groq fallback is unavailable.")
 

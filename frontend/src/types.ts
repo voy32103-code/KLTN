@@ -67,6 +67,7 @@ export type EvaluationResult = {
   overriddenCoverageScore?: number | null
   overriddenByLecturer?: string | null
   overriddenAt?: string | null
+  reviewFinalizedAt?: string | null
   matchedCount: number
   partialCount: number
   missedCount: number
@@ -75,6 +76,27 @@ export type EvaluationResult = {
   feedback?: EvaluationFeedback | null
   matches?: RequirementMatchReport[]
   scoringPolicy?: ScoringPolicy | null
+  aiProvenance?: AiEvaluationProvenance | null
+}
+
+export type AiEvaluationProvenance = {
+  schemaVersion: string
+  extraction?: {
+    requestedModel?: string | null
+    effectiveModel?: string | null
+    promptVersion?: string | null
+  } | null
+  scoring?: {
+    engine?: string | null
+    embeddingModel?: string | null
+    matchingMethod?: string | null
+    policyPreset?: string | null
+  } | null
+  feedback?: {
+    variant?: string | null
+    requestedModel?: string | null
+  } | null
+  evaluatedAt?: string | null
 }
 
 export type ScoringPolicy = {
@@ -277,6 +299,16 @@ export type GradingReviewItem = {
 export type GradingReviewReport = {
   methodology: { minimumReviews: number; meanAdjustmentThreshold: number; highAdjustmentThreshold: number; disclaimer: string }
   reviewers: GradingReviewItem[]
+  cohorts?: Array<{
+    lecturerId: string
+    lecturerName: string
+    scenarioTitle: string
+    difficulty: string
+    reviewCount: number
+    averageAdjustment: number
+    hasSufficientData: boolean
+    requiresReview: boolean
+  }>
 }
 export type AdminUserItem = {
   id: string

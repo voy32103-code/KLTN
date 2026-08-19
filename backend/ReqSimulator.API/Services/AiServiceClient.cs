@@ -118,7 +118,11 @@ public record AiExtractRequest(
 public record AiExtractResponse(
     List<ExtractedReq> Requirements,
     bool IsFallback = false,
-    List<NormalizedRequirementData>? NormalizedRequirements = null);
+    List<NormalizedRequirementData>? NormalizedRequirements = null,
+    string? RequestedModel = null,
+    string? EffectiveModel = null,
+    string? PromptVersion = null,
+    string? FallbackReason = null);
 
 public record AiEvaluateRequest(
     List<ExtractedReq> Extracted,

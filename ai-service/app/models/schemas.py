@@ -143,6 +143,10 @@ class ExtractResponse(BaseModel):
     isFallback: bool = False
     structuredRequirements: list[StructuredRequirement] = Field(default_factory=list)
     normalizedRequirements: list[NormalizedRequirement] = Field(default_factory=list)
+    requestedModel: str | None = None
+    effectiveModel: str | None = None
+    promptVersion: str | None = None
+    fallbackReason: str | None = None
 
 
 # ===== Evaluate =====

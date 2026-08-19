@@ -230,12 +230,6 @@ public class SessionsController : ControllerBase
                 s.EndedAt,
                 s.IsActive,
                 s.FinalizationStatus,
-                Student = new
-                {
-                    s.Student.Id,
-                    s.Student.Name,
-                    s.Student.Email
-                },
                 Scenario = new
                 {
                     s.Scenario.Id,
@@ -273,7 +267,7 @@ public class SessionsController : ControllerBase
             s.EndedAt,
             s.IsActive,
             FinalizationStatus = s.FinalizationStatus.ToString(),
-            s.Student,
+            Student = ToAnonymousReviewStudent(s.Id),
             Scenario = new
             {
                 s.Scenario.Id,
@@ -401,12 +395,6 @@ public class SessionsController : ControllerBase
                 s.EndedAt,
                 s.IsActive,
                 s.FinalizationStatus,
-                Student = new
-                {
-                    s.Student.Id,
-                    s.Student.Name,
-                    s.Student.Email
-                },
                 Scenario = new
                 {
                     s.Scenario.Id,
@@ -436,7 +424,7 @@ public class SessionsController : ControllerBase
             sessionRow.EndedAt,
             sessionRow.IsActive,
             FinalizationStatus = sessionRow.FinalizationStatus.ToString(),
-            sessionRow.Student,
+            Student = ToAnonymousReviewStudent(sessionRow.Id),
             Scenario = new
             {
                 sessionRow.Scenario.Id,
@@ -544,6 +532,47 @@ public class SessionsController : ControllerBase
     public record MatchOverrideItemDto(Guid MatchId, string NewMatchType);
     public record LecturerOverrideDto(List<MatchOverrideItemDto> MatchOverrides, string? Comment);
 
+    [HttpPost("review/{sessionId:guid}/finalize")]
+    [Authorize(Roles = "Lecturer,Admin")]
+    public async Task<IActionResult> FinalizeReview(Guid sessionId)
+    {
+        var reviewerId = GetCurrentUserId();
+        if (reviewerId is null) return Unauthorized();
+
+        var evaluation = await _db.EvaluationResults
+            .SingleOrDefaultAsync(item => item.SessionId == sessionId);
+        if (evaluation is null)
+            return NotFound(new { message = "Chưa có kết quả AI để chốt review." });
+
+        if (evaluation.ReviewFinalizedAt is null)
+        {
+            evaluation.ReviewFinalizedByLecturerId = reviewerId;
+            evaluation.ReviewFinalizedAt = DateTime.UtcNow;
+            await _db.SaveChangesAsync();
+        }
+
+        return Ok(new { evaluation.ReviewFinalizedAt });
+    }
+
+    [HttpGet("review/{sessionId:guid}/identity")]
+    [Authorize(Roles = "Lecturer,Admin")]
+    public async Task<IActionResult> RevealReviewIdentity(Guid sessionId)
+    {
+        var review = await _db.EvaluationResults.AsNoTracking()
+            .Where(item => item.SessionId == sessionId)
+            .Select(item => new { item.ReviewFinalizedAt })
+            .FirstOrDefaultAsync();
+        if (review is null) return NotFound();
+        if (review.ReviewFinalizedAt is null && !User.IsInRole(UserRole.Admin.ToString()))
+            return Forbid();
+
+        var student = await _db.SimulationSessions.AsNoTracking()
+            .Where(item => item.Id == sessionId)
+            .Select(item => new { item.Student.Id, item.Student.Name, item.Student.Email })
+            .FirstOrDefaultAsync();
+        return student is null ? NotFound() : Ok(new { student, review.ReviewFinalizedAt });
+    }
+
     /// <summary>
     /// Giảng viên hoặc Admin chỉnh sửa MatchType của các yêu cầu và tự động tính lại CoverageScore
     /// </summary>
@@ -571,6 +600,12 @@ public class SessionsController : ControllerBase
             return BadRequest(new { message = "Danh sách chỉnh sửa không được để trống." });
         }
 
+        var comment = dto.Comment?.Trim();
+        if (string.IsNullOrWhiteSpace(comment))
+        {
+            return BadRequest(new { message = "Vui lòng nêu lý do trước khi điều chỉnh điểm." });
+        }
+
         var matchDict = evaluation.Matches.ToDictionary(m => m.Id);
         var auditLogs = new List<object>();
 
@@ -584,7 +619,11 @@ public class SessionsController : ControllerBase
             if (Enum.TryParse<RequirementMatchType>(item.NewMatchType, true, out var newType))
             {
                 var originalType = match.OverriddenMatchType ?? match.MatchType;
-                match.OverriddenMatchType = newType;
+                if (newType == originalType)
+                    continue;
+
+                // Selecting the original AI match type explicitly restores it.
+                match.OverriddenMatchType = newType == match.MatchType ? null : newType;
                 auditLogs.Add(new
                 {
                     matchId = match.Id,
@@ -593,6 +632,11 @@ public class SessionsController : ControllerBase
                     newMatchType = newType.ToString()
                 });
             }
+        }
+
+        if (auditLogs.Count == 0)
+        {
+            return BadRequest(new { message = "Chưa có thay đổi đánh giá nào để lưu." });
         }
 
         // Tự động tính lại MatchedCount, PartialCount, MissedCount & OverriddenCoverageScore (Option A)
@@ -634,7 +678,7 @@ public class SessionsController : ControllerBase
             OriginalCoverageScore = originalScore,
             NewCoverageScore = newCoverage,
             MatchOverrides = JsonSerializer.Serialize(auditLogs),
-            Comment = dto.Comment,
+            Comment = comment,
             OverriddenAt = DateTime.UtcNow
         };
 
@@ -1015,7 +1059,31 @@ public class SessionsController : ControllerBase
                 MissedCount = evaluateResult.Matches.Count(m =>
                     ParseMatchType(m.MatchType) == RequirementMatchType.Missed),
                 Feedback = JsonSerializer.Serialize(evaluateResult.Feedback),
-                FeedbackVariant = evaluateResult.Feedback.ExperimentVariant
+                FeedbackVariant = evaluateResult.Feedback.ExperimentVariant,
+                AiProvenance = JsonSerializer.Serialize(new
+                {
+                    schemaVersion = "ai-evaluation-provenance-v1",
+                    extraction = new
+                    {
+                        requestedModel = extractResult.RequestedModel ?? selectedModel,
+                        effectiveModel = extractResult.EffectiveModel ?? selectedModel,
+                        promptVersion = extractResult.PromptVersion ?? "unknown",
+                        fallbackReason = extractResult.FallbackReason
+                    },
+                    scoring = new
+                    {
+                        engine = "deterministic_requirement_matching",
+                        embeddingModel = evaluateResult.ScoringPolicy?.EmbeddingModel,
+                        matchingMethod = evaluateResult.ScoringPolicy?.MatchingMethod,
+                        policyPreset = evaluateResult.ScoringPolicy?.Preset
+                    },
+                    feedback = new
+                    {
+                        variant = evaluateResult.Feedback.ExperimentVariant,
+                        requestedModel = selectedModel
+                    },
+                    evaluatedAt = DateTime.UtcNow
+                })
             };
 
             try
@@ -1316,6 +1384,8 @@ public class SessionsController : ControllerBase
             evaluation.OverriddenCoverageScore,
             OverriddenByLecturer = evaluation.OverriddenByLecturer?.Name,
             evaluation.OverriddenAt,
+            evaluation.ReviewFinalizedAt,
+            AiProvenance = DeserializeAiProvenance(evaluation.AiProvenance),
             evaluation.MatchedCount,
             evaluation.PartialCount,
             evaluation.MissedCount,
@@ -1325,6 +1395,31 @@ public class SessionsController : ControllerBase
             Matches = matches ?? [],
             ScoringPolicy = scoringPolicy
         };
+
+    private static object ToAnonymousReviewStudent(Guid sessionId)
+    {
+        var shortCode = sessionId.ToString("N")[..8].ToUpperInvariant();
+        return new
+        {
+            Id = $"anonymous-{shortCode.ToLowerInvariant()}",
+            Name = $"Bài làm ẩn danh #{shortCode}",
+            Email = ""
+        };
+    }
+
+    private static JsonElement? DeserializeAiProvenance(string? serialized)
+    {
+        if (string.IsNullOrWhiteSpace(serialized)) return null;
+        try
+        {
+            using var document = JsonDocument.Parse(serialized);
+            return document.RootElement.Clone();
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
 
     private Dictionary<string, Dictionary<string, string>>? TryReadNormalizationGlossary(string? serializedConfig)
     {

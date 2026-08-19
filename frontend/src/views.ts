@@ -1,4 +1,5 @@
 import { i18n, t } from './i18n'
+import { formatPersonaText } from './persona-display'
 import type {
   AdminState,
   AdminUserItem,
@@ -279,16 +280,17 @@ function renderScenarioDetail(scenario: ScenarioDetail, state: AppState) {
     </div>
     <div class="persona-section">
       <div class="subsection-heading" data-animate="fade-up" style="--index: 1">
-        <h3>Đối tác Stakeholder</h3>
-        ${selectedPersona ? `<span class="view-pill font-serif">${escapeHtml(selectedPersona.name)}</span>` : ''}
+        <h3>Nhân vật phỏng vấn</h3>
+        ${selectedPersona ? `<span class="view-pill font-serif">${escapeHtml(formatPersonaText(selectedPersona.name))}</span>` : ''}
       </div>
       <div class="persona-grid">
         ${scenario.personas.length === 0 ? renderEmpty('Kịch bản này chưa có đối tác phỏng vấn nào.', 'Cần khởi tạo dữ liệu đối tác trước khi bắt đầu phỏng vấn.') : scenario.personas.map((persona, index) => renderPersonaCard(persona, state, index + 2)).join('')}
       </div>
+      ${selectedPersona ? renderPersonaBrief(selectedPersona) : ''}
     </div>
     <div class="panel-footer" data-animate="fade-up" style="--index: 5">
       <div>
-        <strong>${selectedPersona ? escapeHtml(selectedPersona.roleTitle ?? 'Đối tác') : 'Chưa chọn đối tác'}</strong>
+        <strong>${selectedPersona ? escapeHtml(formatPersonaText(selectedPersona.roleTitle ?? 'Đối tác')) : 'Chưa chọn đối tác'}</strong>
         <span>${selectedPersona ? 'Phiên mô phỏng phỏng vấn phác thảo sẽ bắt đầu với nhân vật này.' : 'Vui lòng lựa chọn một đối tác phỏng vấn để bắt đầu.'}</span>
       </div>
       <div style="display: flex; gap: var(--spacing-sm); align-items: center; flex-wrap: wrap; position: relative;">
@@ -306,12 +308,28 @@ function renderPersonaCard(persona: Persona, state: AppState, index: number) {
   return `
     <button class="persona-card ${active ? 'active' : ''}" data-persona-id="${escapeAttribute(persona.id)}" type="button" data-animate="fade-up" style="--index: ${index}">
       <span class="persona-topline">
-        <strong class="font-serif">${escapeHtml(persona.name)}</strong>
-        <span class="difficulty-badge">${escapeHtml(persona.difficulty)}</span>
+        <strong class="font-serif">${escapeHtml(formatPersonaText(persona.name))}</strong>
+        <span class="difficulty-badge">${escapeHtml(formatPersonaText(persona.difficulty))}</span>
       </span>
-      <span>${escapeHtml(persona.roleTitle ?? 'Đối tác')}</span>
-      <small>${escapeHtml(persona.communicationStyle ?? 'trung lập')} · ${escapeHtml(persona.knowledgeLevel ?? 'tiêu chuẩn')}</small>
+      <span>${escapeHtml(formatPersonaText(persona.roleTitle ?? 'Đối tác'))}</span>
+      <small>Trao đổi: ${escapeHtml(formatPersonaText(persona.communicationStyle ?? 'trung lập'))} · Mức độ am hiểu: ${escapeHtml(formatPersonaText(persona.knowledgeLevel ?? 'tiêu chuẩn'))}</small>
     </button>
+  `
+}
+
+function renderPersonaBrief(persona: Persona) {
+  const knowledge = formatPersonaText(persona.knowledgeLevel ?? 'tiêu chuẩn')
+  const style = formatPersonaText(persona.communicationStyle ?? 'trung lập')
+  const role = formatPersonaText(persona.roleTitle ?? 'nhân vật phỏng vấn')
+  const scope = (persona.knowledgeLevel ?? '').toLowerCase() === 'high'
+    ? 'Nắm rõ nghiệp vụ thuộc vai trò của mình và có thể làm rõ quy trình, ngoại lệ khi được hỏi đúng trọng tâm.'
+    : 'Có góc nhìn vận hành thực tế; hãy dùng câu hỏi mở và câu hỏi làm rõ để thu thập thông tin cần thiết.'
+  return `
+    <aside class="notice info" style="margin-top: 14px; margin-bottom: 0;">
+      <strong>Brief trước phỏng vấn: ${escapeHtml(role)}</strong>
+      <p style="margin: 6px 0 0;">Mục tiêu: khai thác nhu cầu, quy tắc và ngoại lệ từ góc nhìn của nhân vật. ${escapeHtml(scope)}</p>
+      <small style="display:block; margin-top: 6px;">Cách trao đổi: ${escapeHtml(style)} · Mức độ am hiểu: ${escapeHtml(knowledge)}. Thông tin chi tiết sẽ được nhân vật tiết lộ dần qua câu hỏi phù hợp.</small>
+    </aside>
   `
 }
 
@@ -338,7 +356,7 @@ function renderStudentHistory(state: AppState) {
             : state.studentHistory.map((session) => {
               const score = session.evaluation?.finalScore ?? session.evaluation?.coverageScore
               return `<button class="review-session-item ${session.id === state.selectedStudentSessionId ? 'active' : ''}" data-student-session-id="${escapeAttribute(session.id)}" type="button" ${state.busy ? 'disabled' : ''}>
-                <span><strong>${escapeHtml(session.scenario.title)}</strong><small>${escapeHtml(session.persona.name)} · ${formatTime(session.startedAt)}</small></span>
+                <span><strong>${escapeHtml(session.scenario.title)}</strong><small>${escapeHtml(formatPersonaText(session.persona.name))} · ${formatTime(session.startedAt)}</small></span>
                 <span class="history-score">${typeof score === 'number' ? formatScore(score) : 'Chưa chấm'}</span>
               </button>`
             }).join('')}
@@ -346,7 +364,7 @@ function renderStudentHistory(state: AppState) {
       </aside>
       <section class="review-detail student-history-detail" data-animate="fade-up" style="--index: 2">
         ${detail ? `
-          <div class="review-detail-header"><div><p class="section-kicker">${escapeHtml(detail.session.scenario.domain ?? 'Nghiệp vụ')}</p><h2>${escapeHtml(detail.session.scenario.title)}</h2><p>Stakeholder: <strong>${escapeHtml(detail.session.persona.name)}</strong></p></div><span class="view-pill">${detail.session.isActive ? 'Đang tiến hành' : 'Đã kết thúc'}</span></div>
+          <div class="review-detail-header"><div><p class="section-kicker">${escapeHtml(detail.session.scenario.domain ?? 'Nghiệp vụ')}</p><h2>${escapeHtml(detail.session.scenario.title)}</h2><p>Nhân vật phỏng vấn: <strong>${escapeHtml(formatPersonaText(detail.session.persona.name))}</strong></p></div><span class="view-pill">${detail.session.isActive ? 'Đang tiến hành' : 'Đã kết thúc'}</span></div>
           ${detail.evaluation ? `<div class="history-score-compare"><div><small>Điểm AI ban đầu</small><strong>${formatScore(detail.evaluation.coverageScore ?? null)}</strong></div><div class="history-score-arrow">→</div><div><small>Điểm sau review</small><strong>${typeof detail.evaluation.overriddenCoverageScore === 'number' ? formatScore(detail.evaluation.overriddenCoverageScore) : 'Chưa review'}</strong></div></div>` : renderEmpty('Phiên chưa có điểm.', 'Kết thúc phiên để hệ thống đánh giá.')}
           <section class="review-block"><div class="panel-heading"><h3>Transcript</h3><span>${detail.messages.length} tin nhắn</span></div><div class="review-transcript">${detail.messages.map((message, index) => renderMessage(message, index)).join('')}</div></section>
           ${detail.evaluation ? renderEvaluation(detail.evaluation) : ''}
@@ -590,7 +608,7 @@ function renderReviewSessionItem(session: ReviewSessionSummary, state: AppState,
   return `
     <button class="review-session-item ${active ? 'active' : ''}" data-review-session-id="${escapeAttribute(session.id)}" type="button" data-animate="fade-up" style="--index: ${index}" ${state.busy ? 'disabled' : ''}>
       <span class="scenario-title-block">
-        <strong>${escapeHtml(session.student.name || session.student.email)}</strong>
+        <strong>${escapeHtml(session.student.name)}</strong>
         <small>${escapeHtml(session.scenario.title)}</small>
       </span>
       <span class="scenario-stats">
@@ -633,12 +651,17 @@ function renderReviewSessionDetail(detail: ReviewSessionDetail) {
         <div class="export-actions">
           <button class="ghost-button" data-action="export-review-json" type="button">Xuất JSON</button>
           <button class="ghost-button" data-action="export-review-csv" type="button">Xuất CSV</button>
+          ${detail.evaluation?.reviewFinalizedAt
+            ? '<button class="ghost-button" data-action="reveal-review-identity" type="button">Mở danh tính</button>'
+            : detail.evaluation
+              ? '<button class="primary-button" data-action="finalize-review" type="button">Chốt review ẩn danh</button>'
+              : ''}
         </div>
       </div>
     </div>
     <div class="review-identity-grid" data-animate="fade-up" style="--index: 1">
-      <span><strong>Sinh viên</strong>${escapeHtml(detail.session.student.name)} · ${escapeHtml(detail.session.student.email)}</span>
-      <span><strong>Đối tác</strong><span class="font-serif">${escapeHtml(detail.session.persona.name)}</span> · ${escapeHtml(detail.session.persona.roleTitle ?? 'Đối tác')}</span>
+      <span><strong>${detail.session.student.email ? 'Danh tính sinh viên' : 'Mã bài ẩn danh'}</strong>${escapeHtml(detail.session.student.name)}${detail.session.student.email ? ` · ${escapeHtml(detail.session.student.email)}` : ''}</span>
+      <span><strong>Đối tác</strong><span class="font-serif">${escapeHtml(formatPersonaText(detail.session.persona.name))}</span> · ${escapeHtml(formatPersonaText(detail.session.persona.roleTitle ?? 'Đối tác'))}</span>
       <span><strong>Trạng thái</strong>${detail.session.finalizationStatus === 'completed' ? 'Đã hoàn thành' : 'Đang thực hiện'} · ${detail.session.isActive ? 'Đang hoạt động' : 'Đã đóng'}</span>
     </div>
     ${isOverridden && detail.evaluation?.overriddenByLecturer ? `
@@ -831,6 +854,7 @@ function renderEvaluation(evaluation: EvaluationResult, showSurvey = false) {
  
       <div class="eval-tab-content active" id="tab-feedback">
         ${evaluation.scoringPolicy ? renderScoringPolicy(evaluation.scoringPolicy) : ''}
+        ${evaluation.aiProvenance ? renderAiEvaluationProvenance(evaluation.aiProvenance) : ''}
         ${extractionReviewHtml}
         ${feedback ? `
           <div class="feedback-block" style="margin-top: 16px;">
@@ -881,6 +905,27 @@ function renderScoringPolicy(policy: ScoringPolicy) {
   `
 }
 
+function renderAiEvaluationProvenance(provenance: NonNullable<EvaluationResult['aiProvenance']>) {
+  const extraction = provenance.extraction
+  const scoring = provenance.scoring
+  return `
+    <div class="policy-card" style="margin-top: 12px;">
+      <div class="subsection-heading">
+        <h3>Dấu vết chấm AI</h3>
+        <span style="font-family: var(--font-mono); font-size: 11px;">${escapeHtml(provenance.schemaVersion)}</span>
+      </div>
+      <div class="policy-grid">
+        <span>Model yêu cầu: <strong>${escapeHtml(extraction?.requestedModel ?? 'Không có dữ liệu')}</strong></span>
+        <span>Model thực tế: <strong>${escapeHtml(extraction?.effectiveModel ?? 'Không có dữ liệu')}</strong></span>
+        <span>Phiên bản prompt: <strong>${escapeHtml(extraction?.promptVersion ?? 'Không có dữ liệu')}</strong></span>
+        <span>Model nhúng: <strong>${escapeHtml(scoring?.embeddingModel ?? 'Không có dữ liệu')}</strong></span>
+        <span>Cách so khớp: <strong>${escapeHtml(scoring?.matchingMethod ?? 'Không có dữ liệu')}</strong></span>
+        <span>Thời điểm chấm: <strong>${provenance.evaluatedAt ? escapeHtml(formatTime(provenance.evaluatedAt)) : 'Không có dữ liệu'}</strong></span>
+      </div>
+    </div>
+  `
+}
+
 function renderRequirementReport(matches: RequirementMatchReport[]) {
   return `
     <div class="requirement-report">
@@ -922,8 +967,8 @@ function renderRequirementReport(matches: RequirementMatchReport[]) {
           <h4 style="margin-bottom: 8px; color: var(--accent);">Lưu thay đổi đánh giá của Giảng viên</h4>
           <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px;">Hệ thống sẽ tự động tính lại <strong>Coverage Score</strong> dựa trên loại so khớp (MatchType) mới được chọn ở trên.</p>
           <div style="margin-bottom: 12px;">
-            <label style="display: block; font-size: 12px; color: var(--muted-strong); margin-bottom: 4px;">Ghi chú / Nhận xét của Giảng viên (tùy chọn):</label>
-            <textarea id="override-comment" rows="2" style="width: 100%; background: var(--surface); color: var(--text-primary); border: 1px solid var(--line); border-radius: 6px; padding: 8px; font-family: var(--font-sans); font-size: 13px;" placeholder="Nhập lý do điều chỉnh hoặc góp ý cho sinh viên..."></textarea>
+            <label style="display: block; font-size: 12px; color: var(--muted-strong); margin-bottom: 4px;" for="override-comment">Lý do điều chỉnh điểm <span aria-hidden="true">*</span></label>
+            <textarea id="override-comment" rows="2" required maxlength="1000" style="width: 100%; background: var(--surface); color: var(--text-primary); border: 1px solid var(--line); border-radius: 6px; padding: 8px; font-family: var(--font-sans); font-size: 13px;" placeholder="Nêu căn cứ điều chỉnh theo transcript hoặc rubric..."></textarea>
           </div>
           <button class="primary-button" data-action="submit-override" type="button">Lưu & Tính lại điểm số</button>
         </div>
@@ -1209,12 +1254,12 @@ function renderAdminScenarioPreview(state: AppState) {
         <label>
           <span>Từ khóa (phân cách bằng dấu phẩy)</span>
           <input data-draft-field="keywords"
-            value="${escapeAttribute(requirement.keywords.join(', '))}" />
+            value="${escapeAttribute((requirement.keywords ?? []).join(', '))}" />
         </label>
         <label>
           <span>Loại câu hỏi</span>
           <input data-draft-field="question_types"
-            value="${escapeAttribute(requirement.question_types.join(', '))}" />
+            value="${escapeAttribute((requirement.question_types ?? []).join(', '))}" />
         </label>
         <label class="span-2">
           <span>Điều kiện tiết lộ</span>
@@ -1232,7 +1277,7 @@ function renderAdminScenarioPreview(state: AppState) {
         <label>
           <span>Phụ thuộc các mã</span>
           <input data-draft-field="requires"
-            value="${escapeAttribute(requirement.requires.join(', '))}"
+            value="${escapeAttribute((requirement.requires ?? []).join(', '))}"
             placeholder="Ví dụ: R1, R2" />
         </label>
       </div>
@@ -1270,7 +1315,7 @@ function renderAdminScenarioPreview(state: AppState) {
         <label>
           <span>Từ khóa chung</span>
           <input data-draft-field="general_keywords"
-            value="${escapeAttribute(draft.general_keywords.join(', '))}" />
+            value="${escapeAttribute((draft.general_keywords ?? []).join(', '))}" />
         </label>
         <label>
           <span>Số yêu cầu mới tối đa mỗi lượt</span>
@@ -1292,8 +1337,8 @@ function renderAdminScenarioPreview(state: AppState) {
                   ${selectedPersonaTemplateKeys.size === 0
                     ? template.isSystemDefault ? 'checked' : ''
                     : selectedPersonaTemplateKeys.has(template.templateKey) ? 'checked' : ''} />
-                  ${escapeHtml(template.label)}</span>
-                <small>${escapeHtml(template.communicationStyle)} · ${escapeHtml(template.knowledgeLevel)} · ${escapeHtml(template.difficulty)}</small>
+                  ${escapeHtml(formatPersonaText(template.label))}</span>
+                <small>Trao đổi: ${escapeHtml(formatPersonaText(template.communicationStyle))} · Am hiểu: ${escapeHtml(formatPersonaText(template.knowledgeLevel))} · Độ khó: ${escapeHtml(formatPersonaText(template.difficulty))}</small>
               </label>
             `).join('')}
           </div>
@@ -1403,6 +1448,7 @@ function renderAdminOverviewSection(admin: AdminState) {
           </table>
         </div>
         <small style="display:block; margin-top: 10px; color: var(--muted);">Ngưỡng: tối thiểu ${admin.gradingReview?.methodology.minimumReviews ?? 5} lần review; cờ khi chỉnh trung bình từ ±${admin.gradingReview?.methodology.meanAdjustmentThreshold ?? 15} điểm hoặc ít nhất một nửa số lần lệch từ ${admin.gradingReview?.methodology.highAdjustmentThreshold ?? 25} điểm.</small>
+        ${(admin.gradingReview?.cohorts ?? []).length > 0 ? `<small style="display:block; margin-top: 6px; color: var(--muted);">Đã phân tách theo cohort scenario/độ khó: ${(admin.gradingReview?.cohorts ?? []).filter(item => item.hasSufficientData).length}/${(admin.gradingReview?.cohorts ?? []).length} cohort đủ dữ liệu; ${(admin.gradingReview?.cohorts ?? []).filter(item => item.requiresReview).length} cohort cần rà soát.</small>` : ''}
       </div>
       <!-- Charts 2x2 Grid -->
       <div class="admin-charts-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">

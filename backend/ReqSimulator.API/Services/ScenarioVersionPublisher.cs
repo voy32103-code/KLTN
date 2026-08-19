@@ -134,9 +134,9 @@ public sealed partial class ScenarioVersionPublisher
 
         var stakeholderTemplates = new[]
         {
-            ("Business Owner", "Decision Maker", "Management"),
-            ("Process Expert", "Domain Specialist", "Operations"),
-            ("End User", "Operational User", "Delivery")
+            ("Chủ sở hữu nghiệp vụ", "Người ra quyết định", "Quản lý", "Đại diện cho góc nhìn quản lý."),
+            ("Chuyên gia quy trình", "Chuyên gia nghiệp vụ", "Vận hành", "Đại diện cho góc nhìn vận hành."),
+            ("Người dùng cuối", "Người dùng vận hành", "Triển khai", "Đại diện cho góc nhìn sử dụng hằng ngày.")
         };
         foreach (var role in stakeholderTemplates)
         {
@@ -144,7 +144,7 @@ public sealed partial class ScenarioVersionPublisher
             {
                 Id = Guid.NewGuid(), ScenarioId = next.Id, Name = role.Item1,
                 RoleTitle = role.Item2, Department = role.Item3,
-                Description = $"Represents the {role.Item3} viewpoint.", CreatedAt = now
+                Description = role.Item4, CreatedAt = now
             };
             next.Stakeholders.Add(stakeholder);
             foreach (var profile in personaTemplates)
@@ -264,7 +264,7 @@ public sealed partial class ScenarioVersionPublisher
     [
         new PersonaTemplate
         {
-            TemplateKey = "collaborative", Label = "Collaborative",
+            TemplateKey = "collaborative", Label = "Hợp tác",
             PersonalityTraits = "{\"traits\":[\"collaborative\",\"detail_oriented\"]}",
             CommunicationStyle = "collaborative", KnowledgeLevel = "high",
             Difficulty = PersonaDifficulty.Easy, InitialMood = "neutral", InitialPatience = 1.00m,
@@ -272,7 +272,7 @@ public sealed partial class ScenarioVersionPublisher
         },
         new PersonaTemplate
         {
-            TemplateKey = "challenging", Label = "Challenging",
+            TemplateKey = "challenging", Label = "Phản biện",
             PersonalityTraits = "{\"traits\":[\"challenging\",\"detail_oriented\"]}",
             CommunicationStyle = "concise", KnowledgeLevel = "medium",
             Difficulty = PersonaDifficulty.Hard, InitialMood = "neutral", InitialPatience = 0.70m,

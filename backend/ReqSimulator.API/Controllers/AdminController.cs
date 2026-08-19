@@ -210,7 +210,15 @@ public class AdminController : ControllerBase
 
         var overrides = await _db.LecturerOverrides.AsNoTracking()
             .Where(o => o.OriginalCoverageScore != null && o.NewCoverageScore != null)
-            .Select(o => new { o.LecturerId, LecturerName = o.Lecturer.Name, Original = o.OriginalCoverageScore!.Value, Final = o.NewCoverageScore!.Value })
+            .Select(o => new
+            {
+                o.LecturerId,
+                LecturerName = o.Lecturer.Name,
+                Original = o.OriginalCoverageScore!.Value,
+                Final = o.NewCoverageScore!.Value,
+                ScenarioTitle = o.Evaluation.Session.Scenario.Title,
+                Difficulty = o.Evaluation.Session.Scenario.Difficulty.ToString()
+            })
             .ToListAsync();
 
         var reviewers = overrides.GroupBy(item => new { item.LecturerId, item.LecturerName }).Select(group =>
@@ -236,10 +244,42 @@ public class AdminController : ControllerBase
             };
         }).OrderByDescending(item => item.requiresReview).ThenByDescending(item => item.averageAbsoluteAdjustment).ToList();
 
+        // A reviewer's adjustments are only comparable inside the same scenario and
+        // difficulty cohort. This is an invitation to calibrate, never a bias verdict.
+        var cohorts = overrides.GroupBy(item => new
+        {
+            item.LecturerId,
+            item.LecturerName,
+            item.ScenarioTitle,
+            item.Difficulty
+        }).Select(group =>
+        {
+            var adjustments = group.Select(item => item.Final - item.Original).ToList();
+            var absoluteAdjustments = adjustments.Select(Math.Abs).ToList();
+            var reviewCount = adjustments.Count;
+            var highAdjustmentCount = absoluteAdjustments.Count(value => value >= highAdjustmentThreshold);
+            var hasSufficientData = reviewCount >= minimumReviews;
+            var averageAdjustment = adjustments.Average();
+            var requiresReview = hasSufficientData &&
+                (Math.Abs(averageAdjustment) >= meanAdjustmentThreshold || highAdjustmentCount * 2 >= reviewCount);
+            return new
+            {
+                lecturerId = group.Key.LecturerId,
+                lecturerName = group.Key.LecturerName,
+                scenarioTitle = group.Key.ScenarioTitle,
+                difficulty = group.Key.Difficulty,
+                reviewCount,
+                averageAdjustment = Math.Round(averageAdjustment, 1),
+                hasSufficientData,
+                requiresReview
+            };
+        }).OrderByDescending(item => item.requiresReview).ThenByDescending(item => item.reviewCount).ToList();
+
         return Ok(new
         {
             methodology = new { minimumReviews, meanAdjustmentThreshold, highAdjustmentThreshold, disclaimer = "Chỉ báo thống kê dùng để mời rà soát; không xác định hoặc kết luận giảng viên thiên vị." },
-            reviewers
+            reviewers,
+            cohorts
         });
     }
     [HttpGet("stats/feedback-experiment")]

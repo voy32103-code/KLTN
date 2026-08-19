@@ -54,9 +54,9 @@ export async function installAdminApiMock(page, jobs = []) {
         max_new_reveals_per_turn: 1,
         requirements: [{
           id: 'LB1', text: 'Students can reserve an available room.', gate: 0,
-          keywords: ['reserve', 'room'], question_types: ['OpenEnded'],
+          keywords: null, question_types: null,
           reveal_condition: 'Ask about room reservations.', reveal_difficulty: 'Easy',
-          requires: [], actor: 'Student', action: 'reserve', object: 'study room',
+          requires: null, actor: 'Student', action: 'reserve', object: 'study room',
           condition: 'when available', type: 'FR', priority: 'high',
         }],
       })
