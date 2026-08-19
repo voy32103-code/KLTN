@@ -730,7 +730,7 @@ function renderExtractedRequirements(requirements: ReviewExtractedRequirement[])
     <div class="artifact-list">
       ${requirements.map((requirement) => `
         <article>
-          <strong>${escapeHtml(requirement.requirementText)}</strong>
+          <strong>${escapeHtml(localizeExtractedRequirement(requirement.requirementText))}</strong>
           <small>Độ tin cậy: ${formatNullablePercent(requirement.confidenceScore)}</small>
         </article>
       `).join('')}
@@ -988,7 +988,7 @@ function renderRequirementReport(matches: RequirementMatchReport[], canOverride 
               <p>${escapeHtml(localizeRequirementText(match.hiddenText ?? 'Yêu cầu ẩn'))}</p>
               <div class="evidence-line">
                 <span>Bằng chứng từ hội thoại</span>
-                <small>${escapeHtml(match.extractedText ? localizeRequirementText(match.extractedText) : 'Không tìm thấy thông tin trùng khớp')}</small>
+                <small>${escapeHtml(match.extractedText ? localizeExtractedRequirement(match.extractedText) : 'Không tìm thấy thông tin trùng khớp')}</small>
               </div>
               <div class="evidence-line">
                 <span>Lý do đối soát</span>
@@ -1048,6 +1048,37 @@ const IT_REQUIREMENT_VI: Record<string, string> = {
 
 function localizeRequirementText(text: string) {
   return IT_REQUIREMENT_VI[text] ?? text
+}
+
+const EXTRACTED_REQUIREMENT_VI: Record<string, string> = {
+  'system must block tao phieu loi when thieu thong tin bat buoc tieu de cac buoc tai hien ket qua mong doi ket qua thuc te thong tin build.': 'Hệ thống phải chặn tạo phiếu lỗi khi thiếu thông tin bắt buộc: tiêu đề, các bước tái hiện, kết quả mong đợi, kết quả thực tế hoặc thông tin bản build.',
+  'system must kiem soat du lieu dau vao when khi tao phieu loi.': 'Hệ thống phải kiểm soát dữ liệu đầu vào khi tạo phiếu lỗi.',
+  'user must gan muc do uu tien when khi loi duoc xac nhan.': 'Người dùng phải gán mức độ ưu tiên khi lỗi được xác nhận.',
+  'system must chuyen trang thai phieu loi when loi duoc tao.': 'Hệ thống phải chuyển trạng thái phiếu lỗi khi lỗi được tạo.',
+  'system must ghi lai nhat ky thay doi trang thai loi when moi thay doi trang thai.': 'Hệ thống phải ghi lại nhật ký thay đổi trạng thái lỗi sau mỗi lần cập nhật.',
+  'system must gui thong bao when doi ngu phat trien cap nhat trang thai loi la da sua xong.': 'Hệ thống phải gửi thông báo khi đội ngũ phát triển cập nhật trạng thái lỗi là đã sửa xong.',
+  'tester must tao phieu ghi nhan loi when phat hien loi.': 'Người kiểm thử phải tạo phiếu ghi nhận lỗi khi phát hiện lỗi.',
+}
+
+function localizeExtractedRequirement(text: string) {
+  const source = text.trim()
+  const exact = EXTRACTED_REQUIREMENT_VI[source.toLowerCase()]
+  if (exact) return exact
+
+  const normalized = source
+    .replace(/\bsystem must\b/gi, 'Hệ thống phải')
+    .replace(/\btester must\b/gi, 'Người kiểm thử phải')
+    .replace(/\buser must\b/gi, 'Người dùng phải')
+    .replace(/\bwhen khi\b/gi, 'khi')
+    .replace(/\bwhen\b/gi, 'khi')
+    .replace(/\bblock\b/gi, 'chặn')
+    .replace(/\btao phieu loi\b/gi, 'tạo phiếu lỗi')
+    .replace(/\bphieu ghi nhan loi\b/gi, 'phiếu ghi nhận lỗi')
+    .replace(/\bkiem soat du lieu dau vao\b/gi, 'kiểm soát dữ liệu đầu vào')
+    .replace(/\bchuyen trang thai\b/gi, 'chuyển trạng thái')
+    .replace(/\bghi lai nhat ky\b/gi, 'ghi lại nhật ký')
+    .replace(/\bgui thong bao\b/gi, 'gửi thông báo')
+  return normalized.replace(/^./, character => character.toUpperCase())
 }
 
 function localizeRequirementCategory(category: string) {
