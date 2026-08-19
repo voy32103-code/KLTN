@@ -586,6 +586,64 @@ th, td { border: 1px solid #151515 !important; }
   background: #ffffff !important;
 }
 
+.admin-metric-card {
+  position: relative;
+  overflow: hidden;
+  padding: 16px !important;
+  border: 3px solid #151515 !important;
+  border-radius: 0 !important;
+  background: #ffffff !important;
+  box-shadow: 4px 4px 0 #151515 !important;
+}
+
+.admin-metric-card::before {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 10px;
+  height: 100%;
+  background: #5546ff;
+  content: '';
+}
+
+.admin-metric-card:nth-child(2)::before { background: #9be8b8; }
+.admin-metric-card:nth-child(3)::before { background: #ffde59; }
+.admin-metric-card:nth-child(4)::before { background: #ff8b73; }
+
+.admin-metric-card > span,
+.admin-metric-card > small {
+  position: relative;
+  margin-left: 8px;
+  color: #3d3d3d !important;
+}
+
+.admin-metric-card > span {
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.admin-metric-card > strong {
+  position: relative;
+  margin-left: 8px;
+  color: #151515 !important;
+  font-family: var(--font-heading);
+  line-height: 1.1;
+}
+
+.chart-card {
+  padding: 16px !important;
+  border: 3px solid #151515 !important;
+  border-radius: 0 !important;
+  background: #ffffff !important;
+  box-shadow: 4px 4px 0 #151515 !important;
+}
+
+.chart-card canvas {
+  background: #ffffff;
+  border: 0;
+}
+
 @media (max-width: 760px) {
   .admin-dashboard > .admin-header {
     align-items: stretch !important;
