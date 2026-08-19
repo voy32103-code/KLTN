@@ -21,6 +21,7 @@ class PersonaProfile(BaseModel):
     style: str         # communication style
     mood: str
     patience: float
+    knowledgeLevel: str = "medium"
 
 
 class PersonaStateUpdate(BaseModel):

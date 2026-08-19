@@ -34,6 +34,39 @@ from app.services.api_client_manager import client_manager
 MODEL = os.getenv("MODEL_NAME", "gemini-2.5-flash")
 
 
+def persona_knowledge_boundary(role_title: str, knowledge_level: str) -> str:
+    """Return a strict, role-appropriate knowledge boundary for the simulated person."""
+    role = (role_title or "").casefold()
+    knowledge = (knowledge_level or "medium").casefold()
+
+    if any(marker in role for marker in ("người dùng", "end user", "user")):
+        return """You are an END USER, not a technical representative.
+- Speak only from daily usage, observed problems, desired outcomes, and the steps you personally perform.
+- Do NOT explain or speculate about APIs, databases, source code, cloud infrastructure, CI/CD, deployment, logging, secrets, architecture, or technical configuration.
+- Technical wording in the allowed knowledge is not permission to claim technical expertise. Rephrase it as an observable need, or say politely in Vietnamese that this belongs to the technical team.
+- When asked for a technical decision, say you only know its effect on your work and redirect the analyst to the appropriate technical owner.
+"""
+
+    if any(marker in role for marker in ("quy trình", "nghiệp vụ", "vận hành", "business")):
+        return """You are a BUSINESS/OPERATIONS EXPERT, not a system engineer.
+- Explain workflow, business rules, exceptions, responsibilities, inputs, outputs, and service impact.
+- Do NOT prescribe APIs, databases, source code, infrastructure, deployment configuration, or architecture.
+- If implementation is requested, state the business constraint or expected outcome and refer technical decisions to the engineering team.
+"""
+
+    if any(marker in role for marker in ("quyết định", "chủ sở hữu", "manager", "quản lý")):
+        return """You are a BUSINESS DECISION MAKER.
+- Focus on goals, priorities, risks, approvals, budget/service impact, and success criteria.
+- Do NOT claim detailed operational or technical knowledge that your role would not normally own.
+- Refer implementation questions to the relevant operations or engineering stakeholder.
+"""
+
+    return f"""Knowledge level: {knowledge}.
+- Stay within the responsibilities of your stated role.
+- Explain business needs and observed behavior; do not invent technical implementation details outside that role.
+"""
+
+
 def build_system_prompt(
     req: ChatRequest,
     state: dict[str, object],
@@ -49,6 +82,7 @@ def build_system_prompt(
     scenario_title = config.scenario_title if config else (req.scenarioTitle or "Unknown scenario")
     scenario_context = config.context if config else "You work at an organization that needs a new software system."
     technical_question = "yes" if is_overly_technical(req.studentMessage) else "no"
+    knowledge_boundary = persona_knowledge_boundary(req.persona.roleTitle, req.persona.knowledgeLevel)
 
     previously_revealed_text = (
         "\n".join(f"- {item}" for item in previously_revealed)
@@ -79,6 +113,7 @@ Your name: {req.persona.name}
 Your role: {req.persona.roleTitle}
 Personality traits: {traits}
 Communication style: {req.persona.style}
+Knowledge level: {req.persona.knowledgeLevel}
 Current mood: {state["mood"]}
 Current patience level: {state["patience"]}/1.0
 Turn count so far: {state["turn_count"]}
@@ -88,6 +123,9 @@ Behavior rules:
 - If mood is rushed or irritated, sound busy and less detailed without being rude, dismissive, or sarcastic.
 - Never punish the student for asking a clarifying question; answer the business question first.
 - If the student asks a technical implementation question, redirect to business concerns.
+
+Role knowledge boundary:
+{knowledge_boundary}
 
 === LAYER 4: INFORMATION GATING ===
 Previously revealed requirements you may reference again:
@@ -116,6 +154,7 @@ Current date: {date.today().isoformat()}
 - Do NOT invent requirements not listed above.
 - Do NOT dump all rules in one answer.
 - Do NOT provide implementation details.
+- Never speak outside the role knowledge boundary above, even when the student asks directly.
 - Do NOT tell the student what to ask next.
 - Stay consistent with earlier answers.
 

@@ -149,14 +149,17 @@ public sealed partial class ScenarioVersionPublisher
             next.Stakeholders.Add(stakeholder);
             foreach (var profile in personaTemplates)
             {
+                var roleProfile = role.Item1 == "Người dùng cuối"
+                    ? (Traits: """{"traits":["practical","experience_based"],"jargon_level":"low","technical_scope":"none"}""", KnowledgeLevel: "low")
+                    : (Traits: profile.PersonalityTraits, KnowledgeLevel: profile.KnowledgeLevel);
                 var persona = new Persona
                 {
                     Id = Guid.NewGuid(), ScenarioId = next.Id, StakeholderId = stakeholder.Id,
                     TemplateId = profile.Id == Guid.Empty ? null : profile.Id,
                     Name = $"{role.Item1} - {profile.Label}", Label = profile.Label,
                     RoleTitle = role.Item2,
-                    PersonalityTraits = profile.PersonalityTraits,
-                    CommunicationStyle = profile.CommunicationStyle, KnowledgeLevel = profile.KnowledgeLevel,
+                    PersonalityTraits = roleProfile.Traits,
+                    CommunicationStyle = profile.CommunicationStyle, KnowledgeLevel = roleProfile.KnowledgeLevel,
                     Difficulty = profile.Difficulty, InitialMood = profile.InitialMood,
                     InitialPatience = profile.InitialPatience, CreatedAt = now
                 };

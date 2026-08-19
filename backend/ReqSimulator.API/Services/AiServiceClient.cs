@@ -170,7 +170,14 @@ public record ScenarioConfigJson(
     [property: JsonPropertyName("review_notes")] string? ReviewNotes = null);
 
 public record ChatMessage(string Role, string Content, DateTime Timestamp);
-public record PersonaProfile(string Name, string RoleTitle, string Traits, string Style, string Mood, decimal Patience);
+public record PersonaProfile(
+    string Name,
+    string RoleTitle,
+    string Traits,
+    string Style,
+    string Mood,
+    decimal Patience,
+    string KnowledgeLevel = "medium");
 public record PersonaStateUpdate(string Mood, decimal Patience, int TurnCount, List<string> NewlyRevealed);
 public record ExtractedReq(
     string Text,

@@ -41,6 +41,36 @@ class ChatServiceFallbackTests(unittest.TestCase):
         self.assertIn("without being rude", prompt)
         self.assertIn("Do not output internal labels", prompt)
 
+    def test_end_user_prompt_blocks_technical_explanations(self):
+        request = ChatRequest(
+            sessionId="session",
+            scenarioTitle="DevOps - CI/CD",
+            studentMessage="CI/CD pipeline và secret được cấu hình như thế nào?",
+            history=[],
+            persona=PersonaProfile(
+                name="Người dùng cuối - Hợp tác",
+                roleTitle="Người dùng Trực tiếp",
+                traits='{"jargon_level":"low","technical_scope":"none"}',
+                style="collaborative",
+                mood="neutral",
+                patience=1,
+                knowledgeLevel="low",
+            ),
+            availableRequirements=["Production deployment requires an approved change request."],
+        )
+
+        prompt = build_system_prompt(
+            request,
+            {"mood": "neutral", "patience": 1, "turn_count": 1},
+            "Probing",
+            ["Production deployment requires an approved change request."],
+            [], [], None, "specific", "R1",
+        )
+
+        self.assertIn("You are an END USER", prompt)
+        self.assertIn("Do NOT explain or speculate about APIs, databases", prompt)
+        self.assertIn("Technical wording in the allowed knowledge is not permission", prompt)
+
     def test_fallback_reply_uses_only_newly_revealed_requirement(self):
         req: Any = SimpleNamespace(studentMessage="What is the main purpose?")
 

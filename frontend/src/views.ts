@@ -321,7 +321,10 @@ function renderPersonaBrief(persona: Persona) {
   const knowledge = formatPersonaText(persona.knowledgeLevel ?? 'tiêu chuẩn')
   const style = formatPersonaText(persona.communicationStyle ?? 'trung lập')
   const role = formatPersonaText(persona.roleTitle ?? 'nhân vật phỏng vấn')
-  const scope = (persona.knowledgeLevel ?? '').toLowerCase() === 'high'
+  const isEndUser = `${persona.name} ${persona.roleTitle ?? ''}`.toLowerCase().includes('người dùng')
+  const scope = isEndUser
+    ? 'Chỉ chia sẻ trải nghiệm sử dụng, thao tác hằng ngày và vấn đề gặp phải; không đại diện cho quyết định kỹ thuật hoặc kiến trúc hệ thống.'
+    : (persona.knowledgeLevel ?? '').toLowerCase() === 'high'
     ? 'Nắm rõ nghiệp vụ thuộc vai trò của mình và có thể làm rõ quy trình, ngoại lệ khi được hỏi đúng trọng tâm.'
     : 'Có góc nhìn vận hành thực tế; hãy dùng câu hỏi mở và câu hỏi làm rõ để thu thập thông tin cần thiết.'
   return `

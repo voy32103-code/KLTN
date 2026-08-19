@@ -90,6 +90,7 @@ public static class SeedData
                 continue;
             foreach (var role in templates)
             {
+                var roleProfile = GetPersonaRoleProfile(role.Item2, role.Item1);
                 var stakeholder = new Stakeholder
                 {
                     Id = Guid.NewGuid(), ScenarioId = scenarioId, Name = role.Item1,
@@ -109,14 +110,45 @@ public static class SeedData
                         StakeholderId = stakeholder.Id,
                         Name = $"{role.Item1} - {profile.Item1}", Label = profile.Item1,
                         RoleTitle = role.Item2,
-                        PersonalityTraits = """{"traits":["detail_oriented"],"jargon_level":"medium"}""",
-                        CommunicationStyle = profile.Item2, KnowledgeLevel = "medium",
+                        PersonalityTraits = roleProfile.Traits,
+                        CommunicationStyle = profile.Item2, KnowledgeLevel = roleProfile.KnowledgeLevel,
                         Difficulty = profile.Item3, InitialMood = "neutral",
                         InitialPatience = profile.Item4
                     });
                 }
             }
         }
+
+        // Existing deployments already contain these personas. Normalize them on
+        // startup too, so role boundaries take effect without a data reset.
+        var existingPersonas = await db.Personas
+            .Include(persona => persona.Stakeholder)
+            .Where(persona => scenarioIds.Contains(persona.ScenarioId))
+            .ToListAsync();
+        foreach (var persona in existingPersonas)
+        {
+            var roleProfile = GetPersonaRoleProfile(persona.RoleTitle, persona.Name);
+            persona.PersonalityTraits = roleProfile.Traits;
+            persona.KnowledgeLevel = roleProfile.KnowledgeLevel;
+        }
+    }
+
+    private static (string Traits, string KnowledgeLevel) GetPersonaRoleProfile(
+        string? roleTitle,
+        string? personaName)
+    {
+        var identity = $"{roleTitle} {personaName}".ToLowerInvariant();
+        if (identity.Contains("người dùng"))
+        {
+            return ("""{"traits":["practical","experience_based"],"jargon_level":"low","technical_scope":"none"}""", "low");
+        }
+
+        if (identity.Contains("chuyên viên") || identity.Contains("quy trình") || identity.Contains("nghiệp vụ"))
+        {
+            return ("""{"traits":["process_oriented","detail_oriented"],"jargon_level":"medium","technical_scope":"business_only"}""", "high");
+        }
+
+        return ("""{"traits":["outcome_oriented","risk_aware"],"jargon_level":"low","technical_scope":"decision_only"}""", "medium");
     }
 
     private static async Task SeedPersona(AppDbContext db, Guid scenarioId)
