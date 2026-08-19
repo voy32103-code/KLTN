@@ -572,6 +572,27 @@ th, td { border: 1px solid #151515 !important; }
   font: 800 12px var(--font-mono);
 }
 
+.admin-dashboard > .admin-header {
+  gap: 16px;
+  padding: 18px 20px;
+  border: 3px solid #151515;
+  background: #ffffff;
+  box-shadow: 4px 4px 0 #151515;
+}
+
+.admin-dashboard > .admin-header .admin-nav-tabs {
+  border: 2px solid #151515 !important;
+  border-radius: 0 !important;
+  background: #ffffff !important;
+}
+
+@media (max-width: 760px) {
+  .admin-dashboard > .admin-header {
+    align-items: stretch !important;
+    flex-direction: column;
+  }
+}
+
 @media (max-width: 760px) {
   .feedback-survey-heading {
     align-items: start;
