@@ -20,6 +20,7 @@ namespace ReqSimulator.API.Controllers;
 [Authorize]
 public class SessionsController : ControllerBase
 {
+    private const string StudentCatalogDomain = "Information Technology";
     private readonly AppDbContext _db;
     private readonly AiServiceClient _ai;
     private readonly ILogger<SessionsController> _logger;
@@ -768,12 +769,16 @@ public class SessionsController : ControllerBase
         var userId = GetCurrentUserId();
         if (userId == null) return Unauthorized();
 
+        var role = User.FindFirst(ClaimTypes.Role)?.Value;
+
         if (dto.ScenarioId == Guid.Empty || dto.PersonaId == Guid.Empty)
             return BadRequest("Thiếu thông tin ScenarioId hoặc PersonaId.");
 
         var scenario = await _db.Scenarios
             .Include(s => s.Personas)
-            .FirstOrDefaultAsync(s => s.Id == dto.ScenarioId && s.IsActive);
+            .FirstOrDefaultAsync(s => s.Id == dto.ScenarioId
+                && s.IsActive
+                && (role != "Student" || s.Domain == StudentCatalogDomain));
 
         if (scenario is null)
             return NotFound("Kịch bản không tồn tại hoặc đã bị ẩn.");

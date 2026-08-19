@@ -12,6 +12,7 @@ namespace ReqSimulator.API.Controllers;
 [Authorize]  // Tất cả endpoints cần JWT
 public class ScenariosController : ControllerBase
 {
+    private const string StudentCatalogDomain = "Information Technology";
     private readonly AppDbContext _db;
     private readonly ScenarioLocalizationCatalog _localizations;
 
@@ -25,8 +26,17 @@ public class ScenariosController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAll([FromQuery] string? lang = null)
     {
-        var scenarios = await _db.Scenarios
-            .Where(s => s.IsActive)
+        var role = User.FindFirst(ClaimTypes.Role)?.Value;
+        var scenariosQuery = _db.Scenarios.Where(s => s.IsActive);
+
+        // The student catalog is intentionally limited to the refactored IT scenarios.
+        // Legacy scenarios can remain in the database for audit/history without being selectable.
+        if (role == "Student")
+        {
+            scenariosQuery = scenariosQuery.Where(s => s.Domain == StudentCatalogDomain);
+        }
+
+        var scenarios = await scenariosQuery
             .Select(s => new
             {
                 s.Id, s.ScenarioKey, s.Title, s.Description, s.Domain, s.Difficulty,
@@ -62,11 +72,14 @@ public class ScenariosController : ControllerBase
     {
         var role = User.FindFirst(ClaimTypes.Role)?.Value;
         var canViewInactive = role is "Lecturer" or "Admin";
+        var canUseLegacyCatalog = role is "Lecturer" or "Admin";
 
         var scenario = await _db.Scenarios
             .Include(s => s.Personas)
                 .ThenInclude(p => p.Stakeholder)
-            .FirstOrDefaultAsync(s => s.Id == id && (s.IsActive || canViewInactive));
+            .FirstOrDefaultAsync(s => s.Id == id
+                && (s.IsActive || canViewInactive)
+                && (canUseLegacyCatalog || s.Domain == StudentCatalogDomain));
 
         if (scenario == null) return NotFound();
 
