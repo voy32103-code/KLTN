@@ -286,6 +286,7 @@ async def evaluate(req: EvaluateRequest):
                 "Có yêu cầu được trích xuất nhưng chưa đối chiếu được với ground truth; "
                 "hãy để giảng viên xem lại trước khi dùng làm kết luận."
             )
+        suggestions = list(dict.fromkeys(suggestions))
         design_suggestions = await generate_design_models(
             req.extracted,
             req.scenarioDescription,

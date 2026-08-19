@@ -128,9 +128,11 @@ class EvaluationPolicyTests(unittest.TestCase):
         self.assertEqual(len(strengths), 1)
         self.assertEqual(len(weaknesses), 1)
         self.assertEqual(len(suggestions), 1)
-        self.assertIn("Đã xác định thành công", strengths[0])
-        self.assertIn("Bỏ sót yêu cầu", weaknesses[0])
-        self.assertIn("functional", suggestions[0].lower())
+        self.assertNotIn("R1", " ".join(strengths + weaknesses + suggestions))
+        self.assertIn("chức năng", " ".join(strengths + weaknesses + suggestions).lower())
+        self.assertIn("Bạn đã khai thác rõ", strengths[0])
+        self.assertIn("Chưa có đủ bằng chứng", weaknesses[0])
+        self.assertIn("câu hỏi tình huống", suggestions[0])
 
 
 if __name__ == "__main__":

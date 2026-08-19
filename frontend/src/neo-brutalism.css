@@ -468,6 +468,113 @@ th, td { border: 1px solid #151515 !important; }
   font: 800 14px var(--font-mono);
   white-space: nowrap;
 }
+
+.feedback-survey {
+  display: grid;
+  gap: 16px;
+  margin-top: 20px;
+  padding: 18px;
+  border: 3px solid #151515;
+  background: #fffdf5;
+  box-shadow: 4px 4px 0 #151515;
+}
+
+.feedback-survey-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.feedback-survey-heading .section-kicker {
+  margin: 0 0 4px;
+}
+
+.feedback-survey-heading strong {
+  color: #151515;
+  font-size: 18px;
+}
+
+.feedback-survey-scale {
+  padding: 4px 7px;
+  border: 2px solid #151515;
+  background: #ffde59;
+  color: #151515;
+  font: 700 11px var(--font-mono);
+  white-space: nowrap;
+}
+
+.feedback-survey-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.feedback-survey-field,
+.feedback-survey-comment {
+  display: grid;
+  gap: 7px;
+  color: #151515;
+  font-weight: 800;
+}
+
+.feedback-survey-field {
+  min-height: 150px;
+  align-content: start;
+  padding: 12px;
+  border: 2px solid #151515;
+  background: #ffffff;
+}
+
+.feedback-survey-field small,
+.feedback-survey-comment em {
+  color: #4b4b4b;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.feedback-survey select,
+.feedback-survey textarea {
+  width: 100%;
+  border: 2px solid #151515 !important;
+  border-radius: 0 !important;
+  background: #ffffff !important;
+  color: #151515 !important;
+  font: 700 14px var(--font-mono);
+}
+
+.feedback-survey select {
+  margin-top: auto;
+  min-height: 38px;
+  padding: 6px 8px;
+}
+
+.feedback-survey textarea {
+  min-height: 84px;
+  padding: 10px 12px;
+  resize: vertical;
+}
+
+.feedback-survey-submit {
+  justify-self: start;
+}
+
+@media (max-width: 760px) {
+  .feedback-survey-heading {
+    align-items: start;
+    flex-direction: column;
+  }
+
+  .feedback-survey-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .feedback-survey-field {
+    min-height: 0;
+  }
+}
 .modal-card .danger-button, .modal-card .ghost-button { border: 2px solid #151515 !important; border-radius: 0 !important; }
 
 .scenario-draft-advanced,

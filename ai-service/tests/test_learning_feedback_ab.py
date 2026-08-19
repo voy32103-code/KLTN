@@ -36,6 +36,7 @@ class LearningFeedbackAbTests(unittest.IsolatedAsyncioTestCase):
             )
         prompt = provider.await_args.kwargs["contents"]
         self.assertNotIn("SECRET_GROUND_TRUTH", prompt)
+        self.assertNotIn("requirementId", prompt)
         self.assertEqual(result, (["ok"], ["w"], ["s"]))
 
     async def test_variant_b_rejects_feedback_that_repeats_hidden_requirement_wording(self):

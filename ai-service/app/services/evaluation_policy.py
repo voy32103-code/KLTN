@@ -60,6 +60,32 @@ SYNONYM_GROUPS = (
     {"waitlist", "wait-list", "waiting", "chờ", "đợi", "danh-sách-chờ"},
 )
 
+LEARNING_AREAS = {
+    "Functional": {
+        "label": "chức năng và kết quả hệ thống cần thực hiện",
+        "question": "hệ thống cần làm gì, cho ai và kết quả nào được xem là hoàn thành",
+    },
+    "NonFunctional": {
+        "label": "tiêu chí chất lượng và điều kiện vận hành",
+        "question": "cách đo chất lượng, ngưỡng chấp nhận và bối cảnh vận hành",
+    },
+    "BusinessRule": {
+        "label": "quy tắc, điều kiện và ngoại lệ nghiệp vụ",
+        "question": "điều kiện áp dụng, trường hợp ngoại lệ, người có quyền quyết định và cách xử lý",
+    },
+    "Constraint": {
+        "label": "ràng buộc và quyền hạn",
+        "question": "giới hạn áp dụng, vai trò được phép và điều kiện không được phép thực hiện",
+    },
+}
+
+
+def _learning_area(category: str | None) -> dict[str, str]:
+    return LEARNING_AREAS.get(category or "", {
+        "label": "một khía cạnh yêu cầu quan trọng",
+        "question": "tác nhân, hành động, đối tượng và điều kiện áp dụng",
+    })
+
 
 def _read_threshold(source: Mapping[str, str], name: str, default: float) -> float:
     raw = source.get(name)
@@ -198,29 +224,41 @@ def generate_feedback(matches: list[Any], hidden_reqs: list[Any]) -> tuple[list[
 
     req_map = {r.id: r for r in hidden_reqs}
 
-    # Learning feedback intentionally uses only IDs/categories and AAOC prompts.
-    # Ground-truth wording is never copied into student-facing feedback.
+    # Learning feedback intentionally avoids IDs and ground-truth wording. It
+    # names the learning area in student-facing Vietnamese so learners can act
+    # on it without being shown the answer they were expected to elicit.
     for match in matches:
         hidden = req_map.get(match.hiddenId)
         if hidden is None:
             continue
+        area = _learning_area(getattr(hidden, "category", None))
         if match.matchType in ("exact", "semantic"):
             strengths.append(
-                f"Đã xác định thành công yêu cầu {hidden.id} thuộc nhóm {hidden.category} "
-                f"(điểm khớp {match.score:.0%})."
+                f"Bạn đã khai thác rõ {area['label']} (mức đối soát {match.score:.0%})."
             )
         elif match.matchType == "partial":
             weaknesses.append(
-                f"Yêu cầu {hidden.id} thuộc nhóm {hidden.category} mới được làm rõ một phần."
+                f"Phần {area['label']} mới được làm rõ một phần."
             )
             suggestions.append(
-                f"Hãy hỏi thêm về tác nhân, hành động, đối tượng và điều kiện của nhóm {hidden.category}."
+                f"Hỏi tiếp về {area['question']} để hoàn thiện phần này."
             )
         else:
-            weaknesses.append(f"Bỏ sót yêu cầu thuộc nhóm {hidden.category}.")
+            weaknesses.append(f"Chưa có đủ bằng chứng cho {area['label']}.")
             suggestions.append(
-                f"Hãy dùng câu hỏi tình huống hoặc ngoại lệ để khám phá thêm nhóm {hidden.category}."
+                f"Dùng một câu hỏi tình huống hoặc ngoại lệ để làm rõ {area['question']}."
             )
     if not strengths:
         strengths.append("Bạn đã hoàn thành phiên phỏng vấn; hãy mở rộng câu hỏi trước khi đi sâu.")
-    return strengths, weaknesses, suggestions
+    return _unique_feedback(strengths), _unique_feedback(weaknesses), _unique_feedback(suggestions)
+
+
+def _unique_feedback(items: list[str]) -> list[str]:
+    seen: set[str] = set()
+    unique: list[str] = []
+    for item in items:
+        key = " ".join(item.casefold().split())
+        if key and key not in seen:
+            seen.add(key)
+            unique.append(item)
+    return unique

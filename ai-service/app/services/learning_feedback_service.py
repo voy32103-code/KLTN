@@ -8,6 +8,7 @@ from google.genai import types
 from pydantic import BaseModel
 
 from app.services.api_client_manager import client_manager
+from app.services.evaluation_policy import _unique_feedback
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +58,6 @@ async def generate_learning_feedback(
     categories = {item.id: item.category for item in hidden_requirements}
     safe_summary = [
         {
-            "requirementId": match.hiddenId,
             "category": categories.get(match.hiddenId, "Unknown"),
             "matchType": match.matchType,
             "score": match.score,
@@ -71,8 +71,9 @@ Create concise Vietnamese feedback from this evaluation metadata:
 
 Rules:
 - Never reconstruct, guess, quote, or reveal a hidden requirement.
-- Refer only to requirement ID, category, question strategy, and AAOC components.
-- Give actionable next-question strategies, not an answer.
+- Never mention a requirement ID, UUID, or English category label in the student-facing text.
+- Refer to learning areas in Vietnamese: Functional = chức năng/kết quả hệ thống; NonFunctional = chất lượng/điều kiện vận hành; BusinessRule = quy tắc/điều kiện/ngoại lệ nghiệp vụ.
+- Give actionable next-question strategies, not an answer. Do not repeat an idea across lists.
 - Return strengths, weaknesses, suggestions in the requested JSON schema.
 """
     try:
@@ -90,7 +91,11 @@ Rules:
         if _contains_hidden_requirement_wording(parsed, hidden_requirements):
             logger.warning("AI learning feedback attempted to repeat hidden requirement wording; using fallback.")
             return fallback
-        return parsed.strengths, parsed.weaknesses, parsed.suggestions
+        return (
+            _unique_feedback(parsed.strengths),
+            _unique_feedback(parsed.weaknesses),
+            _unique_feedback(parsed.suggestions),
+        )
     except Exception:
         logger.warning("Safe AI learning feedback failed; using deterministic fallback.")
         return fallback

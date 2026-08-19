@@ -794,7 +794,7 @@ function renderEvaluation(evaluation: EvaluationResult, showSurvey = false, canO
   const design = feedback?.designSuggestions
   const extractionReviewHtml = feedback?.extractionsToReview?.length ? `
     <div class="feedback-list" style="margin-top: 16px;">
-      <strong>Requirements to review (${evaluation.extraExtractedCount ?? feedback.extractionsToReview.length})</strong>
+      <strong>Nội dung cần giảng viên rà soát (${evaluation.extraExtractedCount ?? feedback.extractionsToReview.length})</strong>
       <ul>${feedback.extractionsToReview.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul>
     </div>
   ` : ''
@@ -882,13 +882,21 @@ function renderEvaluation(evaluation: EvaluationResult, showSurvey = false, canO
             ${renderFeedbackList('Gợi ý tiếp theo', feedback.suggestions)}
           </div>
           ${showSurvey ? `
-            <form id="feedback-survey-form" class="feedback-block" style="margin-top:16px;">
-              <strong>Đánh giá feedback này</strong>
-              <label>Hữu ích (1–5)<select name="helpfulness">${[1,2,3,4,5].map(value => `<option value="${value}" ${value === 4 ? 'selected' : ''}>${value}</option>`).join('')}</select></label>
-              <label>Dễ hành động (1–5)<select name="actionability">${[1,2,3,4,5].map(value => `<option value="${value}" ${value === 4 ? 'selected' : ''}>${value}</option>`).join('')}</select></label>
-              <label>Không làm lộ đáp án (1–5)<select name="noAnswerLeak">${[1,2,3,4,5].map(value => `<option value="${value}" ${value === 5 ? 'selected' : ''}>${value}</option>`).join('')}</select></label>
-              <textarea name="comment" maxlength="1000" rows="2" placeholder="Nhận xét thêm (không bắt buộc)"></textarea>
-              <button class="ghost-button" data-action="submit-feedback-survey" type="button">Gửi đánh giá feedback</button>
+            <form id="feedback-survey-form" class="feedback-survey">
+              <div class="feedback-survey-heading">
+                <div>
+                  <p class="section-kicker">Phản hồi nhanh</p>
+                  <strong>Đánh giá feedback này</strong>
+                </div>
+                <span class="feedback-survey-scale">1 = thấp · 5 = cao</span>
+              </div>
+              <div class="feedback-survey-grid">
+                <label class="feedback-survey-field"><span>Hữu ích</span><small>Feedback có giúp bạn nhận ra điểm cần cải thiện?</small><select name="helpfulness" aria-label="Mức độ hữu ích">${[1,2,3,4,5].map(value => `<option value="${value}" ${value === 4 ? 'selected' : ''}>${value} / 5</option>`).join('')}</select></label>
+                <label class="feedback-survey-field"><span>Dễ hành động</span><small>Bạn có biết câu hỏi tiếp theo nên tập trung vào đâu không?</small><select name="actionability" aria-label="Mức độ dễ hành động">${[1,2,3,4,5].map(value => `<option value="${value}" ${value === 4 ? 'selected' : ''}>${value} / 5</option>`).join('')}</select></label>
+                <label class="feedback-survey-field"><span>Không làm lộ đáp án</span><small>Feedback có giữ được tính công bằng của bài luyện tập?</small><select name="noAnswerLeak" aria-label="Mức độ không làm lộ đáp án">${[1,2,3,4,5].map(value => `<option value="${value}" ${value === 5 ? 'selected' : ''}>${value} / 5</option>`).join('')}</select></label>
+              </div>
+              <label class="feedback-survey-comment"><span>Nhận xét thêm <em>(không bắt buộc)</em></span><textarea name="comment" maxlength="1000" rows="3" placeholder="Ví dụ: Gợi ý về ngoại lệ giúp mình biết cần hỏi tiếp điều gì."></textarea></label>
+              <button class="primary-button feedback-survey-submit" data-action="submit-feedback-survey" type="button">Gửi đánh giá</button>
             </form>
           ` : ''}
         ` : ''}
