@@ -261,6 +261,19 @@ select:focus,
   padding-bottom: 12px;
 }
 
+/* Give page titles a calm reading surface above the patterned canvas. */
+.section-head {
+  margin-bottom: 28px;
+  padding: 20px 22px 18px;
+  border: 3px solid #151515;
+  background: #ffffff;
+  box-shadow: 5px 5px 0 #151515;
+}
+
+.section-head .section-kicker { margin-bottom: 8px; }
+.section-head h1,
+.section-head h2 { margin: 0; }
+
 .scenario-item,
 .persona-card,
 .review-session-item,
