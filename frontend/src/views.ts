@@ -1027,7 +1027,28 @@ function renderIngestionHistory(admin: AdminState | null) {
 }
 
 function renderAdminScenarioSection(state: AppState) {
+  const activeScenarios = state.adminState?.scenarioStats ?? []
   return `
+    <section class="panel" aria-labelledby="published-scenario-edit-title" style="padding: 20px; border: 1px solid var(--line); background: var(--surface); border-radius: var(--radius-lg); box-shadow: var(--shadow-subtle); margin-bottom: 24px;">
+      <div style="display: grid; gap: 8px;">
+        <div>
+          <p class="section-kicker">Quản lý phiên bản</p>
+          <h3 id="published-scenario-edit-title" style="margin: 0;">Sửa scenario hiện tại</h3>
+          <p style="margin: 6px 0 0; color: var(--text-secondary); font-size: 13px;">Tải scenario đang hoạt động thành bản nháp để chỉnh sửa câu hỏi, nội dung tiết lộ và yêu cầu. Khi publish, hệ thống tạo phiên bản mới và giữ nguyên lịch sử các phiên cũ.</p>
+        </div>
+        <div style="display: flex; gap: 10px; align-items: end; flex-wrap: wrap;">
+          <label style="display: grid; gap: 6px; min-width: min(100%, 360px); flex: 1;">
+            <span style="font-size: 13px; color: var(--text-secondary);">Scenario đang hoạt động</span>
+            <select id="admin-published-scenario-select" ${state.busy || activeScenarios.length === 0 ? 'disabled' : ''}>
+              <option value="">Chọn scenario để sửa</option>
+              ${activeScenarios.map(scenario => `<option value="${escapeAttribute(scenario.scenarioId)}">${escapeHtml(scenario.scenarioTitle)} · ${scenario.sessionCount} phiên</option>`).join('')}
+            </select>
+          </label>
+          <button class="primary-button" data-action="admin-edit-published-scenario" type="button" ${state.busy || activeScenarios.length === 0 ? 'disabled' : ''}>Tải để chỉnh sửa</button>
+        </div>
+        ${activeScenarios.length === 0 ? '<small style="color: var(--muted);">Chưa có scenario hoạt động để chỉnh sửa.</small>' : ''}
+      </div>
+    </section>
     ${renderIngestionHistory(state.adminState)}
     ${renderAdminScenarioPreview(state)}
     <div class="admin-scenarios-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px;">
@@ -1370,18 +1391,18 @@ function renderAdminOverviewSection(admin: AdminState) {
       </div>
 
       <div class="top-students-card" style="background: var(--surface); padding: 20px; border-radius: 10px; border: 1px solid var(--line); box-shadow: var(--shadow-subtle);">
-        <h3 style="margin-bottom: 6px; font-size: 16px; color: var(--text-primary);">R� so�t nh?t qu�n �i?u ch?nh �i?m</h3>
-        <p style="margin: 0 0 12px; color: var(--text-secondary); font-size: 13px;">So s�nh �i?m AI g?c v?i �i?m sau review. ${escapeHtml(admin.gradingReview?.methodology.disclaimer ?? 'Ch? b�o th?ng k�, kh�ng ph?i k?t lu?n thi�n v?.')}</p>
+        <h3 style="margin-bottom: 6px; font-size: 16px; color: var(--text-primary);">Rà soát nhất quán điều chỉnh điểm</h3>
+        <p style="margin: 0 0 12px; color: var(--text-secondary); font-size: 13px;">So sánh điểm AI gốc với điểm sau review. ${escapeHtml(admin.gradingReview?.methodology.disclaimer ?? 'Chỉ báo thống kê, không phải kết luận thiên vị.')}</p>
         <div style="overflow-x: auto;">
           <table style="width: 100%; border-collapse: collapse; font-size: 13px; text-align: left;">
-            <thead><tr style="border-bottom: 1px solid var(--line); color: var(--text-secondary);"><th style="padding: 10px;">Ng�?i review</th><th style="padding: 10px; text-align: center;">S? l?n</th><th style="padding: 10px; text-align: center;">AI TB</th><th style="padding: 10px; text-align: center;">Sau review TB</th><th style="padding: 10px; text-align: center;">Ch�nh TB</th><th style="padding: 10px; text-align: center;">Tr?ng th�i</th></tr></thead>
+            <thead><tr style="border-bottom: 1px solid var(--line); color: var(--text-secondary);"><th style="padding: 10px;">Người review</th><th style="padding: 10px; text-align: center;">Số lần</th><th style="padding: 10px; text-align: center;">AI TB</th><th style="padding: 10px; text-align: center;">Sau review TB</th><th style="padding: 10px; text-align: center;">Chỉnh TB</th><th style="padding: 10px; text-align: center;">Trạng thái</th></tr></thead>
             <tbody>
-              ${(admin.gradingReview?.reviewers ?? []).length === 0 ? '<tr><td colspan="6" style="padding: 20px; text-align: center; color: var(--muted);">Ch�a c� d? li?u �i?u ch?nh �i?m �? ph�n t�ch.</td></tr>' : (admin.gradingReview?.reviewers ?? []).map(item => `
-                <tr style="border-bottom: 1px solid var(--line-subtle);"><td style="padding: 10px; font-weight: 600; color: var(--text-primary);">${escapeHtml(item.lecturerName)}</td><td style="padding: 10px; text-align: center;">${item.reviewCount}</td><td style="padding: 10px; text-align: center;">${item.averageAiScore}%</td><td style="padding: 10px; text-align: center;">${item.averageFinalScore}%</td><td style="padding: 10px; text-align: center; font-weight: 600; color: ${item.averageAdjustment > 0 ? 'var(--pastel-green-text)' : item.averageAdjustment < 0 ? 'var(--accent-rose)' : 'var(--text-secondary)'};">${item.averageAdjustment > 0 ? '+' : ''}${item.averageAdjustment} �i?m</td><td style="padding: 10px; text-align: center;">${item.requiresReview ? '<span style="color: var(--accent-rose); font-weight: 700;">C?n r� so�t</span>' : item.hasSufficientData ? '<span style="color: var(--pastel-green-text);">Trong ng�?ng</span>' : '<span style="color: var(--text-secondary);">Ch�a �? d? li?u</span>'}</td></tr>`).join('')}
+              ${(admin.gradingReview?.reviewers ?? []).length === 0 ? '<tr><td colspan="6" style="padding: 20px; text-align: center; color: var(--muted);">Chưa có dữ liệu điều chỉnh điểm để phân tích.</td></tr>' : (admin.gradingReview?.reviewers ?? []).map(item => `
+                <tr style="border-bottom: 1px solid var(--line-subtle);"><td style="padding: 10px; font-weight: 600; color: var(--text-primary);">${escapeHtml(item.lecturerName)}</td><td style="padding: 10px; text-align: center;">${item.reviewCount}</td><td style="padding: 10px; text-align: center;">${item.averageAiScore}%</td><td style="padding: 10px; text-align: center;">${item.averageFinalScore}%</td><td style="padding: 10px; text-align: center; font-weight: 600; color: ${item.averageAdjustment > 0 ? 'var(--pastel-green-text)' : item.averageAdjustment < 0 ? 'var(--accent-rose)' : 'var(--text-secondary)'};">${item.averageAdjustment > 0 ? '+' : ''}${item.averageAdjustment} điểm</td><td style="padding: 10px; text-align: center;">${item.requiresReview ? '<span style="color: var(--accent-rose); font-weight: 700;">Cần rà soát</span>' : item.hasSufficientData ? '<span style="color: var(--pastel-green-text);">Trong ngưỡng</span>' : '<span style="color: var(--text-secondary);">Chưa đủ dữ liệu</span>'}</td></tr>`).join('')}
             </tbody>
           </table>
         </div>
-        <small style="display:block; margin-top: 10px; color: var(--muted);">Ng�?ng: t?i thi?u ${admin.gradingReview?.methodology.minimumReviews ?? 5} l?n review; c? khi ch�nh trung b?nh t? �${admin.gradingReview?.methodology.meanAdjustmentThreshold ?? 15} �i?m ho?c �t nh?t m?t n?a s? l?n l?ch t? ${admin.gradingReview?.methodology.highAdjustmentThreshold ?? 25} �i?m.</small>
+        <small style="display:block; margin-top: 10px; color: var(--muted);">Ngưỡng: tối thiểu ${admin.gradingReview?.methodology.minimumReviews ?? 5} lần review; cờ khi chỉnh trung bình từ ±${admin.gradingReview?.methodology.meanAdjustmentThreshold ?? 15} điểm hoặc ít nhất một nửa số lần lệch từ ${admin.gradingReview?.methodology.highAdjustmentThreshold ?? 25} điểm.</small>
       </div>
       <!-- Charts 2x2 Grid -->
       <div class="admin-charts-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">

@@ -3,8 +3,10 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using ReqSimulator.API.Data;
+using ReqSimulator.API.Models;
 using ReqSimulator.API.Services;
 using System.Security.Claims;
+using System.Text.Json;
 
 namespace ReqSimulator.API.Controllers;
 
@@ -27,6 +29,89 @@ public class AdminScenariosController : ControllerBase
         _publisher = publisher;
         _db = db;
         _logger = logger;
+    }
+
+    /// <summary>
+    /// Loads the active published scenario as an editable draft. Publishing the
+    /// returned draft creates a new immutable version; the original is retained
+    /// for existing sessions and audit history.
+    /// </summary>
+    [HttpGet("{scenarioId:guid}/draft")]
+    public async Task<IActionResult> GetEditableDraft(
+        Guid scenarioId,
+        CancellationToken cancellationToken)
+    {
+        var scenario = await _db.Scenarios.AsNoTracking()
+            .FirstOrDefaultAsync(item => item.Id == scenarioId && item.IsActive, cancellationToken);
+
+        if (scenario is null)
+            return NotFound(new { message = "Active scenario not found." });
+
+        if (!string.IsNullOrWhiteSpace(scenario.SerializedConfig))
+        {
+            try
+            {
+                var draft = JsonSerializer.Deserialize<ScenarioConfigJson>(scenario.SerializedConfig);
+                if (draft is not null && draft.Requirements.Count > 0)
+                    return Ok(draft with { ReviewNotes = null });
+            }
+            catch (JsonException exception)
+            {
+                _logger.LogWarning(exception,
+                    "Scenario {ScenarioId} has an invalid serialized draft; rebuilding it from persisted requirements.",
+                    scenarioId);
+            }
+        }
+
+        var requirements = await _db.HiddenRequirements.AsNoTracking()
+            .Where(item => item.ScenarioId == scenarioId)
+            .OrderBy(item => item.GateOrder)
+            .ThenBy(item => item.CreatedAt)
+            .Select(item => new
+            {
+                item.RequirementText,
+                item.GateOrder,
+                item.RevealCondition,
+                item.RevealDifficulty,
+                item.Actor,
+                item.Action,
+                item.Object,
+                item.Condition,
+                item.RequirementType,
+                item.Priority
+            })
+            .ToListAsync(cancellationToken);
+
+        if (requirements.Count == 0)
+            return Conflict(new { message = "The scenario has no requirements to edit." });
+
+        var sourceUrls = DeserializeSourceUrls(scenario.SourceUrlsData);
+        var fallbackRules = requirements.Select((item, index) => new ScenarioRequirementRuleJson(
+            $"R{index + 1}",
+            item.RequirementText,
+            item.GateOrder,
+            [],
+            ["OpenEnded"],
+            item.RevealCondition ?? "",
+            item.RevealDifficulty.ToString(),
+            [],
+            item.Actor,
+            item.Action,
+            item.Object,
+            item.Condition,
+            item.RequirementType,
+            item.Priority)).ToList();
+
+        return Ok(new ScenarioConfigJson(
+            scenario.ScenarioKey,
+            scenario.Title,
+            scenario.Description,
+            [],
+            new Dictionary<string, List<string>>(),
+            new Dictionary<string, List<int>>(),
+            1,
+            fallbackRules,
+            sourceUrls));
     }
 
     [HttpPost("publish")]
@@ -81,5 +166,18 @@ public class AdminScenariosController : ControllerBase
             })
             .ToListAsync(cancellationToken);
         return Ok(history);
+    }
+
+    private static List<string>? DeserializeSourceUrls(string? sourceUrlsData)
+    {
+        if (string.IsNullOrWhiteSpace(sourceUrlsData)) return null;
+        try
+        {
+            return JsonSerializer.Deserialize<List<string>>(sourceUrlsData);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
     }
 }

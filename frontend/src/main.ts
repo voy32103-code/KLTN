@@ -431,6 +431,9 @@ async function handleAction(action: string, options: { tab?: string; userId?: st
     case 'admin-publish-scenario':
       await publishAdminScenario()
       break
+    case 'admin-edit-published-scenario':
+      await openPublishedScenarioDraft()
+      break
     case 'admin-cancel-preview':
       if (state.adminState) {
         state.adminState.scenarioDraft = null
@@ -1227,6 +1230,27 @@ async function publishAdminScenario() {
       'success',
       `Đã publish "${result.title}" phiên bản ${result.version} với ${result.requirementsCount} yêu cầu.`
     )
+  })
+}
+
+async function openPublishedScenarioDraft() {
+  if (!state.adminState) return
+
+  const select = document.querySelector<HTMLSelectElement>('#admin-published-scenario-select')
+  const scenarioId = select?.value
+  if (!scenarioId) {
+    setNotice('error', 'Vui lòng chọn scenario đang hoạt động để chỉnh sửa.')
+    return
+  }
+
+  const scenarioTitle = select?.selectedOptions[0]?.textContent?.trim() ?? 'Scenario đang hoạt động'
+  await withBusy(async () => {
+    clearNotice()
+    const draft = await api.request<ScenarioDraft>(`/api/AdminScenarios/${scenarioId}/draft`)
+    if (!state.adminState) return
+    state.adminState.scenarioDraft = draft
+    state.adminState.scenarioDraftSource = `${scenarioTitle} — bản nháp từ phiên bản đang publish`
+    setNotice('success', 'Đã tải scenario thành bản nháp. Publish sẽ tạo phiên bản mới, không ghi đè lịch sử cũ.')
   })
 }
 

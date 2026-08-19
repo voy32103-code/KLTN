@@ -18,8 +18,22 @@ export async function installAdminApiMock(page, jobs = []) {
     if (path === '/api/Admin/stats/overview') return json({ totalSessions: 0, totalStudents: 0, totalScenarios: 0, averageCoverage: 0, completedSessions: 0, activeSessions: 0 })
     if (path === '/api/Admin/stats/coverage-distribution') return json([])
     if (path === '/api/Admin/stats/sessions-over-time') return json({ labels: [], counts: [] })
-    if (path === '/api/Admin/stats/by-scenario' || path === '/api/Admin/stats/top-students' || path === '/api/Admin/users') return json([])
+    if (path === '/api/Admin/stats/by-scenario') {
+      return json([{ scenarioId: 'scenario-1', scenarioTitle: 'Library Booking', sessionCount: 3, averageCoverage: 75, averageTurns: 6 }])
+    }
+    if (path === '/api/Admin/stats/top-students' || path === '/api/Admin/users') return json([])
     if (path === '/api/Admin/stats/match-type-breakdown') return json({ exact: 0, semantic: 0, partial: 0, missed: 0 })
+    if (path === '/api/Admin/stats/grading-review') {
+      return json({
+        methodology: {
+          minimumReviews: 5,
+          meanAdjustmentThreshold: 15,
+          highAdjustmentThreshold: 25,
+          disclaimer: 'Statistical review only.',
+        },
+        reviewers: [],
+      })
+    }
     if (path === '/api/Admin/stats/feedback-experiment') return json({ variants: [] })
     if (path === '/api/admin-ingestion/jobs' && request.method() === 'GET') return json(jobs)
     if (path === '/api/admin-ingestion/upload-intents' && request.method() === 'POST') {
@@ -28,6 +42,24 @@ export async function installAdminApiMock(page, jobs = []) {
     if (path === '/api/admin-ingestion/artifacts/artifact-upload-1/complete' && request.method() === 'POST') return json({ jobId: 'job-upload-1', status: 'Queued' }, 202)
     if (path === '/api/admin-ingestion/jobs/job-upload-1' && request.method() === 'GET') {
       return json({ jobId: 'job-upload-1', status: 'Queued', attempts: 0, sourceLabel: 'meeting.mp3', hasDraft: false })
+    }
+    if (path === '/api/AdminScenarios/scenario-1/draft' && request.method() === 'GET') {
+      return json({
+        scenario_key: 'library_booking',
+        scenario_title: 'Library Booking',
+        context: 'Students reserve study rooms.',
+        general_keywords: ['library', 'room'],
+        gate_keyword_groups: { '0': ['reserve'] },
+        question_type_gate_map: { OpenEnded: [0] },
+        max_new_reveals_per_turn: 1,
+        requirements: [{
+          id: 'LB1', text: 'Students can reserve an available room.', gate: 0,
+          keywords: ['reserve', 'room'], question_types: ['OpenEnded'],
+          reveal_condition: 'Ask about room reservations.', reveal_difficulty: 'Easy',
+          requires: [], actor: 'Student', action: 'reserve', object: 'study room',
+          condition: 'when available', type: 'FR', priority: 'high',
+        }],
+      })
     }
     return json({ message: `Unexpected mock request: ${request.method()} ${path}` }, 404)
   })

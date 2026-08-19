@@ -238,7 +238,7 @@ public class AdminController : ControllerBase
 
         return Ok(new
         {
-            methodology = new { minimumReviews, meanAdjustmentThreshold, highAdjustmentThreshold, disclaimer = "Ch? b�o th?ng k� d�ng �? m?i r� so�t; kh�ng x�c �?nh ho?c k?t lu?n gi?ng vi�n thi�n v?." },
+            methodology = new { minimumReviews, meanAdjustmentThreshold, highAdjustmentThreshold, disclaimer = "Chỉ báo thống kê dùng để mời rà soát; không xác định hoặc kết luận giảng viên thiên vị." },
             reviewers
         });
     }

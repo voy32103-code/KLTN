@@ -11,6 +11,7 @@ test('admin dashboard has no WCAG A/AA violations in the tested screen', async (
   // The dashboard initially renders a disabled loading state while its data is
   // requested. Audit the stable, usable screen rather than that transient state.
   await expect(page.locator('#admin-tab-overview')).toBeEnabled()
+  await expect(page.getByRole('heading', { name: 'Rà soát nhất quán điều chỉnh điểm' })).toBeVisible()
 
   const results = await new AxeBuilder({ page })
     .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
