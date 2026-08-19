@@ -68,6 +68,10 @@ export type EvaluationResult = {
   overriddenByLecturer?: string | null
   overriddenAt?: string | null
   reviewFinalizedAt?: string | null
+  lecturerFeedback?: {
+    comment: string
+    reviewedAt: string
+  } | null
   matchedCount: number
   partialCount: number
   missedCount: number

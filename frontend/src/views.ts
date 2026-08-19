@@ -380,6 +380,19 @@ function renderStudentHistory(state: AppState) {
         ${detail ? `
           <div class="review-detail-header"><div><p class="section-kicker">${escapeHtml(detail.session.scenario.domain ?? 'Nghiệp vụ')}</p><h2>${escapeHtml(detail.session.scenario.title)}</h2><p>Nhân vật phỏng vấn: <strong>${escapeHtml(formatPersonaText(detail.session.persona.name))}</strong></p></div><span class="view-pill">${detail.session.isActive ? 'Đang tiến hành' : 'Đã kết thúc'}</span></div>
           ${detail.evaluation ? `<div class="history-score-compare"><div><small>Điểm AI ban đầu</small><strong>${formatScore(detail.evaluation.coverageScore ?? null)}</strong></div><div class="history-score-arrow">→</div><div><small>Điểm sau review</small><strong>${typeof detail.evaluation.overriddenCoverageScore === 'number' ? formatScore(detail.evaluation.overriddenCoverageScore) : 'Chưa review'}</strong></div></div>` : renderEmpty('Phiên chưa có điểm.', 'Kết thúc phiên để hệ thống đánh giá.')}
+          ${detail.evaluation?.lecturerFeedback?.comment ? `
+            <section class="lecturer-feedback-card" aria-labelledby="lecturer-feedback-title">
+              <div class="lecturer-feedback-heading">
+                <div>
+                  <p class="section-kicker">Review ẩn danh</p>
+                  <h3 id="lecturer-feedback-title">Phản hồi của giảng viên</h3>
+                </div>
+                <span>${escapeHtml(formatTime(detail.evaluation.lecturerFeedback.reviewedAt))}</span>
+              </div>
+              <p>${escapeHtml(detail.evaluation.lecturerFeedback.comment)}</p>
+              <small>Phản hồi được hiển thị không kèm danh tính người review.</small>
+            </section>
+          ` : ''}
           <section class="review-block"><div class="panel-heading"><h3>Transcript</h3><span>${detail.messages.length} tin nhắn</span></div><div class="review-transcript">${detail.messages.map((message, index) => renderMessage(message, index)).join('')}</div></section>
           ${detail.evaluation ? renderEvaluation(detail.evaluation) : ''}
         ` : renderEmpty('Chọn một phiên để xem lại.', 'Transcript và điểm số sẽ hiển thị tại đây.')}

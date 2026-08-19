@@ -664,6 +664,52 @@ th, td { border: 1px solid #151515 !important; }
   border: 0;
 }
 
+.lecturer-feedback-card {
+  display: grid;
+  gap: 12px;
+  margin: 16px 0;
+  padding: 18px;
+  border: 3px solid #151515;
+  background: #c8f7d4;
+  box-shadow: 4px 4px 0 #151515;
+}
+
+.lecturer-feedback-heading {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.lecturer-feedback-heading .section-kicker {
+  margin: 0 0 4px;
+}
+
+.lecturer-feedback-heading h3,
+.lecturer-feedback-card p {
+  margin: 0;
+  color: #151515;
+}
+
+.lecturer-feedback-card p {
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.lecturer-feedback-heading > span {
+  padding: 4px 7px;
+  border: 2px solid #151515;
+  background: #ffffff;
+  color: #151515;
+  font: 700 11px var(--font-mono);
+  white-space: nowrap;
+}
+
+.lecturer-feedback-card > small {
+  color: #24553b;
+  font-size: 12px;
+}
+
 @media (max-width: 760px) {
   .admin-dashboard > .admin-header {
     align-items: stretch !important;

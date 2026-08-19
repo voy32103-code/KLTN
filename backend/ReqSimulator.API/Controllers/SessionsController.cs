@@ -437,12 +437,25 @@ public class SessionsController : ControllerBase
         if (evaluation is not null)
         {
             var extractedCount = await _db.ExtractedRequirements.AsNoTracking().CountAsync(r => r.SessionId == sessionId);
+            var lecturerFeedback = await _db.LecturerOverrides
+                .AsNoTracking()
+                .Where(item => item.EvaluationId == evaluation.Id && !string.IsNullOrWhiteSpace(item.Comment))
+                .OrderByDescending(item => item.OverriddenAt)
+                .Select(item => new
+                {
+                    Comment = item.Comment!,
+                    ReviewedAt = item.OverriddenAt
+                })
+                .FirstOrDefaultAsync();
             // Do not expose hidden requirement text/match details to students.
+            // Lecturer identity is deliberately omitted to preserve anonymous review.
             evaluationResponse = ToEvaluationResponse(
                 evaluation,
                 DeserializeFeedback(evaluation.Feedback),
                 extractedCount,
-                matches: []);
+                matches: [],
+                lecturerFeedback: lecturerFeedback,
+                includeReviewerIdentity: false);
         }
 
         return Ok(new { Session = session, Messages = messages, Evaluation = evaluationResponse });
@@ -1442,13 +1455,16 @@ public class SessionsController : ControllerBase
         int extractedCount,
         IEnumerable<RequirementMatchReport>? matches = null,
         ScoringPolicyData? scoringPolicy = null,
-        int? extraExtractedCount = null) => new
+        int? extraExtractedCount = null,
+        object? lecturerFeedback = null,
+        bool includeReviewerIdentity = true) => new
         {
             evaluation.CoverageScore,
             evaluation.OverriddenCoverageScore,
-            OverriddenByLecturer = evaluation.OverriddenByLecturer?.Name,
+            OverriddenByLecturer = includeReviewerIdentity ? evaluation.OverriddenByLecturer?.Name : null,
             evaluation.OverriddenAt,
             evaluation.ReviewFinalizedAt,
+            LecturerFeedback = lecturerFeedback,
             AiProvenance = DeserializeAiProvenance(evaluation.AiProvenance),
             evaluation.MatchedCount,
             evaluation.PartialCount,
