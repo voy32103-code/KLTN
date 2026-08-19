@@ -28,11 +28,19 @@ const PERSONA_TEXT_TRANSLATIONS: ReadonlyArray<readonly [string, string]> = [
  * Keeps stored identifiers and custom admin wording unchanged while presenting
  * known system persona metadata in Vietnamese to students and lecturers.
  */
-export function formatPersonaText(value?: string | null): string {
-  if (!value) return ''
+export function formatPersonaText(value?: unknown): string {
+  // ASP.NET can serialize enum values numerically when an older deployment or
+  // cached API response is involved. Normalize at this display boundary so a
+  // malformed value can never break rendering.
+  const raw = typeof value === 'number'
+    ? ({ 0: 'Easy', 1: 'Medium', 2: 'Hard' }[value] ?? String(value))
+    : typeof value === 'string'
+      ? value
+      : ''
+  if (!raw) return ''
 
   return PERSONA_TEXT_TRANSLATIONS.reduce(
     (formatted, [source, translated]) => formatted.split(source).join(translated),
-    value,
+    raw,
   )
 }

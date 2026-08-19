@@ -10,5 +10,7 @@ test('persona metadata is presented in clear Vietnamese', () => {
   );
   assert.equal(formatPersonaText('concise'), 'Ngắn gọn');
   assert.equal(formatPersonaText('high'), 'Cao');
+  assert.equal(formatPersonaText(2), 'Khó');
+  assert.equal(formatPersonaText(null), '');
   assert.equal(formatPersonaText('Custom persona'), 'Custom persona');
 });
