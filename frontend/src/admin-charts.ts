@@ -17,7 +17,7 @@ const chartColors = {
   grid: '#d8d8d8',
   violet: '#5546FF',
   mint: '#9BE8B8',
-  yellow: '#FFDE59',
+  yellow: '#52B9AD',
   coral: '#FF8B73',
   rose: '#FF9CA7',
 }

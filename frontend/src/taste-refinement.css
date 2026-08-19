@@ -40,8 +40,8 @@
   --pastel-blue-text: #166267;
   --pastel-green-bg: #dcefe7;
   --pastel-green-text: #116555;
-  --pastel-yellow-bg: #f8ecc9;
-  --pastel-yellow-text: #7d4b13;
+  --pastel-yellow-bg: #d9f2ed;
+  --pastel-yellow-text: #0b5e56;
 
   --shadow-subtle: 3px 3px 0 #1d211f;
   --shadow-glow: 4px 4px 0 #1d211f;
@@ -311,6 +311,33 @@ input:focus, textarea:focus, select:focus {
 .history-score-compare,
 .lecturer-feedback-card {
   border-color: var(--line) !important;
+}
+
+/* Retire the former yellow Neo-Brutalist accent everywhere it is still used. */
+thead,
+.modal-icon,
+.feedback-survey-scale,
+.rounded-full-pill,
+.scenario-draft-count,
+.scenario-draft-index,
+.scenario-item.active,
+.persona-card.active,
+.review-session-item.active {
+  background: var(--accent) !important;
+  color: #ffffff !important;
+}
+
+.scenario-item:hover:not(:disabled),
+.persona-card:hover:not(:disabled),
+.review-session-item:hover:not(:disabled),
+.ingestion-job-item:hover,
+.artifact-item:hover,
+.message.thinking {
+  background: #d9f2ed !important;
+}
+
+.modal-card {
+  box-shadow: 6px 6px 0 var(--accent), 9px 9px 0 var(--line) !important;
 }
 
 @media (max-width: 900px) {
