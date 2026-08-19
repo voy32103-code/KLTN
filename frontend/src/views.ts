@@ -976,12 +976,12 @@ function renderRequirementReport(matches: RequirementMatchReport[], canOverride 
         <span>${matches.length} mục</span>
       </div>
       <form id="override-form" class="report-table">
-        ${matches.map((match) => {
+        ${matches.map((match, index) => {
           const activeType = (match.overriddenMatchType || match.matchType).toLowerCase()
           return `
             <article class="requirement-row ${escapeAttribute(activeType)}" data-match-id="${escapeAttribute(match.matchId)}">
               <div class="requirement-row-header" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-                <strong style="font-family: var(--font-mono); font-size: 12px;">${escapeHtml(match.hiddenId)}</strong>
+                <span class="requirement-reference">Yêu cầu ${index + 1}</span>
                 <div style="display: flex; align-items: center; gap: 8px;">
                   ${match.overriddenMatchType ? '<span class="override-badge">Đã chỉnh</span>' : ''}
                   ${renderMatchBadge(match.overriddenMatchType || match.matchType, match.score)}
@@ -1000,7 +1000,7 @@ function renderRequirementReport(matches: RequirementMatchReport[], canOverride 
               </div>
               <div class="evidence-line">
                 <span>Lý do đối soát</span>
-                <small>${escapeHtml(match.reason)}</small>
+                <small>${escapeHtml(localizeMatchReason(match.reason))}</small>
               </div>
             </article>
           `
@@ -1066,6 +1066,12 @@ const EXTRACTED_REQUIREMENT_VI: Record<string, string> = {
   'system must ghi lai nhat ky thay doi trang thai loi when moi thay doi trang thai.': 'Hệ thống phải ghi lại nhật ký thay đổi trạng thái lỗi sau mỗi lần cập nhật.',
   'system must gui thong bao when doi ngu phat trien cap nhat trang thai loi la da sua xong.': 'Hệ thống phải gửi thông báo khi đội ngũ phát triển cập nhật trạng thái lỗi là đã sửa xong.',
   'tester must tao phieu ghi nhan loi when phat hien loi.': 'Người kiểm thử phải tạo phiếu ghi nhận lỗi khi phát hiện lỗi.',
+  'tester must attach environment configuration when creating defect report.': 'Người kiểm thử phải đính kèm cấu hình môi trường khi tạo phiếu lỗi.',
+  'system must reject defect report when missing required information.': 'Hệ thống phải từ chối lưu phiếu lỗi khi thiếu thông tin bắt buộc.',
+  'system must escalate critical production defect when within 30 minutes.': 'Hệ thống phải thực hiện escalation cho lỗi production nghiêm trọng trong vòng 30 phút.',
+  'tester must verify defect fix when status is resolved.': 'Người kiểm thử phải xác nhận lỗi đã được sửa khi trạng thái là Đã xử lý.',
+  'tester must create defect report when defect detected.': 'Người kiểm thử phải tạo phiếu lỗi khi phát hiện lỗi.',
+  'system must assign defect report when based on module responsibility.': 'Hệ thống phải phân công phiếu lỗi theo trách nhiệm của từng module.',
 }
 
 function localizeExtractedRequirement(text: string) {
@@ -1076,6 +1082,7 @@ function localizeExtractedRequirement(text: string) {
   const normalized = source
     .replace(/\bsystem must\b/gi, 'Hệ thống phải')
     .replace(/\btester must\b/gi, 'Người kiểm thử phải')
+    .replace(/\bdeveloper must\b/gi, 'Lập trình viên phải')
     .replace(/\buser must\b/gi, 'Người dùng phải')
     .replace(/\bwhen khi\b/gi, 'khi')
     .replace(/\bwhen\b/gi, 'khi')
@@ -1086,7 +1093,28 @@ function localizeExtractedRequirement(text: string) {
     .replace(/\bchuyen trang thai\b/gi, 'chuyển trạng thái')
     .replace(/\bghi lai nhat ky\b/gi, 'ghi lại nhật ký')
     .replace(/\bgui thong bao\b/gi, 'gửi thông báo')
+    .replace(/\battach\b/gi, 'đính kèm')
+    .replace(/\benvironment configuration\b/gi, 'cấu hình môi trường')
+    .replace(/\bcreating\b/gi, 'tạo')
+    .replace(/\bdefect report\b/gi, 'phiếu lỗi')
+    .replace(/\bmissing required information\b/gi, 'thiếu thông tin bắt buộc')
+    .replace(/\breject\b/gi, 'từ chối lưu')
+    .replace(/\bcritical production defect\b/gi, 'lỗi production nghiêm trọng')
+    .replace(/\bescalate\b/gi, 'escalation')
+    .replace(/\bwithin 30 minutes\b/gi, 'trong vòng 30 phút')
+    .replace(/\bverify defect fix\b/gi, 'xác nhận lỗi đã được sửa')
+    .replace(/\bstatus is resolved\b/gi, 'trạng thái là Đã xử lý')
+    .replace(/\bdefect detected\b/gi, 'phát hiện lỗi')
+    .replace(/\bassign\b/gi, 'phân công')
+    .replace(/\bbased on module responsibility\b/gi, 'theo trách nhiệm của từng module')
   return normalized.replace(/^./, character => character.toUpperCase())
+}
+
+function localizeMatchReason(reason: string) {
+  const aaoc = /^Khớp AAOC đạt (\d+%) \(actor=(\d+%), action=(\d+%), object=(\d+%), condition=(\d+%)\);\s*(.*)$/i.exec(reason.trim())
+  if (!aaoc) return reason
+  return `Đối soát theo cấu trúc đạt ${aaoc[1]} (tác nhân ${aaoc[2]}, hành động ${aaoc[3]}, đối tượng ${aaoc[4]}, điều kiện ${aaoc[5]}). ${aaoc[6]}`
+    .replace(/\bAction\/Object\b/gi, 'hành động và đối tượng')
 }
 
 function getExtractedRequirementDisplayText(requirement: ReviewExtractedRequirement) {

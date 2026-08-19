@@ -561,6 +561,17 @@ th, td { border: 1px solid #151515 !important; }
   justify-self: start;
 }
 
+.requirement-reference {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 3px 8px;
+  border: 2px solid #151515;
+  background: #ffffff;
+  color: #151515;
+  font: 800 12px var(--font-mono);
+}
+
 @media (max-width: 760px) {
   .feedback-survey-heading {
     align-items: start;
