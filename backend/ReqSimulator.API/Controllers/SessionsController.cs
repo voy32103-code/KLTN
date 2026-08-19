@@ -884,15 +884,6 @@ public class SessionsController : ControllerBase
             ScenarioConfig: scenarioConfig
         ));
 
-        if (aiResponse.IsFallback)
-        {
-            return StatusCode(StatusCodes.Status503ServiceUnavailable, new
-            {
-                message = aiResponse.StakeholderReply,
-                isFallback = true
-            });
-        }
-
         // 3. Mở transaction cục bộ ngắn và khóa dòng FOR UPDATE để lưu kết quả nhanh
         await using var transaction = await _db.Database.BeginTransactionAsync();
 
@@ -959,6 +950,7 @@ public class SessionsController : ControllerBase
             questionType = aiResponse.DetectedQuestionType,
             topic = aiResponse.DetectedTopic,
             questionQuality = aiResponse.QuestionQuality,
+            isFallback = aiResponse.IsFallback,
             // Revealed requirement texts are internal ground truth. Persist them
             // server-side, but never expose them in the student's chat response.
             stateUpdate = aiResponse.StateUpdate is null

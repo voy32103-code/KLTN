@@ -709,6 +709,7 @@ async function sendMessage(form: FormData) {
         questionType?: string | null
         topic?: string | null
         questionQuality?: ChatMessage['questionQuality']
+        isFallback?: boolean
       }>(
         `/api/Sessions/${state.session?.id}/messages`,
         {
@@ -732,7 +733,11 @@ async function sendMessage(form: FormData) {
           timestamp: new Date().toISOString(),
         },
       ]
-      clearNotice()
+      if (response.isFallback) {
+        setNotice('info', 'Đối tác AI đang tạm dùng phản hồi dự phòng vì dịch vụ mô hình bận hoặc hết quota. Bạn vẫn có thể tiếp tục phiên và thử lại sau.')
+      } else {
+        clearNotice()
+      }
     } catch (error) {
       state.messages = previousMessages
       throw error

@@ -15,7 +15,7 @@ var tests = new (string Name, Func<Task> Run)[]
     ("schema_bootstrap_never_deletes_duplicate_evaluations", TestSchemaBootstrapIsNonDestructive),
     ("extract_request_serializes_scenario_glossary", TestExtractRequestSerializesGlossaryAsync),
     ("pipeline_enhancement_migration_is_versioned_and_non_destructive", TestPipelineMigrationIsVersioned),
-    ("published_scenario_catalog_contains_10_scenarios_and_100_requirements", TestPublishedScenarioCatalog),
+    ("published_scenario_catalog_contains_13_scenarios_and_118_requirements", TestPublishedScenarioCatalog),
     ("scenario_localization_catalog_covers_vi_and_en", TestScenarioLocalizationCatalog),
     ("ai_model_catalog_accepts_verified_gemini_fallback_models", TestGeminiFallbackModelCatalog),
 };
@@ -126,14 +126,14 @@ static Task TestPublishedScenarioCatalog()
         ?? throw new InvalidOperationException("Could not resolve API assembly directory.");
     var catalogDirectory = Path.Combine(assemblyDirectory, "Data", "ScenarioCatalog");
     var files = Directory.GetFiles(catalogDirectory, "*.json").OrderBy(path => path).ToArray();
-    Assert(files.Length == 10, $"published catalog must have 10 scenarios, found {files.Length}");
+    Assert(files.Length == 13, $"published catalog must have 13 scenarios, found {files.Length}");
     var requirementCount = files.Sum(path =>
     {
         using var document = JsonDocument.Parse(File.ReadAllText(path));
         return document.RootElement.GetProperty("requirements").GetArrayLength();
     });
-    Assert(requirementCount == 100,
-        $"published catalog must have 100 requirements, found {requirementCount}");
+    Assert(requirementCount == 118,
+        $"published catalog must have 118 requirements, found {requirementCount}");
     return Task.CompletedTask;
 }
 
