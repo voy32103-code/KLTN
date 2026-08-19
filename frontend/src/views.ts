@@ -402,10 +402,17 @@ function renderChat(state: AppState) {
         <span class="font-serif">${escapeHtml(persona?.name ?? 'Đối tác')}</span>
         <small>Đang suy nghĩ...</small>
       </div>
-      <div class="thinking-indicator">
-        <span class="dot"></span>
-        <span class="dot"></span>
-        <span class="dot"></span>
+      <div class="thinking-indicator" aria-label="Reqy đang phân tích câu hỏi">
+        <img class="thinking-pet" src="/reqy-thinking-v1.png" alt="" aria-hidden="true" />
+        <div class="thinking-copy">
+          <strong>Reqy đang phân tích</strong>
+          <span>Đối tác sẽ phản hồi trong giây lát</span>
+        </div>
+        <div class="thinking-dots" aria-hidden="true">
+          <span class="dot"></span>
+          <span class="dot"></span>
+          <span class="dot"></span>
+        </div>
       </div>
     </article>
   ` : ''

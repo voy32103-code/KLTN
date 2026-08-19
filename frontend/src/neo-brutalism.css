@@ -352,6 +352,65 @@ select:focus,
 }
 .message.thinking { background: #fff8b2 !important; }
 
+.thinking-indicator {
+  display: flex !important;
+  align-items: center;
+  gap: 10px !important;
+  width: min(100%, 360px) !important;
+  margin-top: 8px !important;
+  padding: 8px 10px !important;
+  border: 2px solid #151515;
+  border-radius: 0 !important;
+  background: #ffffff !important;
+  box-shadow: 3px 3px 0 #151515;
+}
+
+.thinking-pet {
+  width: 54px;
+  height: 54px;
+  flex: 0 0 auto;
+  object-fit: contain;
+  animation: reqy-think 1.6s ease-in-out infinite;
+}
+
+.thinking-copy {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.thinking-copy strong {
+  color: #151515;
+  font-size: 13px;
+}
+
+.thinking-copy span {
+  color: #4b4b4b;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.thinking-dots {
+  display: inline-flex;
+  align-items: center;
+  align-self: end;
+  gap: 3px;
+  padding-bottom: 4px;
+}
+
+.thinking-dots .dot {
+  width: 6px;
+  height: 6px;
+  background: #5546ff;
+  border: 1px solid #151515;
+  border-radius: 50%;
+}
+
+@keyframes reqy-think {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-3px) rotate(-2deg); }
+}
+
 .composer {
   border: 3px solid #151515 !important;
   background: #ffde59 !important;
