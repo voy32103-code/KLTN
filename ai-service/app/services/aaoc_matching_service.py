@@ -98,8 +98,21 @@ def assign_weighted_one_to_one(
     return assignments
 
 
-def classify_aaoc(score: float) -> str:
-    return 'exact' if score >= MATCH_THRESHOLD else 'partial' if score >= PARTIAL_THRESHOLD else 'missed'
+def classify_aaoc(score: float, components: dict[str, float] | None = None) -> str:
+    """Classify AAOC conservatively.
+
+    Action and object are deliberately the strongest signals, but a requirement
+    with a different actor must not be shown as a full match merely because its
+    weighted total reaches 80%.  It remains useful evidence, so it is a partial
+    match instead.
+    """
+    core_components_match = bool(components) and all(
+        components.get(name, 0.0) == 1.0
+        for name in ('actor', 'action', 'object')
+    )
+    if score >= MATCH_THRESHOLD and core_components_match:
+        return 'exact'
+    return 'partial' if score >= PARTIAL_THRESHOLD else 'missed'
 
 
 def explain_aaoc(components: dict[str, float], score: float, match_type: str) -> str:

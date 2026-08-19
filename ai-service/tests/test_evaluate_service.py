@@ -43,6 +43,45 @@ class EvaluateServiceTests(unittest.TestCase):
         self.assertEqual(result.extraExtractedCount, 1)
         self.assertEqual(result.feedback.extractionsToReview, ["unrelated dashboard"])
 
+    def test_aaoc_uses_semantic_fallback_for_unmatched_wording(self):
+        request = EvaluateRequest(
+            extracted=[
+                ExtractedReq(
+                    text="system sends automatic defect status notifications",
+                    confidence=0.95,
+                    actor="System",
+                    action="send",
+                    object="status notification",
+                    type="FR",
+                ),
+            ],
+            hiddenRequirements=[
+                HiddenReq(
+                    id="H1",
+                    text="Assigned developers receive notifications when a defect status changes.",
+                    category="Functional",
+                    actor="System",
+                    action="notify",
+                    object="defect stakeholders",
+                    type="FR",
+                ),
+            ],
+        )
+
+        with patch(
+            "app.services.evaluate_service.compute_similarity_matrix",
+            AsyncMock(return_value=np.array([[0.81]])),
+        ), patch(
+            "app.services.evaluate_service.generate_design_models",
+            new=AsyncMock(return_value=None),
+        ):
+            result = asyncio.run(evaluate(request))
+
+        self.assertEqual(result.matches[0].matchType, "semantic")
+        self.assertEqual(result.matches[0].extractedText, request.extracted[0].text)
+        self.assertEqual(result.extraExtractedCount, 0)
+        self.assertEqual(result.scoringPolicy.matchingMethod, "aaoc_weighted_hybrid_one_to_one")
+
     def test_design_generation_is_deterministic_and_excludes_non_functional_requirements(self):
         requirement = ExtractedReq(
             text="Users view stock",

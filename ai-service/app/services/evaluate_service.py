@@ -138,34 +138,90 @@ async def evaluate(req: EvaluateRequest):
                     reason=explain_match(hr.text, None, 0.0, "missed"),
                 ))
         elif use_aaoc:
+            # Start with high-confidence structured AAOC matches.  If the
+            # extractor uses a different but valid wording, fall back to
+            # semantic matching for the remaining one-to-one pairs instead of
+            # declaring them missed solely because Action/Object are not
+            # identical after normalization.
             assignments = assign_weighted_one_to_one(
                 req.extracted,
                 req.hiddenRequirements,
                 req.normalizationGlossary,
             )
+            assigned_extracted_indexes = {
+                assignment.extracted_index for assignment in assignments.values()
+            }
+            unassigned_hidden_indexes = [
+                index for index in range(len(req.hiddenRequirements)) if index not in assignments
+            ]
+            unassigned_extracted_indexes = [
+                index for index in range(len(req.extracted)) if index not in assigned_extracted_indexes
+            ]
+            semantic_assignments: dict[int, int] = {}
+            semantic_matrix = None
+            if unassigned_hidden_indexes and unassigned_extracted_indexes:
+                full_matrix = await compute_similarity_matrix(extracted_texts, hidden_texts)
+                semantic_matrix = full_matrix[np.ix_(unassigned_extracted_indexes, unassigned_hidden_indexes)]
+                reduced_assignments = assign_one_to_one(
+                    semantic_matrix,
+                    lambda extracted_index, hidden_index, score: classify_match(
+                        score,
+                        req.hiddenRequirements[unassigned_hidden_indexes[hidden_index]].text,
+                        extracted_texts[unassigned_extracted_indexes[extracted_index]],
+                    ) != "missed",
+                )
+                semantic_assignments = {
+                    unassigned_hidden_indexes[hidden_index]: unassigned_extracted_indexes[extracted_index]
+                    for hidden_index, extracted_index in reduced_assignments.items()
+                }
+                assigned_extracted_indexes.update(semantic_assignments.values())
             for hidden_index, hidden in enumerate(req.hiddenRequirements):
                 assignment = assignments.get(hidden_index)
-                if assignment is None:
+                if assignment is not None:
+                    extracted = req.extracted[assignment.extracted_index]
+                    match_type = classify_aaoc(assignment.score, assignment.component_scores)
+                    matches.append(ReqMatch(
+                        hiddenId=hidden.id,
+                        hiddenText=hidden.text,
+                        extractedText=extracted.text,
+                        score=assignment.score,
+                        matchType=match_type,
+                        reason=explain_aaoc(assignment.component_scores, assignment.score, match_type),
+                        componentScores=assignment.component_scores,
+                    ))
+                    continue
+
+                semantic_index = semantic_assignments.get(hidden_index)
+                if semantic_index is None:
+                    nearest_score = 0.0
+                    if semantic_matrix is not None:
+                        local_hidden_index = unassigned_hidden_indexes.index(hidden_index)
+                        nearest_score = float(np.max(semantic_matrix[:, local_hidden_index]))
                     matches.append(ReqMatch(
                         hiddenId=hidden.id,
                         hiddenText=hidden.text,
                         extractedText=None,
-                        score=0.0,
+                        score=round(nearest_score, 3),
                         matchType="missed",
-                        reason="Không có ứng viên cùng Type, Action và Object đạt ngưỡng Partial 60%.",
+                        reason=explain_match(hidden.text, None, nearest_score, "missed"),
                     ))
                     continue
-                extracted = req.extracted[assignment.extracted_index]
-                match_type = classify_aaoc(assignment.score)
-                assigned_extracted_indexes.add(assignment.extracted_index)
+
+                extracted = req.extracted[semantic_index]
+                semantic_score = float(
+                    semantic_matrix[
+                        unassigned_extracted_indexes.index(semantic_index),
+                        unassigned_hidden_indexes.index(hidden_index),
+                    ]
+                )
+                match_type = classify_match(semantic_score, hidden.text, extracted.text)
                 matches.append(ReqMatch(
                     hiddenId=hidden.id,
                     hiddenText=hidden.text,
                     extractedText=extracted.text,
-                    score=assignment.score,
+                    score=round(semantic_score, 3),
                     matchType=match_type,
-                    reason=explain_aaoc(assignment.component_scores, assignment.score, match_type),
-                    componentScores=assignment.component_scores,
+                    reason=explain_match(hidden.text, extracted.text, semantic_score, match_type),
                 ))
         else:
             sim_matrix = await compute_similarity_matrix(extracted_texts, hidden_texts)
@@ -252,7 +308,7 @@ async def evaluate(req: EvaluateRequest):
             partialThreshold=float(meta["partialThreshold"]),
             rubricPartialMatcher=bool(meta["rubricPartialMatcher"]),
             embeddingModel=str(meta["embeddingModel"]),
-            matchingMethod="aaoc_weighted_one_to_one" if use_aaoc else "semantic_similarity_one_to_one",
+            matchingMethod="aaoc_weighted_hybrid_one_to_one" if use_aaoc else "semantic_similarity_one_to_one",
         )
 
         return EvaluateResponse(

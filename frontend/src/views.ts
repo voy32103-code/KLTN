@@ -730,7 +730,7 @@ function renderExtractedRequirements(requirements: ReviewExtractedRequirement[])
     <div class="artifact-list">
       ${requirements.map((requirement) => `
         <article>
-          <strong>${escapeHtml(localizeExtractedRequirement(requirement.requirementText))}</strong>
+          <strong>${escapeHtml(getExtractedRequirementDisplayText(requirement))}</strong>
           <small>Độ tin cậy: ${formatNullablePercent(requirement.confidenceScore)}</small>
         </article>
       `).join('')}
@@ -1079,6 +1079,20 @@ function localizeExtractedRequirement(text: string) {
     .replace(/\bghi lai nhat ky\b/gi, 'ghi lại nhật ký')
     .replace(/\bgui thong bao\b/gi, 'gửi thông báo')
   return normalized.replace(/^./, character => character.toUpperCase())
+}
+
+function getExtractedRequirementDisplayText(requirement: ReviewExtractedRequirement) {
+  const raw = requirement.rawRequirementData
+  if (typeof raw === 'string' && raw.trim()) {
+    try {
+      const parsed = JSON.parse(raw) as Record<string, unknown>
+      const rawText = parsed.rawText ?? parsed.RawText ?? parsed.raw_text
+      if (typeof rawText === 'string' && rawText.trim()) return rawText.trim()
+    } catch {
+      // Older records may not contain valid structured JSON; use the canonical text below.
+    }
+  }
+  return localizeExtractedRequirement(requirement.requirementText)
 }
 
 function localizeRequirementCategory(category: string) {

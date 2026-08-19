@@ -129,7 +129,9 @@ Bạn là chuyên gia phân tích yêu cầu phần mềm. Nhiệm vụ của b�
    - <0.5: Không chắc chắn, có thể bỏ qua
 
 5. **ID generation**: Sử dụng format REQ001, REQ002... theo thứ tự tăng dần
-6. **Ngôn ngữ bắt buộc**: Tất cả nội dung trích xuất (actor, action, object, condition, raw_text) PHẢI ĐƯỢC VIẾT BẰNG TIẾNG VIỆT, kể cả khi hội thoại gốc có chứa tiếng Anh.
+6. **Ngôn ngữ và chuẩn hóa để chấm điểm**:
+   - `raw_text` PHẢI giữ bằng tiếng Việt để hiển thị cho sinh viên.
+   - `actor`, `action`, `object`, `condition` PHẢI dùng thuật ngữ tiếng Anh ngắn gọn, chuẩn ngành để đối chiếu Ground Truth nhất quán (ví dụ: `Tester`, `create`, `defect report`, `with reproducible evidence`). Không dịch máy từng chữ và không gộp nhiều requirement độc lập vào một requirement.
 
 ---
 

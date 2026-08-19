@@ -4,6 +4,12 @@
   "general_keywords": ["bug", "defect", "test", "issue", "lỗi"],
   "gate_keyword_groups": {"1":["reproduce","môi trường","bước tái hiện","expected","actual"],"2":["severity","priority","log","evidence"],"3":["assign","SLA","retest","reopen"],"4":["audit","permission","notification","performance"]},
   "question_type_gate_map": {"Clarifying":[1,2],"Probing":[2,3],"ExceptionOriented":[3,4]}, "max_new_reveals_per_turn": 1,
+  "normalization_glossary": {
+    "actor": {"kiểm thử viên":"tester","tester":"tester","hệ thống":"system","lập trình viên":"developer","developer":"developer","trưởng nhóm qa":"qa lead"},
+    "action": {"tạo":"create","ghi nhận":"record","lưu":"record","gửi thông báo":"notify","gửi thông báo tự động":"notify","kiểm thử lại":"verify","kiểm thử lại và kiểm thử hồi quy":"verify","lưu vết":"audit","leo thang":"escalate"},
+    "object": {"thông tin phiếu lỗi":"defect report","môi trường kiểm thử":"test environment","thông tin thay đổi trạng thái lỗi":"defect stakeholders","bằng chứng kiểm thử lại":"resolved defect","lịch sử thay đổi trạng thái người thực hiện và thời điểm":"defect changes","dữ liệu lịch sử":"defect changes","lỗi production nghiêm trọng":"critical production defect"},
+    "condition": {"khi trạng thái lỗi thay đổi":"on assignment or status change","sau khi developer cập nhật trạng thái đã sửa xong":"before closure"}
+  },
   "requirements": [
     {"id":"QA1","text":"Tester must create a defect with title, steps to reproduce, expected result, actual result and affected build.","gate":0,"keywords":["create","reproduce","expected","actual","build"],"question_types":["OpenEnded","Clarifying"],"reveal_condition":"Ask what information is required when reporting a defect.","reveal_difficulty":"Easy","actor":"Tester","action":"create","object":"defect report","condition":"with reproducible evidence","type":"FUNCTIONAL","priority":"high"},
     {"id":"QA2","text":"The system must record browser, device, operating system and test environment for each defect.","gate":1,"keywords":["browser","device","operating system","environment"],"question_types":["Clarifying","Probing"],"reveal_condition":"Ask how the team reproduces a reported defect.","reveal_difficulty":"Medium","actor":"System","action":"record","object":"test environment","condition":"for every defect","type":"NFR","priority":"high"},

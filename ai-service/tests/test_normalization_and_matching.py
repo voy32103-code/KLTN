@@ -6,7 +6,7 @@ import numpy as np
 from app.models.schemas import StructuredRequirement
 from app.services.extract_service import _parse_structured_extraction_json
 from app.services.matching_service import assign_one_to_one
-from app.services.aaoc_matching_service import score_pair
+from app.services.aaoc_matching_service import classify_aaoc, score_pair
 from app.services.normalization_service import normalize_and_deduplicate
 
 
@@ -86,6 +86,22 @@ class NormalizationTests(unittest.TestCase):
         score = score_pair(extracted, hidden, glossary)
         self.assertIsNotNone(score)
         self.assertEqual(score.score, 1.0)
+
+    def test_aaoc_with_different_actor_is_partial_not_exact(self):
+        extracted = type("Requirement", (), {
+            "type": "FR", "actor": "System", "action": "Create",
+            "object": "Defect report", "condition": None,
+        })()
+        hidden = type("Requirement", (), {
+            "type": "FR", "actor": "Tester", "action": "Create",
+            "object": "Defect report", "condition": None,
+        })()
+
+        score = score_pair(extracted, hidden)
+
+        self.assertIsNotNone(score)
+        self.assertEqual(score.score, 0.8)
+        self.assertEqual(classify_aaoc(score.score, score.component_scores), "partial")
 
 
 class OneToOneMatchingTests(unittest.TestCase):
