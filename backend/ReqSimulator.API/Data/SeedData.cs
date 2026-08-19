@@ -46,11 +46,12 @@ public static class SeedData
             new[] { scenario.Id, HospitalScenario.Id, InventoryScenario.Id }
                 .Concat(additionalScenarioIds)
                 .ToArray());
+        await ScenarioCatalogSeeder.RetireLegacyScenariosAsync(db);
         await db.SaveChangesAsync();
 
         logger.LogInformation(
-            "Seeded {ScenarioCount} catalog scenarios with 100 candidate ground-truth requirements.",
-            3 + additionalScenarioIds.Count);
+            "Seeded {ScenarioCount} active IT catalog scenarios; legacy scenarios remain available only as historical records.",
+            additionalScenarioIds.Count);
     }
 
     private static async Task EnsureStakeholderPersonas(

@@ -16,6 +16,21 @@ internal static class ScenarioCatalogSeeder
         "small_business_inventory"
     ];
 
+    private static readonly HashSet<string> ActiveItScenarioKeys =
+    [
+        "qa_defect_management",
+        "devops_cicd_release",
+        "backend_order_api"
+    ];
+
+    private static readonly HashSet<string> LegacyCatalogScenarioKeys =
+    [
+        "university_course_registration", "hospital_appointment", "small_business_inventory",
+        "bank_loan_application", "ecommerce_returns", "employee_leave_management",
+        "food_delivery_operations", "hotel_room_booking", "public_library_management",
+        "vehicle_service_appointment"
+    ];
+
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNameCaseInsensitive = true
@@ -40,7 +55,8 @@ internal static class ScenarioCatalogSeeder
             var catalog = JsonSerializer.Deserialize<CatalogScenario>(raw, JsonOptions)
                 ?? throw new InvalidOperationException($"Scenario catalog file is empty: {path}");
             Validate(catalog, path);
-            if (BaselineScenarioKeys.Contains(catalog.ScenarioKey))
+            if (BaselineScenarioKeys.Contains(catalog.ScenarioKey) ||
+                !ActiveItScenarioKeys.Contains(catalog.ScenarioKey))
             {
                 continue;
             }
@@ -119,6 +135,25 @@ internal static class ScenarioCatalogSeeder
             "Loaded {ScenarioCount} additional scenarios from the versioned catalog.",
             scenarioIds.Count);
         return scenarioIds;
+    }
+
+    /// <summary>
+    /// Refactoring the catalog must not delete historical sessions. Legacy training
+    /// scenarios are simply retired from the student picker while their data stays intact.
+    /// </summary>
+    public static async Task RetireLegacyScenariosAsync(AppDbContext db, CancellationToken cancellationToken = default)
+    {
+        var legacy = await db.Scenarios
+            .Where(item => item.IsActive &&
+                (LegacyCatalogScenarioKeys.Contains(item.ScenarioKey) ||
+                 (!ActiveItScenarioKeys.Contains(item.ScenarioKey) &&
+                  item.Domain != "Information Technology")))
+            .ToListAsync(cancellationToken);
+        foreach (var scenario in legacy)
+        {
+            scenario.IsActive = false;
+            scenario.SupersededAt ??= DateTime.UtcNow;
+        }
     }
 
     private static void Validate(CatalogScenario scenario, string path)
