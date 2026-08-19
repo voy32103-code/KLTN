@@ -1,5 +1,6 @@
 import './style.css'
 import './neo-brutalism.css'
+import './taste-refinement.css'
 import { createApiClient } from './api'
 import { API_BASE_URL, EXPIRED_SESSION_NOTICE, TOKEN_KEY } from './constants'
 import { buildLecturerOverridePayload } from './contracts'
