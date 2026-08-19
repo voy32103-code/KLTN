@@ -336,6 +336,7 @@ builder.Services.AddSwaggerGen();
 var app = builder.Build();
 
 await app.Services.EnsureOperationalSchemaAsync(app.Logger);
+await app.Services.EnsureStudentCatalogAsync(app.Logger);
 
 if (builder.Configuration.GetValue<bool>("SeedData:Enabled"))
 {

@@ -8,6 +8,25 @@ public static class SeedData
     private const string ScenarioTitle = "University Course Registration System";
     private const string ScenarioKey = "university_course_registration";
 
+    /// <summary>
+    /// Ensures the published student catalog exists after every deployment.
+    /// This is intentionally separate from the optional legacy sample-data seed.
+    /// </summary>
+    public static async Task EnsureStudentCatalogAsync(this IServiceProvider services, ILogger logger)
+    {
+        using var scope = services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var scenarioIds = await ScenarioCatalogSeeder.SeedAdditionalAsync(db, logger);
+        await EnsureStakeholderPersonas(db, scenarioIds);
+        await ScenarioCatalogSeeder.RetireLegacyScenariosAsync(db);
+        await db.SaveChangesAsync();
+
+        logger.LogInformation(
+            "Ensured {ScenarioCount} active IT scenarios in the student catalog.",
+            scenarioIds.Count);
+    }
+
     public static async Task SeedScenarioV1Async(this IServiceProvider services, ILogger logger)
     {
         using var scope = services.CreateScope();
