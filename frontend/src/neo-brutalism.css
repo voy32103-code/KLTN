@@ -4,9 +4,9 @@
  * former soft/glass treatment with bold borders, flat colour and hard shadows.
  */
 :root {
-  --font-heading: Impact, Haettenschweiler, "Arial Black", sans-serif;
-  --font-body: Inter, ui-sans-serif, system-ui, sans-serif;
-  --font-serif: Impact, Haettenschweiler, "Arial Black", sans-serif;
+  --font-heading: Inter, "Segoe UI", Arial, sans-serif;
+  --font-body: Inter, "Segoe UI", Arial, sans-serif;
+  --font-serif: Inter, "Segoe UI", Arial, sans-serif;
   --font-sans: var(--font-body);
   --font-mono: "Courier New", monospace;
 
@@ -65,17 +65,18 @@ body { background: transparent; }
 h1, h2, h3, .font-serif, .font-heading {
   font-family: var(--font-heading) !important;
   color: var(--text-primary);
-  letter-spacing: 0.015em;
+  letter-spacing: -0.015em;
 }
 
 h1, h2 {
-  text-transform: uppercase;
-  line-height: 0.98;
+  text-transform: none;
+  line-height: 1.08;
+  font-weight: 800;
 }
 
 h3, .section-kicker, .eyebrow {
   letter-spacing: 0.08em;
-  font-weight: 900;
+  font-weight: 800;
 }
 
 .topbar {
@@ -306,6 +307,7 @@ select:focus,
 .review-metrics strong {
   color: #5546ff !important;
   font-family: var(--font-heading);
+  font-weight: 800;
 }
 
 .message {
