@@ -335,6 +335,7 @@ function renderPersonaBrief(persona: Persona) {
 
 function renderStudentHistory(state: AppState) {
   const detail = state.studentHistoryDetail
+  const progress = state.studentProgress
   return `
     <section class="section-head" data-animate="fade-up" style="--index: 0">
       <div>
@@ -347,6 +348,16 @@ function renderStudentHistory(state: AppState) {
         <button class="primary-button" data-action="open-student-lab" type="button">Phỏng vấn mới</button>
       </div>
     </section>
+    ${progress ? `<section class="top-students-card" style="background: var(--surface); padding: 16px; border-radius: 10px; border: 1px solid var(--line); margin-bottom: 16px;">
+      <div class="panel-heading"><div><p class="section-kicker">Năng lực IT</p><h3>Tiến bộ qua các phiên</h3></div><span>${progress.completedSessions} phiên đã chấm</span></div>
+      <div class="score-grid">
+        <span>Điểm đầu: <strong>${formatScore(progress.firstScore ?? null)}</strong></span>
+        <span>Điểm gần nhất: <strong>${formatScore(progress.latestScore ?? null)}</strong></span>
+        <span>Thay đổi: <strong>${typeof progress.scoreChange === 'number' ? `${progress.scoreChange > 0 ? '+' : ''}${progress.scoreChange} điểm` : 'Chưa đủ dữ liệu'}</strong></span>
+        <span>Chất lượng câu hỏi: <strong>${typeof progress.questionQuality === 'number' ? `${progress.questionQuality}%` : 'Chưa đủ dữ liệu'}</strong></span>
+      </div>
+      ${progress.competencies.length ? `<div class="score-grid" style="margin-top: 10px;">${progress.competencies.map(item => `<span>${escapeHtml(item.competency)}: <strong>${item.score}%</strong> <small>(${item.assessed} mục)</small></span>`).join('')}</div>` : '<small>Hoàn thành phiên đầu tiên để xem competency profile.</small>'}
+    </section>` : ''}
     <section class="review-layout student-history-layout">
       <aside class="review-list" data-animate="fade-up" style="--index: 1">
         <div class="panel-heading"><div><p class="section-kicker">Các phiên đã lưu</p><h2>${state.studentHistory.length} phiên</h2></div></div>
@@ -854,6 +865,7 @@ function renderEvaluation(evaluation: EvaluationResult, showSurvey = false) {
  
       <div class="eval-tab-content active" id="tab-feedback">
         ${evaluation.scoringPolicy ? renderScoringPolicy(evaluation.scoringPolicy) : ''}
+        ${renderItCompetencyRubric()}
         ${evaluation.aiProvenance ? renderAiEvaluationProvenance(evaluation.aiProvenance) : ''}
         ${extractionReviewHtml}
         ${feedback ? `
@@ -901,6 +913,22 @@ function renderScoringPolicy(policy: ScoringPolicy) {
         <span>Rubric: <strong>${policy.rubricPartialMatcher ? 'bật' : 'tắt'}</strong></span>
         <span>Mô hình nhúng: <strong>${escapeHtml(policy.embeddingModel)}</strong></span>
       </div>
+    </div>
+  `
+}
+
+function renderItCompetencyRubric() {
+  return `
+    <div class="policy-card" style="margin-top: 12px;">
+      <div class="subsection-heading"><h3>Rubric năng lực IT</h3><span>Khung tham chiếu</span></div>
+      <div class="policy-grid">
+        <span>Yêu cầu chức năng: <strong>35%</strong></span>
+        <span>Phi chức năng: <strong>20%</strong></span>
+        <span>Ngoại lệ và rủi ro: <strong>15%</strong></span>
+        <span>Chất lượng câu hỏi: <strong>15%</strong></span>
+        <span>AAOC và ưu tiên: <strong>15%</strong></span>
+      </div>
+      <small>Coverage Score hiện tại đo mức độ khai thác Ground Truth. Rubric này dùng để đọc competency profile và định hướng review theo vai trò Tester, DevOps hoặc Backend Developer.</small>
     </div>
   `
 }

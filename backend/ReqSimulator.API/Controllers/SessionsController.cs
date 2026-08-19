@@ -324,6 +324,72 @@ public class SessionsController : ControllerBase
         return Ok(sessions);
     }
 
+    /// <summary>Returns non-sensitive progress aggregates for the signed-in student.</summary>
+    [HttpGet("mine/progress")]
+    public async Task<IActionResult> StudentProgress()
+    {
+        var userId = GetCurrentUserId();
+        if (userId is null) return Unauthorized();
+
+        var completed = await _db.SimulationSessions.AsNoTracking()
+            .Where(session => session.StudentId == userId.Value && session.EvaluationResult != null)
+            .OrderBy(session => session.StartedAt)
+            .Select(session => new
+            {
+                session.Id,
+                session.StartedAt,
+                ScenarioTitle = session.Scenario.Title,
+                Score = session.EvaluationResult!.OverriddenCoverageScore ?? session.EvaluationResult.CoverageScore
+            })
+            .ToListAsync();
+
+        var matchRows = await _db.RequirementMatches.AsNoTracking()
+            .Where(match => match.Evaluation.Session.StudentId == userId.Value)
+            .Select(match => new
+            {
+                Category = match.HiddenRequirement.Category.ToString(),
+                MatchType = match.OverriddenMatchType ?? match.MatchType
+            })
+            .ToListAsync();
+
+        var competencies = matchRows.GroupBy(item => item.Category).Select(group => new
+        {
+            competency = group.Key,
+            assessed = group.Count(),
+            score = Math.Round(group.Average(item => item.MatchType switch
+            {
+                RequirementMatchType.Exact or RequirementMatchType.Semantic => 100m,
+                RequirementMatchType.Partial => 50m,
+                _ => 0m
+            }), 1)
+        }).OrderBy(item => item.competency).ToList();
+
+        var qualityRows = await _db.Messages.AsNoTracking()
+            .Where(message => message.Session.StudentId == userId.Value &&
+                message.Sender == SenderType.Student && message.QuestionQuality != null)
+            .Select(message => message.QuestionQuality!)
+            .ToListAsync();
+        decimal? questionQuality = qualityRows.Count == 0 ? null : Math.Round(qualityRows.Average(value => value switch
+        {
+            "conditional" or "specific" => 100m,
+            "on_topic" => 60m,
+            _ => 20m
+        }), 1);
+
+        var firstScore = completed.FirstOrDefault()?.Score;
+        var latestScore = completed.LastOrDefault()?.Score;
+        return Ok(new
+        {
+            completedSessions = completed.Count,
+            firstScore,
+            latestScore,
+            scoreChange = firstScore is null || latestScore is null ? (decimal?)null : Math.Round(latestScore.Value - firstScore.Value, 1),
+            questionQuality,
+            competencies,
+            trend = completed.Select(item => new { item.StartedAt, item.ScenarioTitle, item.Score })
+        });
+    }
+
     /// <summary>Returns a student's own transcript and non-sensitive evaluation history.</summary>
     [HttpGet("mine/{sessionId:guid}")]
     public async Task<IActionResult> StudentSessionDetail(Guid sessionId)

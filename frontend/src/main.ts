@@ -26,6 +26,7 @@ import type {
   SessionState,
   SessionsOverTimeData,
   StudentSessionDetail,
+  StudentProgress,
   StudentSessionSummary,
   TopStudentItem,
 } from './types'
@@ -70,6 +71,7 @@ const state: AppState = {
   studentHistory: [],
   selectedStudentSessionId: null,
   studentHistoryDetail: null,
+  studentProgress: null,
   adminState: null,
   busy: false,
   notice: null,
@@ -628,8 +630,12 @@ async function openStudentHistory() {
 
 async function loadStudentHistory(showLoading = true) {
   await withBusy(async () => {
-    const sessions = await api.request<StudentSessionSummary[]>('/api/Sessions/mine')
+    const [sessions, progress] = await Promise.all([
+      api.request<StudentSessionSummary[]>('/api/Sessions/mine'),
+      api.request<StudentProgress>('/api/Sessions/mine/progress'),
+    ])
     state.studentHistory = sessions
+    state.studentProgress = progress
     if (state.selectedStudentSessionId && !sessions.some(item => item.id === state.selectedStudentSessionId)) {
       state.selectedStudentSessionId = null
       state.studentHistoryDetail = null

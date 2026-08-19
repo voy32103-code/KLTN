@@ -237,6 +237,16 @@ export type StudentSessionDetail = {
   evaluation?: EvaluationResult | null
 }
 
+export type StudentProgress = {
+  completedSessions: number
+  firstScore?: number | null
+  latestScore?: number | null
+  scoreChange?: number | null
+  questionQuality?: number | null
+  competencies: Array<{ competency: string; assessed: number; score: number }>
+  trend: Array<{ startedAt: string; scenarioTitle: string; score?: number | null }>
+}
+
 // === Admin & User Management Types ===
 export type AdminOverview = {
   totalSessions: number
@@ -447,6 +457,7 @@ export type AppState = {
   studentHistory: StudentSessionSummary[]
   selectedStudentSessionId: string | null
   studentHistoryDetail: StudentSessionDetail | null
+  studentProgress: StudentProgress | null
   adminState: AdminState | null
   busy: boolean
   notice: Notice | null
