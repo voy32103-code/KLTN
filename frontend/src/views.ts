@@ -1014,7 +1014,7 @@ function renderIngestionHistory(admin: AdminState | null) {
             <li class="ingestion-job-item">
               <div class="ingestion-job-main">
                 <strong>${escapeHtml(job.sourceLabel ?? 'Nguồn nạp tri thức')}</strong>
-                <span>${escapeHtml(job.status)} · ${job.attempts} lượt chạy${job.updatedAt ? ` · ${escapeHtml(formatTime(job.updatedAt))}` : ''}</span>
+                <span class="ingestion-job-meta"><span class="ingestion-job-status">${escapeHtml(job.status)}</span>${job.attempts} lượt chạy${job.updatedAt ? ` · ${escapeHtml(formatTime(job.updatedAt))}` : ''}</span>
                 ${job.errorCode ? `<small>Mã lỗi: ${escapeHtml(job.errorCode)}</small>` : ''}
               </div>
               ${job.status === 'AwaitingReview' && job.hasDraft ? `<button class="primary-button" data-action="review-ingestion-job" data-job-id="${escapeAttribute(job.jobId)}" type="button">Mở bản nháp</button>` : ''}
@@ -1070,9 +1070,9 @@ function renderAdminScenarioSection(state: AppState) {
           <textarea id="admin-crawl-url-input" rows="4" placeholder="Mỗi dòng một URL (tối đa 10 nguồn)..." style="background: var(--surface-raised); color: var(--text-primary); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; font-size: 13px; outline: none; width: 100%; resize: vertical;"></textarea>
         </div>
 
-        <div class="form-group" style="display: flex; flex-direction: column; gap: 8px;">
+        <div class="form-group admin-ingestion-field" style="display: flex; flex-direction: column; gap: 8px;">
           <label for="admin-crawl-model-select" style="font-size: 13px; color: var(--text-secondary); font-weight: 500;">Mô hình AI xử lý:</label>
-          <select id="admin-crawl-model-select" style="background: var(--surface-raised); color: var(--text-primary); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; font-size: 13px; cursor: pointer; outline: none; width: 100%;">
+          <select id="admin-crawl-model-select" class="admin-ingestion-select">
             <option value="gemini-2.5-flash">Gemini 2.5 Flash (Khuyên dùng - Structured Output)</option>
             <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash Lite</option>
             <option value="gemini-3-flash-preview">Gemini 3 Flash Preview</option>
@@ -1115,9 +1115,9 @@ function renderAdminScenarioSection(state: AppState) {
           <input id="admin-video-path-input" type="file" accept="audio/mpeg,audio/wav,audio/x-wav,audio/mp4,audio/aac,audio/ogg,audio/webm,video/mp4,video/webm,video/quicktime" style="background: var(--surface-raised); color: var(--text-primary); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; font-size: 13px; outline: none; width: 100%;" />
         </div>
 
-        <div class="form-group" style="display: flex; flex-direction: column; gap: 8px;">
+        <div class="form-group admin-ingestion-field" style="display: flex; flex-direction: column; gap: 8px;">
           <label for="admin-video-model-select" style="font-size: 13px; color: var(--text-secondary); font-weight: 500;">Mô hình AI xử lý:</label>
-          <select id="admin-video-model-select" style="background: var(--surface-raised); color: var(--text-primary); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; font-size: 13px; cursor: pointer; outline: none; width: 100%;">
+          <select id="admin-video-model-select" class="admin-ingestion-select">
             <option value="gemini-2.5-flash">Gemini 2.5 Flash (Khuyên dùng - Multimodal)</option>
             <option value="gemini-3.1-flash-lite">Gemini 3.1 Flash Lite (Hạn mức cao)</option>
             <option value="gemini-3.5-flash-lite">Gemini 3.5 Flash Lite (Hạn mức cao)</option>
