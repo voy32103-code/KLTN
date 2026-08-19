@@ -397,23 +397,8 @@ function renderChat(state: AppState) {
 
   const isThinking = state.busy && !state.evaluation && state.messages.length > 0 && state.messages[state.messages.length - 1].sender === 'Student'
   const thinkingHtml = isThinking ? `
-    <article class="message stakeholder thinking" data-animate="fade-up" style="--index: ${state.messages.length}">
-      <div class="message-meta">
-        <span class="font-serif">${escapeHtml(persona?.name ?? 'Đối tác')}</span>
-        <small>Đang suy nghĩ...</small>
-      </div>
-      <div class="thinking-indicator" aria-label="Reqy đang phân tích câu hỏi">
-        <img class="thinking-pet" src="/reqy-thinking-v1.png" alt="" aria-hidden="true" />
-        <div class="thinking-copy">
-          <strong>Reqy đang phân tích</strong>
-          <span>Đối tác sẽ phản hồi trong giây lát</span>
-        </div>
-        <div class="thinking-dots" aria-hidden="true">
-          <span class="dot"></span>
-          <span class="dot"></span>
-          <span class="dot"></span>
-        </div>
-      </div>
+    <article class="message stakeholder thinking" data-animate="fade-up" style="--index: ${state.messages.length}" aria-label="Reqy đang phân tích câu hỏi">
+      <img class="thinking-pet" src="/reqy-thinking-v1.png" alt="" aria-hidden="true" />
     </article>
   ` : ''
 
