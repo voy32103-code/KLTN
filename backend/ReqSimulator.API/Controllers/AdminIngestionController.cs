@@ -128,6 +128,24 @@ public sealed class AdminIngestionController : ControllerBase
         return Ok(jobs.Select(job => ToClientJob(job, artifactNames.GetValueOrDefault(job.SourceArtifactId ?? Guid.Empty), includeDraft: false)));
     }
 
+    /// <summary>Records that an admin-reviewed ingestion draft has been published.</summary>
+    [HttpPost("jobs/{jobId:guid}/mark-published")]
+    [EnableRateLimiting("admin_ingestion")]
+    public async Task<IActionResult> MarkPublished(Guid jobId, CancellationToken cancellationToken)
+    {
+        var job = await _db.IngestionJobs.SingleOrDefaultAsync(
+            item => item.Id == jobId && item.CreatedByUserId == GetUserId(), cancellationToken);
+        if (job is null) return NotFound();
+        if (job.Status != "AwaitingReview" && job.Status != "Published")
+            return Conflict(new { message = "Only a reviewed ingestion draft can be marked as published." });
+
+        job.Status = "Published";
+        job.ErrorCode = null;
+        job.UpdatedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync(cancellationToken);
+        return Ok(ToClientJob(job));
+    }
+
     [AllowAnonymous, HttpPost("worker/claim")]
     public async Task<IActionResult> ClaimWork(CancellationToken cancellationToken)
     {

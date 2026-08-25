@@ -9,6 +9,7 @@ export const i18n = {
     'Queued': 'Đang chờ',
     'Processing': 'Đang xử lý',
     'AwaitingReview': 'Chờ duyệt',
+    'Published': 'Đã publish',
     'Failed': 'Thất bại'
   },
   moods: {

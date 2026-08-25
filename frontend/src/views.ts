@@ -1313,10 +1313,15 @@ function renderIngestionHistory(admin: AdminState | null) {
             <li class="ingestion-job-item">
               <div class="ingestion-job-main">
                 <strong>${escapeHtml(job.sourceLabel ?? 'Nguồn nạp tri thức')}</strong>
-                <span class="ingestion-job-meta"><span class="ingestion-job-status">${escapeHtml(job.status)}</span>${job.attempts} lượt chạy${job.updatedAt ? ` · ${escapeHtml(formatTime(job.updatedAt))}` : ''}</span>
+                <span class="ingestion-job-meta"><span class="ingestion-job-status">${escapeHtml(i18n.status[job.status] ?? job.status)}</span>${job.attempts} lượt chạy${job.updatedAt ? ` · ${escapeHtml(formatTime(job.updatedAt))}` : ''}</span>
                 ${job.errorCode ? `<small>Mã lỗi: ${escapeHtml(job.errorCode)}</small>` : ''}
               </div>
-              ${job.status === 'AwaitingReview' && job.hasDraft ? `<button class="primary-button" data-action="review-ingestion-job" data-job-id="${escapeAttribute(job.jobId)}" type="button">Mở bản nháp</button>` : ''}
+              ${job.status === 'AwaitingReview' && job.hasDraft ? `
+                <div class="ingestion-job-actions">
+                  <button class="primary-button" data-action="review-ingestion-job" data-job-id="${escapeAttribute(job.jobId)}" type="button">Mở bản nháp</button>
+                  <button class="ghost-button" data-action="mark-ingestion-job-published" data-job-id="${escapeAttribute(job.jobId)}" type="button">Đã publish</button>
+                </div>
+              ` : ''}
             </li>
           `).join('')}
         </ul>

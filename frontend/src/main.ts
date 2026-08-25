@@ -439,6 +439,9 @@ async function handleAction(action: string, options: { tab?: string; userId?: st
     case 'review-ingestion-job':
       if (options.jobId) await openIngestionJob(options.jobId)
       break
+    case 'mark-ingestion-job-published':
+      if (options.jobId) await markIngestionJobPublished(options.jobId)
+      break
     case 'admin-publish-scenario':
       await publishAdminScenario()
       break
@@ -449,6 +452,7 @@ async function handleAction(action: string, options: { tab?: string; userId?: st
       if (state.adminState) {
         state.adminState.scenarioDraft = null
         state.adminState.scenarioDraftSource = null
+        state.adminState.scenarioDraftIngestionJobId = null
         clearNotice()
         render()
       }
@@ -870,6 +874,7 @@ async function openAdminDashboard() {
       isCreatingUser: false,
       scenarioDraft: null,
       scenarioDraftSource: null,
+      scenarioDraftIngestionJobId: null,
       ingestionJob: null,
       ingestionJobs: [],
       personaTemplates: [],
@@ -1330,8 +1335,15 @@ async function publishAdminScenario() {
       body: scenario,
     })
     if (!state.adminState) return
+    const ingestionJobId = state.adminState.scenarioDraftIngestionJobId
+    if (ingestionJobId) {
+      const updatedJob = await api.request<IngestionJob>(`/api/admin-ingestion/jobs/${ingestionJobId}/mark-published`, { method: 'POST' })
+      state.adminState.ingestionJob = updatedJob
+      state.adminState.ingestionJobs = state.adminState.ingestionJobs.map(job => job.jobId === updatedJob.jobId ? { ...job, ...updatedJob } : job)
+    }
     state.adminState.scenarioDraft = null
     state.adminState.scenarioDraftSource = null
+    state.adminState.scenarioDraftIngestionJobId = null
     setNotice(
       'success',
       `Đã publish "${result.title}" phiên bản ${result.version} với ${result.requirementsCount} yêu cầu.`
@@ -1358,6 +1370,7 @@ async function openPublishedScenarioDraft() {
     if (!state.adminState) return
     state.adminState.scenarioDraft = draft
     state.adminState.scenarioDraftSource = `${scenarioTitle} — bản nháp từ phiên bản đang publish`
+    state.adminState.scenarioDraftIngestionJobId = null
     setNotice('success', 'Đã tải scenario thành bản nháp. Publish sẽ tạo phiên bản mới, không ghi đè lịch sử cũ.')
   })
 }
@@ -1438,6 +1451,7 @@ async function waitForIngestion(jobId: string, source: string, workerDispatchReq
       if (state.adminState) {
         state.adminState.scenarioDraft = normalizeScenarioDraft(job.draft)
         state.adminState.scenarioDraftSource = source
+        state.adminState.scenarioDraftIngestionJobId = job.jobId
       }
       setNotice('success', 'Bản nháp đã sẵn sàng. Hãy kiểm tra trước khi publish.')
       return
@@ -1471,7 +1485,18 @@ async function openIngestionJob(jobId: string) {
     }
     state.adminState.scenarioDraft = normalizeScenarioDraft(job.draft)
     state.adminState.scenarioDraftSource = job.sourceLabel ?? 'Ingestion job'
+    state.adminState.scenarioDraftIngestionJobId = job.jobId
     setNotice('success', 'Đã mở bản nháp scenario để kiểm tra trước khi publish.')
+  })
+}
+
+async function markIngestionJobPublished(jobId: string) {
+  await withBusy(async () => {
+    const job = await api.request<IngestionJob>(`/api/admin-ingestion/jobs/${jobId}/mark-published`, { method: 'POST' })
+    if (!state.adminState) return
+    state.adminState.ingestionJob = job
+    state.adminState.ingestionJobs = state.adminState.ingestionJobs.map(item => item.jobId === job.jobId ? { ...item, ...job } : item)
+    setNotice('success', 'Đã đánh dấu job nạp tri thức là đã publish.')
   })
 }
 
@@ -1498,6 +1523,7 @@ async function runAdminCrawl() {
     if (!state.adminState) return
     state.adminState.scenarioDraft = normalizeScenarioDraft(result.scenario)
     state.adminState.scenarioDraftSource = urls.join(', ')
+    state.adminState.scenarioDraftIngestionJobId = null
     setNotice('success', 'Đã tạo bản preview. Hãy kiểm tra, chỉnh sửa và xác nhận publish.')
   })
 }

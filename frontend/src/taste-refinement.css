@@ -572,6 +572,13 @@ input:focus, textarea:focus, select:focus {
   background: var(--surface-muted);
 }
 
+.ingestion-job-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 /* Retire the former yellow Neo-Brutalist accent everywhere it is still used. */
 thead,
 thead tr,

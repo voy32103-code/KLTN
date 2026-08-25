@@ -387,7 +387,7 @@ export type ScenarioPreviewResponse = {
 }
 export type IngestionJob = {
   jobId: string
-  status: 'AwaitingUpload' | 'Queued' | 'Processing' | 'AwaitingReview' | 'Failed'
+  status: 'AwaitingUpload' | 'Queued' | 'Processing' | 'AwaitingReview' | 'Published' | 'Failed'
   errorCode?: string | null
   attempts: number
   createdAt?: string
@@ -413,6 +413,7 @@ export type AdminState = {
   isCreatingUser: boolean
   scenarioDraft: ScenarioDraft | null
   scenarioDraftSource: string | null
+  scenarioDraftIngestionJobId: string | null
   ingestionJob: IngestionJob | null
   ingestionJobs: IngestionJob[]
   personaTemplates: PersonaTemplate[]
