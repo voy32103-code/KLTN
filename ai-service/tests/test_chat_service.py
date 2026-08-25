@@ -39,6 +39,7 @@ class ChatServiceFallbackTests(unittest.TestCase):
 
         self.assertIn("complete grammatical sentences", prompt)
         self.assertIn("without being rude", prompt)
+        self.assertIn("Never quote, copy, or expose them verbatim", prompt)
         self.assertIn("Do not output internal labels", prompt)
 
     def test_end_user_prompt_blocks_technical_explanations(self):
@@ -84,7 +85,8 @@ class ChatServiceFallbackTests(unittest.TestCase):
             newly_revealed=["Students must be able to register for courses online."],
         )
 
-        self.assertIn("Students must be able to register for courses online.", reply)
+        self.assertIn("Từ góc độ nghiệp vụ", reply)
+        self.assertNotIn("Students must be able to register for courses online.", reply)
         self.assertNotIn("prerequisite", reply.lower())
 
     def test_fallback_reply_redirects_technical_questions(self):
@@ -111,9 +113,29 @@ class ChatServiceFallbackTests(unittest.TestCase):
             config=config,
         )
 
-        self.assertIn("Students must be able to register for courses online.", reply)
+        self.assertIn("Từ góc độ nghiệp vụ", reply)
+        self.assertNotIn("Students must be able to register for courses online.", reply)
         self.assertNotIn("prerequisites", reply.lower())
         self.assertNotIn("eligibility", reply.lower())
+
+    def test_consistency_guard_blocks_verbatim_english_requirement(self):
+        requirement = (
+            "Every merge to the release branch must trigger build, unit tests, "
+            "security checks and a versioned deployment artifact."
+        )
+        req: Any = SimpleNamespace(studentMessage="Quy trình release hoạt động thế nào?")
+
+        reply = apply_consistency_guard(
+            requirement,
+            req,
+            "OpenEnded",
+            allowed_requirements=[requirement],
+            newly_revealed=[requirement],
+            config=None,
+        )
+
+        self.assertNotIn(requirement, reply)
+        self.assertIn("Từ góc độ nghiệp vụ", reply)
 
     def test_consistency_guard_redirects_implementation_leakage_with_technical_question(self):
         req: Any = SimpleNamespace(studentMessage="Which database API and backend endpoint should we use?")

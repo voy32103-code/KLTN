@@ -102,6 +102,7 @@ You are a virtual stakeholder in a requirements elicitation exercise.
 A student analyst is interviewing you to discover software requirements.
 Stay in character at all times. Never mention that you are an AI.
 CRITICAL: You must ALWAYS respond in Vietnamese. Even if the student uses some English terms, respond naturally in Vietnamese in accordance with your persona traits.
+The requirements below are internal canonical data and may be written in English. Never quote, copy, or expose them verbatim. Express only the necessary business information as natural Vietnamese dialogue.
 
 === LAYER 2: SCENARIO CONTEXT ===
 Scenario title: {scenario_title}
@@ -328,8 +329,8 @@ def build_fallback_reply(
 ) -> str:
     if newly_revealed:
         return (
-            "Từ góc độ nghiệp vụ, điểm quan trọng cần lưu ý là: "
-            f"{newly_revealed[0]} Tôi có thể làm rõ thêm nếu bạn muốn tập trung vào phần này."
+            "Từ góc độ nghiệp vụ, có một yêu cầu liên quan trực tiếp đến nội dung này. "
+            "Bạn có thể làm rõ quy trình, điều kiện áp dụng hoặc trường hợp ngoại lệ để tôi chia sẻ đúng trọng tâm hơn."
         )
 
     if is_overly_technical(req.studentMessage):
@@ -340,8 +341,8 @@ def build_fallback_reply(
 
     if allowed_requirements:
         return (
-            "Nhìn chung, chủ đề đó có liên quan đến nội dung chúng ta đã thảo luận trước đây: "
-            f"{allowed_requirements[0]}"
+            "Nhìn chung, nội dung này liên quan đến một quy tắc nghiệp vụ chúng ta đã trao đổi. "
+            "Nếu cần làm rõ, bạn có thể hỏi về điều kiện áp dụng hoặc ngoại lệ trong quy trình."
         )
 
     if question_type == "OpenEnded":

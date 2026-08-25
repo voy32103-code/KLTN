@@ -39,7 +39,7 @@ export async function installAdminApiMock(page, jobs = []) {
     if (path === '/api/admin-ingestion/upload-intents' && request.method() === 'POST') {
       return json({ jobId: 'job-upload-1', artifactId: 'artifact-upload-1', uploadUrl: 'https://r2.mock/upload/job-upload-1' })
     }
-    if (path === '/api/admin-ingestion/artifacts/artifact-upload-1/complete' && request.method() === 'POST') return json({ jobId: 'job-upload-1', status: 'Queued' }, 202)
+    if (path === '/api/admin-ingestion/artifacts/artifact-upload-1/complete' && request.method() === 'POST') return json({ jobId: 'job-upload-1', status: 'Queued', workerDispatchRequested: true }, 202)
     if (path === '/api/admin-ingestion/jobs/job-upload-1' && request.method() === 'GET') {
       return json({ jobId: 'job-upload-1', status: 'Queued', attempts: 0, sourceLabel: 'meeting.mp3', hasDraft: false })
     }

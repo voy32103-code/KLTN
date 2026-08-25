@@ -126,7 +126,10 @@ async def run() -> None:
     headers = {"X-Ingestion-Worker-Key": WORKER_KEY}
     async with httpx.AsyncClient(headers=headers, timeout=30.0) as client:
         if RUN_ONCE:
-            await process_one_job(client)
+            # GitHub Actions invokes this mode. Drain the durable queue so one
+            # workflow run is not artificially limited to a single job.
+            while await process_one_job(client):
+                pass
             return
 
         while True:

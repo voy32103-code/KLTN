@@ -36,6 +36,16 @@ class SpaFallbackTests(unittest.IsolatedAsyncioTestCase):
 
 
 class RunOnceWorkerTests(unittest.IsolatedAsyncioTestCase):
+    async def test_run_once_drains_all_queued_jobs(self):
+        with (
+            patch("app.ingestion_worker.RUN_ONCE", True),
+            patch("app.ingestion_worker._require_configuration"),
+            patch("app.ingestion_worker.process_one_job", new=AsyncMock(side_effect=[True, True, False])) as process,
+        ):
+            await ingestion_worker.run()
+
+        self.assertEqual(process.await_count, 3)
+
     async def test_download_artifact_streams_to_a_temporary_file(self):
         payload = b"audio fixture"
         client = httpx.AsyncClient(

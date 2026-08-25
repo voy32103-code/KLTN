@@ -207,6 +207,10 @@ builder.Services.AddHttpClient<AiServiceClient>(client =>
     client.Timeout = TimeSpan.FromSeconds(120); // LLM calls can be slow.
     client.DefaultRequestHeaders.Add("X-AI-Service-Key", aiServiceInternalKey);
 });
+builder.Services.AddHttpClient<IngestionWorkflowDispatcher>(client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(10);
+});
 
 // ===== CORS: allow the React frontend (localhost + Vercel) to call the API =====
 var allowedOriginsSetting = builder.Configuration["Cors:AllowedOrigins"] ?? "";

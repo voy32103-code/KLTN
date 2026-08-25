@@ -3,7 +3,8 @@ name: Ingestion worker
 on:
   workflow_dispatch:
   schedule:
-    - cron: '17 3 * * *'
+    # Fallback for jobs queued while GitHub workflow dispatch is unavailable.
+    - cron: '*/15 * * * *'
 
 permissions:
   contents: read
@@ -13,10 +14,10 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  process-one-job:
-    name: Process one queued ingestion job
+  process-queued-jobs:
+    name: Process queued ingestion jobs
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     defaults:
       run:
         working-directory: ai-service

@@ -1371,10 +1371,10 @@ async function runQueuedAdminCrawl() {
     return
   }
   await withBusy(async () => {
-    const created = await api.request<{ jobId: string }>('/api/admin-ingestion/crawl-jobs', {
+    const created = await api.request<{ jobId: string; workerDispatchRequested?: boolean }>('/api/admin-ingestion/crawl-jobs', {
       method: 'POST', body: { urls, selectedModel: modelSelect?.value || 'gemini-2.5-flash' },
     })
-    await waitForIngestion(created.jobId, urls.join(', '))
+    await waitForIngestion(created.jobId, urls.join(', '), created.workerDispatchRequested === true)
   })
 }
 
@@ -1396,8 +1396,10 @@ async function runQueuedAdminVideo() {
       method: 'POST', body: { fileName: file.name, contentType, size: file.size, selectedModel: modelSelect?.value || 'gemini-2.5-flash' },
     })
     await uploadToPresignedUrl(intent.uploadUrl, file, contentType)
-    await api.request(`/api/admin-ingestion/artifacts/${intent.artifactId}/complete`, { method: 'POST' })
-    await waitForIngestion(intent.jobId, file.name)
+    const completed = await api.request<{ jobId: string; workerDispatchRequested?: boolean }>(
+      `/api/admin-ingestion/artifacts/${intent.artifactId}/complete`, { method: 'POST' },
+    )
+    await waitForIngestion(intent.jobId, file.name, completed.workerDispatchRequested === true)
   })
 }
 
@@ -1415,7 +1417,7 @@ function uploadToPresignedUrl(uploadUrl: string, file: File, contentType: string
   })
 }
 
-async function waitForIngestion(jobId: string, source: string) {
+async function waitForIngestion(jobId: string, source: string, workerDispatchRequested: boolean) {
   for (let attempt = 0; attempt < 120; attempt += 1) {
     const job = await api.request<IngestionJob>(`/api/admin-ingestion/jobs/${jobId}`)
     if (state.adminState) {
@@ -1424,7 +1426,12 @@ async function waitForIngestion(jobId: string, source: string) {
       state.adminState.ingestionJobs = [historyJob, ...state.adminState.ingestionJobs.filter(item => item.jobId !== jobId)]
     }
     if (job.status === 'Queued') {
-      setNotice('info', 'Job queued — chạy GitHub Action.')
+      setNotice(
+        'info',
+        workerDispatchRequested
+          ? 'Đã xếp hàng và kích hoạt worker. Bạn có thể theo dõi tiến trình trong Lịch sử nạp tri thức.'
+          : 'Đã xếp hàng. Worker chưa được kích hoạt tự động; hệ thống sẽ xử lý ở lượt chạy dự phòng.',
+      )
       return
     }
     if (job.status === 'AwaitingReview' && job.draft) {

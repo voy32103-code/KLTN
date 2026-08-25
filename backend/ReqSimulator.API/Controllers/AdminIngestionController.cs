@@ -23,9 +23,10 @@ public sealed class AdminIngestionController : ControllerBase
     private readonly IR2ObjectStorage _storage;
     private readonly IConfiguration _configuration;
     private readonly ILogger<AdminIngestionController> _logger;
+    private readonly IngestionWorkflowDispatcher _workflowDispatcher;
 
-    public AdminIngestionController(AppDbContext db, IR2ObjectStorage storage, IConfiguration configuration, ILogger<AdminIngestionController> logger)
-    { _db = db; _storage = storage; _configuration = configuration; _logger = logger; }
+    public AdminIngestionController(AppDbContext db, IR2ObjectStorage storage, IConfiguration configuration, ILogger<AdminIngestionController> logger, IngestionWorkflowDispatcher workflowDispatcher)
+    { _db = db; _storage = storage; _configuration = configuration; _logger = logger; _workflowDispatcher = workflowDispatcher; }
 
     public sealed record UploadIntentDto([Required, StringLength(255)] string FileName, [Required, StringLength(128)] string ContentType, [Range(1, MaxMediaBytes)] long Size, [StringLength(100)] string? SelectedModel);
     public sealed record CrawlJobDto([Required, MinLength(1), MaxLength(10)] List<string> Urls, [StringLength(100)] string? SelectedModel);
@@ -74,7 +75,8 @@ public sealed class AdminIngestionController : ControllerBase
         job.Status = "Queued";
         job.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync(cancellationToken);
-        return Accepted(new { jobId = job.Id, status = job.Status });
+        var workerDispatchRequested = await _workflowDispatcher.TryDispatchAsync(cancellationToken);
+        return Accepted(new { jobId = job.Id, status = job.Status, workerDispatchRequested });
     }
 
     [HttpPost("crawl-jobs")]
@@ -86,7 +88,8 @@ public sealed class AdminIngestionController : ControllerBase
         var job = new IngestionJob { Id = Guid.NewGuid(), CreatedByUserId = GetUserId(), SourceKind = IngestionSourceKind.Url, SourceUrlsData = JsonSerializer.Serialize(urls), SelectedModel = dto.SelectedModel, Status = "Queued" };
         _db.IngestionJobs.Add(job);
         await _db.SaveChangesAsync(cancellationToken);
-        return Accepted(new { jobId = job.Id, status = job.Status });
+        var workerDispatchRequested = await _workflowDispatcher.TryDispatchAsync(cancellationToken);
+        return Accepted(new { jobId = job.Id, status = job.Status, workerDispatchRequested });
     }
 
     [HttpGet("jobs/{jobId:guid}")]

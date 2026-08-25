@@ -524,6 +524,54 @@ input:focus, textarea:focus, select:focus {
   background: rgba(0, 0, 0, .14);
 }
 
+.grading-review-guide {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0 0 14px;
+}
+
+.grading-review-guide > div {
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+  border: 1px solid var(--line-subtle);
+  border-radius: 8px;
+  background: var(--surface-muted);
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.grading-review-guide strong,
+.grading-review-guide b {
+  color: var(--text-primary);
+}
+
+.grading-review-cohorts {
+  margin-top: 10px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.grading-review-cohorts summary {
+  cursor: pointer;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.grading-review-cohorts > div {
+  display: grid;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.grading-review-cohorts > div > span {
+  padding: 8px 10px;
+  border-left: 3px solid var(--accent);
+  background: var(--surface-muted);
+}
+
 /* Retire the former yellow Neo-Brutalist accent everywhere it is still used. */
 thead,
 thead tr,
@@ -573,6 +621,7 @@ thead th,
 }
 
 @media (max-width: 760px) {
+  .grading-review-guide { grid-template-columns: 1fr; }
   .workspace { padding-left: 18px; padding-right: 18px; }
   .topbar { align-items: flex-start; }
   .topbar-actions { width: 100%; justify-content: flex-start; flex-wrap: wrap; }

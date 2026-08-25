@@ -1,9 +1,9 @@
 """
 Post-generation consistency checks for stakeholder replies.
 
-The checker is intentionally conservative: it only flags likely out-of-gate
-disclosure when a reply mentions multiple distinctive keywords from a hidden
-requirement that was not allowed in the current turn.
+The checker is intentionally conservative: it flags likely out-of-gate
+disclosure and prevents a stakeholder reply from quoting internal canonical
+requirements verbatim.
 """
 from dataclasses import dataclass
 
@@ -31,8 +31,8 @@ IMPLEMENTATION_KEYWORDS = (
 )
 
 DEFAULT_CONSISTENCY_FALLBACK = (
-    "At this stage, I should stay within the scope of your current question. "
-    "Please ask a more specific business question if you want to explore another rule."
+    "Ở giai đoạn này, tôi chỉ có thể chia sẻ thông tin nghiệp vụ trong phạm vi câu hỏi hiện tại. "
+    "Bạn có thể hỏi cụ thể hơn về quy trình, điều kiện hoặc trường hợp ngoại lệ."
 )
 
 
@@ -56,6 +56,18 @@ def check_response_consistency(
     violations: list[ConsistencyViolation] = []
     normalized_reply = normalize_text(reply)
     allowed_norm = {normalize_text(item) for item in allowed_requirements}
+
+    # Ground-truth requirements are an internal scoring artifact. Even a
+    # requirement that is allowed for this turn must be paraphrased as natural
+    # stakeholder speech, never copied into the visible reply.
+    for requirement in allowed_requirements:
+        canonical = normalize_text(requirement)
+        if len(canonical) >= 24 and canonical in normalized_reply:
+            violations.append(ConsistencyViolation(
+                "canonical_requirement_leak",
+                "Reply quotes an internal canonical requirement verbatim.",
+            ))
+            break
 
     if config is not None:
         for rule in config.requirements:

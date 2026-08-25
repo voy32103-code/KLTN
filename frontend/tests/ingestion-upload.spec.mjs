@@ -13,7 +13,7 @@ test('admin can queue a mock video/audio upload and sees it in history', async (
   })
   await page.locator('[data-action="admin-video"]').click()
 
-  await expect(page.getByRole('status')).toContainText('Job queued')
+  await expect(page.getByRole('status')).toContainText('Đã xếp hàng và kích hoạt worker')
   await expect(page.getByText('meeting.mp3', { exact: true })).toBeVisible()
   await expect(page.locator('.ingestion-job-item')).toContainText('Queued')
 })
