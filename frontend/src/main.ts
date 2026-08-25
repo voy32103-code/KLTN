@@ -718,6 +718,7 @@ async function sendMessage(form: FormData) {
         topic?: string | null
         questionQuality?: ChatMessage['questionQuality']
         isFallback?: boolean
+        fallbackReason?: string | null
       }>(
         `/api/Sessions/${state.session?.id}/messages`,
         {
@@ -743,6 +744,18 @@ async function sendMessage(form: FormData) {
       ]
       if (response.isFallback) {
         setNotice('info', 'Đối tác AI đang tạm dùng phản hồi dự phòng vì dịch vụ mô hình bận hoặc hết quota. Bạn vẫn có thể tiếp tục phiên và thử lại sau.')
+      } else if (response.fallbackReason === 'gemini_key_rotation') {
+        setNotice('success', 'Đã tự động chuyển sang AI key dự phòng và nhận phản hồi thành công.')
+      } else if (response.fallbackReason === 'gemini_model_fallback') {
+        setNotice('success', 'Đã tự động chuyển sang mô hình AI dự phòng và nhận phản hồi thành công.')
+      } else if (response.fallbackReason === 'gemini_capacity_fallback') {
+        setNotice('success', 'Đã tự động chuyển sang nhà cung cấp AI dự phòng và nhận phản hồi thành công.')
+      } else if (response.fallbackReason === 'openrouter_capacity_fallback') {
+        setNotice('success', 'Đã tự động chuyển sang OpenRouter dự phòng và nhận phản hồi thành công.')
+      } else if (response.fallbackReason === 'deepseek_capacity_fallback') {
+        setNotice('success', 'Đã tự động chuyển sang DeepSeek dự phòng và nhận phản hồi thành công.')
+      } else if (response.fallbackReason === 'mimo_capacity_fallback') {
+        setNotice('success', 'Đã tự động chuyển sang Mimo dự phòng và nhận phản hồi thành công.')
       } else {
         clearNotice()
       }

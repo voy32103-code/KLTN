@@ -51,6 +51,7 @@ class ChatResponse(BaseModel):
     questionQuality: Literal["vague", "on_topic", "specific", "conditional"] | None = None
     stateUpdate: PersonaStateUpdate | None = None
     isFallback: bool = False
+    fallbackReason: str | None = None
 
 
 # ===== Extract =====

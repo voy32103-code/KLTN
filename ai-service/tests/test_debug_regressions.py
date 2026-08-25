@@ -60,7 +60,7 @@ class SecurityRegressionTests(unittest.TestCase):
 
 
 class ProviderConfigRegressionTests(unittest.IsolatedAsyncioTestCase):
-    def test_structured_gemini_errors_are_classified_without_treating_permission_as_quota(self):
+    def test_structured_gemini_errors_classify_capacity_and_credentials_separately(self):
         quota = APIError(
             429,
             {"error": {"code": 429, "status": "RESOURCE_EXHAUSTED", "message": "quota"}},
@@ -73,10 +73,25 @@ class ProviderConfigRegressionTests(unittest.IsolatedAsyncioTestCase):
             403,
             {"error": {"code": 403, "status": "PERMISSION_DENIED", "message": "forbidden"}},
         )
+        invalid_key = APIError(
+            403,
+            {"error": {"code": 403, "status": "PERMISSION_DENIED", "message": "API key not valid"}},
+        )
 
-        self.assertEqual(ApiClientManager._classify_gemini_error(quota), (True, False, False))
-        self.assertEqual(ApiClientManager._classify_gemini_error(missing_model), (False, False, True))
-        self.assertEqual(ApiClientManager._classify_gemini_error(permission), (False, False, False))
+        self.assertEqual(ApiClientManager._classify_gemini_error(quota), (True, False, False, False))
+        self.assertEqual(ApiClientManager._classify_gemini_error(missing_model), (False, False, True, False))
+        self.assertEqual(ApiClientManager._classify_gemini_error(permission), (False, False, False, False))
+        self.assertEqual(ApiClientManager._classify_gemini_error(invalid_key), (False, False, False, True))
+
+    def test_singular_gemini_key_is_an_extra_rotation_candidate(self):
+        with patch.dict(
+            os.environ,
+            {"GEMINI_API_KEYS": "first-key,second-key", "GEMINI_API_KEY": "third-key"},
+            clear=True,
+        ):
+            manager = ApiClientManager()
+
+        self.assertEqual(manager.gemini_keys, ["first-key", "second-key", "third-key"])
 
     async def test_embedding_quota_does_not_block_text_generation_models(self):
         class QuotaLimitedEmbeddingModels:
@@ -144,6 +159,63 @@ class ProviderConfigRegressionTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(response.text, "fallback")
         manager._call_groq.assert_awaited_once()
 
+    async def test_external_provider_fallbacks_continue_until_one_succeeds(self):
+        with patch.dict(os.environ, {}, clear=True):
+            manager = ApiClientManager()
+        manager.gemini_clients = []
+        manager.groq_api_key = "groq-test"
+        manager.openrouter_api_key = "openrouter-test"
+        manager.deepseek_api_key = "deepseek-test"
+        manager.mimo_api_key = "mimo-test"
+        manager._call_groq = AsyncMock(side_effect=RuntimeError("Groq unavailable"))
+        manager._call_openrouter = AsyncMock(side_effect=RuntimeError("OpenRouter unavailable"))
+        manager._call_deepseek = AsyncMock(return_value=GroqResponseShim("DeepSeek fallback worked"))
+        manager._call_mimo = AsyncMock(return_value=GroqResponseShim("Mimo must not be called"))
+
+        response = await manager.generate_content(model="gemini-2.5-flash", contents="input")
+
+        self.assertEqual(response.text, "DeepSeek fallback worked")
+        self.assertEqual(response.fallback_reason, "deepseek_capacity_fallback")
+        manager._call_groq.assert_awaited_once()
+        manager._call_openrouter.assert_awaited_once()
+        manager._call_deepseek.assert_awaited_once()
+        manager._call_mimo.assert_not_awaited()
+
+    async def test_openrouter_is_used_when_groq_fallback_fails(self):
+        with patch.dict(os.environ, {}, clear=True):
+            manager = ApiClientManager()
+        manager.gemini_clients = []
+        manager.groq_api_key = "groq-test"
+        manager.openrouter_api_key = "openrouter-test"
+        manager._call_groq = AsyncMock(side_effect=RuntimeError("Groq unavailable"))
+        manager._call_openrouter = AsyncMock(return_value=GroqResponseShim("OpenRouter fallback worked"))
+
+        response = await manager.generate_content(model="gemini-2.5-flash", contents="input")
+
+        self.assertEqual(response.text, "OpenRouter fallback worked")
+        self.assertEqual(response.fallback_reason, "openrouter_capacity_fallback")
+        manager._call_groq.assert_awaited_once()
+        manager._call_openrouter.assert_awaited_once()
+
+    async def test_mimo_is_used_when_earlier_external_fallbacks_fail(self):
+        with patch.dict(os.environ, {}, clear=True):
+            manager = ApiClientManager()
+        manager.gemini_clients = []
+        manager.groq_api_key = "groq-test"
+        manager.openrouter_api_key = "openrouter-test"
+        manager.deepseek_api_key = "deepseek-test"
+        manager.mimo_api_key = "mimo-test"
+        manager._call_groq = AsyncMock(side_effect=RuntimeError("Groq unavailable"))
+        manager._call_openrouter = AsyncMock(side_effect=RuntimeError("OpenRouter unavailable"))
+        manager._call_deepseek = AsyncMock(side_effect=RuntimeError("DeepSeek unavailable"))
+        manager._call_mimo = AsyncMock(return_value=GroqResponseShim("Mimo fallback worked"))
+
+        response = await manager.generate_content(model="gemini-2.5-flash", contents="input")
+
+        self.assertEqual(response.text, "Mimo fallback worked")
+        self.assertEqual(response.fallback_reason, "mimo_capacity_fallback")
+        manager._call_mimo.assert_awaited_once()
+
     async def test_transient_gemini_failure_uses_next_available_key(self):
         class FailingModels:
             def generate_content(self, **_kwargs):
@@ -164,6 +236,29 @@ class ProviderConfigRegressionTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(response.text, "second key worked")
         self.assertIn((0, "gemini-2.5-flash"), manager.blocked_until)
+        self.assertEqual(response.fallback_reason, "gemini_key_rotation")
+
+    async def test_invalid_gemini_key_uses_next_available_key(self):
+        class InvalidKeyModels:
+            def generate_content(self, **_kwargs):
+                raise RuntimeError("401 API key not valid")
+
+        class SuccessfulModels:
+            def generate_content(self, **_kwargs):
+                return GroqResponseShim("second key worked")
+
+        with patch.dict(os.environ, {}, clear=True):
+            manager = ApiClientManager()
+        manager.gemini_clients = [
+            SimpleNamespace(models=InvalidKeyModels()),
+            SimpleNamespace(models=SuccessfulModels()),
+        ]
+
+        response = await manager.generate_content(model="gemini-2.5-flash", contents="input")
+
+        self.assertEqual(response.text, "second key worked")
+        self.assertIn(0, manager.blocked_until)
+        self.assertEqual(response.fallback_reason, "gemini_key_rotation")
 
     async def test_quota_exhaustion_falls_back_to_another_gemini_model(self):
         calls: list[str] = []
@@ -188,6 +283,7 @@ class ProviderConfigRegressionTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(response.text, "model fallback worked")
         self.assertEqual(calls, ["gemini-2.5-flash", "gemini-3.1-flash-lite"])
+        self.assertEqual(response.fallback_reason, "gemini_model_fallback")
         self.assertIn((0, "gemini-2.5-flash"), manager.blocked_until)
         self.assertNotIn((0, "gemini-3.1-flash-lite"), manager.blocked_until)
 
@@ -203,11 +299,14 @@ class ProviderConfigRegressionTests(unittest.IsolatedAsyncioTestCase):
             manager = ApiClientManager()
         manager.gemini_clients = [SimpleNamespace(models=InvalidRequestClient())]
         manager.gemini_model_fallbacks = ["gemini-3.1-flash-lite"]
+        manager.groq_api_key = "configured-for-test"
+        manager._call_groq = AsyncMock(return_value=GroqResponseShim("must-not-be-used"))
 
-        with self.assertRaisesRegex(RuntimeError, "fallback is unavailable"):
+        with self.assertRaisesRegex(RuntimeError, "provider fallback was not attempted"):
             await manager.generate_content(model="gemini-2.5-flash", contents="input")
 
         self.assertEqual(calls, ["gemini-2.5-flash"])
+        manager._call_groq.assert_not_awaited()
 
 
 class VideoFileRegressionTests(unittest.IsolatedAsyncioTestCase):

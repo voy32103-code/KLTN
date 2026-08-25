@@ -965,6 +965,7 @@ public class SessionsController : ControllerBase
             topic = aiResponse.DetectedTopic,
             questionQuality = aiResponse.QuestionQuality,
             isFallback = aiResponse.IsFallback,
+            fallbackReason = aiResponse.FallbackReason,
             // Revealed requirement texts are internal ground truth. Persist them
             // server-side, but never expose them in the student's chat response.
             stateUpdate = aiResponse.StateUpdate is null

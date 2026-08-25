@@ -108,7 +108,8 @@ public record AiChatResponse(
     PersonaStateUpdate? StateUpdate,
     bool IsFallback = false,
     string? DetectedTopic = null,
-    string? QuestionQuality = null);
+    string? QuestionQuality = null,
+    string? FallbackReason = null);
 
 public record AiExtractRequest(
     string SessionId,

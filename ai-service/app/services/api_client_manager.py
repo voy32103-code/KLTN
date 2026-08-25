@@ -39,16 +39,18 @@ class GeneratedContentResponse:
 class ApiClientManager:
     def __init__(self):
         # 1. Đọc và khởi tạo các key Gemini
-        self.gemini_keys = []
+        self.gemini_keys: list[str] = []
         raw_keys = os.getenv("GEMINI_API_KEYS")
         if raw_keys:
             self.gemini_keys = [k.strip() for k in raw_keys.split(",") if k.strip()]
-        
-        # Fallback sang GEMINI_API_KEY nếu GEMINI_API_KEYS trống
-        if not self.gemini_keys:
-            single_key = os.getenv("GEMINI_API_KEY")
-            if single_key:
-                self.gemini_keys = [single_key]
+
+        # Keep compatibility with the older singular setting.  When both settings
+        # are present, the singular key is a real extra rotation candidate instead
+        # of being silently ignored.  This is useful while deployments migrate to
+        # the comma-separated setting and harmless when both values are identical.
+        single_key = (os.getenv("GEMINI_API_KEY") or "").strip()
+        if single_key and single_key not in self.gemini_keys:
+            self.gemini_keys.append(single_key)
                 
         self.gemini_clients = [genai.Client(api_key=key) for key in self.gemini_keys]
         # General key blocks use an integer key. Model-specific quota blocks use
@@ -72,6 +74,18 @@ class ApiClientManager:
 
         # 5. Đọc OmniRoute key
         self.omniroute_api_key = os.getenv("OMNIROUTE_API_KEY")
+
+        # Provider fallbacks are configurable so a deployment can replace a
+        # retired model without changing the application code.
+        self.openrouter_fallback_model = os.getenv(
+            "OPENROUTER_FALLBACK_MODEL", "meta-llama/llama-3.3-70b-instruct"
+        ).strip()
+        self.deepseek_fallback_model = os.getenv(
+            "DEEPSEEK_FALLBACK_MODEL", "deepseek-chat"
+        ).strip()
+        self.mimo_fallback_model = os.getenv(
+            "MIMO_FALLBACK_MODEL", "mimo-v2.5pro"
+        ).strip()
 
         logger.info(
             f"ApiClientManager initialized with {len(self.gemini_clients)} Gemini clients. "
@@ -103,8 +117,8 @@ class ApiClientManager:
         return GeneratedContentResponse(response, effective_model, fallback_reason)
 
     @staticmethod
-    def _classify_gemini_error(error: Exception) -> tuple[bool, bool, bool]:
-        """Return quota, transient and model-unavailable flags for a Gemini error."""
+    def _classify_gemini_error(error: Exception) -> tuple[bool, bool, bool, bool]:
+        """Return quota, transient, model-unavailable and credential-error flags."""
         code = error.code if isinstance(error, APIError) else None
         status = str(getattr(error, "status", "") or "").lower()
         message = str(error).lower()
@@ -141,7 +155,21 @@ class ApiClientManager:
                 ]
             )
         )
-        return is_quota_error, is_transient_error, is_model_unavailable
+        is_credential_error = (
+            code == 401
+            or status == "unauthenticated"
+            or any(
+                marker in message
+                for marker in [
+                    "api key not valid",
+                    "invalid api key",
+                    "invalid key",
+                    "key is invalid",
+                    "authentication failed",
+                ]
+            )
+        )
+        return is_quota_error, is_transient_error, is_model_unavailable, is_credential_error
 
     def _get_active_gemini_client_index(self, model: str | None = None) -> int | None:
         """Tìm index của client Gemini đầu tiên không bị block; trả None nếu không có client khả dụng."""
@@ -382,6 +410,56 @@ class ApiClientManager:
             response_format=response_format
         )
 
+    async def _try_external_provider_fallbacks(
+        self,
+        model_lower: str,
+        contents: Any,
+        system_instruction: Any,
+        temperature: float,
+        max_output_tokens: int,
+        response_format: dict | None,
+    ) -> GeneratedContentResponse:
+        """Try configured non-Gemini providers after Gemini capacity failure."""
+        groq_model = "llama-3.3-70b-versatile" if "pro" in model_lower else "llama-3.1-8b-instant"
+        candidates = [
+            ("Groq", self.groq_api_key, groq_model, "gemini_capacity_fallback", self._call_groq),
+            ("OpenRouter", self.openrouter_api_key, self.openrouter_fallback_model, "openrouter_capacity_fallback", self._call_openrouter),
+            ("DeepSeek", self.deepseek_api_key, self.deepseek_fallback_model, "deepseek_capacity_fallback", self._call_deepseek),
+            ("Mimo", self.mimo_api_key, self.mimo_fallback_model, "mimo_capacity_fallback", self._call_mimo),
+        ]
+
+        attempted_providers: list[str] = []
+        for provider_name, api_key, fallback_model, reason, call_provider in candidates:
+            if not api_key or not fallback_model:
+                continue
+            attempted_providers.append(provider_name)
+            try:
+                response = await call_provider(
+                    model=fallback_model,
+                    contents=contents,
+                    system_instruction=system_instruction,
+                    temperature=temperature,
+                    max_output_tokens=max_output_tokens,
+                    response_format=response_format,
+                )
+                logger.warning(
+                    "%s fallback succeeded after Gemini capacity failure. model=%s",
+                    provider_name,
+                    fallback_model,
+                )
+                return self._with_effective_model(response, fallback_model, reason)
+            except Exception as error:
+                logger.warning(
+                    "%s fallback failed after Gemini capacity failure; trying the next provider. Error: %s",
+                    provider_name,
+                    error,
+                )
+
+        providers = ", ".join(attempted_providers) or "none configured"
+        raise RuntimeError(
+            f"Gemini capacity fallback failed; external providers attempted: {providers}."
+        )
+
     async def generate_content(
         self,
         model: str,
@@ -493,8 +571,9 @@ class ApiClientManager:
         # Ngược lại -> gọi Gemini. Mỗi model thử tất cả key khả dụng trước,
         # sau đó mới chuyển model khi gặp quota, model-unavailable hoặc lỗi tạm thời.
         max_attempts = len(self.gemini_clients)
-        stop_model_fallback = False
+        fatal_error: Exception | None = None
         requested_model = model
+        used_key_rotation = False
 
         for candidate_model in self._gemini_model_candidates(requested_model):
             attempts = 0
@@ -542,13 +621,16 @@ class ApiClientManager:
                     return self._with_effective_model(
                         response,
                         candidate_model,
-                        "gemini_model_fallback" if candidate_model != requested_model else None,
+                        "gemini_model_fallback"
+                        if candidate_model != requested_model
+                        else "gemini_key_rotation" if used_key_rotation else None,
                     )
                 except Exception as e:
                     (
                         is_quota_error,
                         is_transient_error,
                         is_model_unavailable,
+                        is_credential_error,
                     ) = self._classify_gemini_error(e)
 
                     if is_model_unavailable:
@@ -559,6 +641,7 @@ class ApiClientManager:
                         break
 
                     if is_quota_error or is_transient_error:
+                        used_key_rotation = True
                         self.block_key(
                             idx,
                             duration_seconds=120 if is_quota_error else 15,
@@ -574,6 +657,21 @@ class ApiClientManager:
                             )
                         continue
 
+                    if is_credential_error:
+                        # An invalid/revoked key cannot recover for any Gemini
+                        # model. Block it globally and try the next configured key.
+                        used_key_rotation = True
+                        self.block_key(idx, duration_seconds=300)
+                        attempts += 1
+                        if attempts < max_attempts:
+                            logger.info(
+                                "Retrying Gemini with another key after a credential failure "
+                                "(attempt %s/%s).",
+                                attempts + 1,
+                                max_attempts,
+                            )
+                        continue
+
                     # Validation, safety and malformed-request errors are not
                     # availability failures. Switching models could hide the
                     # real defect and consume quota, so stop the model chain.
@@ -582,30 +680,26 @@ class ApiClientManager:
                         candidate_model,
                         exc_info=True,
                     )
-                    stop_model_fallback = True
+                    fatal_error = e
                     break
 
-            if stop_model_fallback:
+            if fatal_error is not None:
                 break
 
+        if fatal_error is not None:
+            raise RuntimeError(
+                "Gemini rejected the request; provider fallback was not attempted."
+            ) from fatal_error
+
         # Fallback sang Groq
-        if self.groq_api_key:
-            fallback_model = "llama-3.3-70b-versatile" if "pro" in model_lower else "llama-3.1-8b-instant"
-            logger.info(f"All Gemini keys failed. Falling back to Groq: {fallback_model}")
-            response_format = None
-            if config and config.response_mime_type == "application/json":
-                response_format = {"type": "json_object"}
-            response = await self._call_groq(
-                model=fallback_model,
-                contents=contents,
-                system_instruction=effective_system_instruction,
-                temperature=effective_temperature,
-                max_output_tokens=effective_max_output_tokens,
-                response_format=response_format
-            )
-            return self._with_effective_model(response, fallback_model, "gemini_capacity_fallback")
-            
-        raise RuntimeError("All Gemini API keys failed and Groq fallback is unavailable.")
+        return await self._try_external_provider_fallbacks(
+            model_lower=model_lower,
+            contents=contents,
+            system_instruction=effective_system_instruction,
+            temperature=effective_temperature,
+            max_output_tokens=effective_max_output_tokens,
+            response_format=response_format,
+        )
 
     async def embed_content(self, model: str, contents: List[str]) -> Any:
         """
@@ -630,7 +724,12 @@ class ApiClientManager:
                 )
                 return response
             except Exception as e:
-                is_quota_error, is_transient_error, _ = self._classify_gemini_error(e)
+                (
+                    is_quota_error,
+                    is_transient_error,
+                    _,
+                    is_credential_error,
+                ) = self._classify_gemini_error(e)
 
                 if is_quota_error or is_transient_error:
                     self.block_key(
@@ -638,6 +737,11 @@ class ApiClientManager:
                         duration_seconds=120 if is_quota_error else 15,
                         model=model,
                     )
+                    attempts += 1
+                    if attempts < max_attempts:
+                        continue
+                if is_credential_error:
+                    self.block_key(idx, duration_seconds=300)
                     attempts += 1
                     if attempts < max_attempts:
                         continue
