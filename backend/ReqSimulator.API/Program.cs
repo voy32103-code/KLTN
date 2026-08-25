@@ -259,11 +259,11 @@ var aiWindowSeconds = Math.Max(
 var adminPermitLimit = Math.Max(
     1,
     builder.Configuration.GetValue<int?>("ADMIN_INGESTION_RATE_LIMIT_PERMIT_LIMIT") ??
-    builder.Configuration.GetValue("RateLimiting:AdminIngestion:PermitLimit", 3));
+    builder.Configuration.GetValue("RateLimiting:AdminIngestion:PermitLimit", 20));
 var adminWindowSeconds = Math.Max(
     1,
     builder.Configuration.GetValue<int?>("ADMIN_INGESTION_RATE_LIMIT_WINDOW_SECONDS") ??
-    builder.Configuration.GetValue("RateLimiting:AdminIngestion:WindowSeconds", 300));
+    builder.Configuration.GetValue("RateLimiting:AdminIngestion:WindowSeconds", 60));
 
 static string GetRateLimitPartitionKey(HttpContext context)
 {

@@ -1320,6 +1320,7 @@ async function publishAdminScenario() {
     setNotice('error', getErrorMessage(error))
     return
   }
+  const ingestionJobId = state.adminState.scenarioDraftIngestionJobId
 
   await withBusy(async () => {
     clearNotice()
@@ -1330,16 +1331,18 @@ async function publishAdminScenario() {
       version: number
       title: string
       requirementsCount: number
-    }>('/api/AdminScenarios/publish', {
+    }>(`/api/AdminScenarios/publish${ingestionJobId ? `?ingestionJobId=${encodeURIComponent(ingestionJobId)}` : ''}`, {
       method: 'POST',
       body: scenario,
     })
     if (!state.adminState) return
-    const ingestionJobId = state.adminState.scenarioDraftIngestionJobId
     if (ingestionJobId) {
-      const updatedJob = await api.request<IngestionJob>(`/api/admin-ingestion/jobs/${ingestionJobId}/mark-published`, { method: 'POST' })
-      state.adminState.ingestionJob = updatedJob
-      state.adminState.ingestionJobs = state.adminState.ingestionJobs.map(job => job.jobId === updatedJob.jobId ? { ...job, ...updatedJob } : job)
+      const existingJob = state.adminState.ingestionJobs.find(job => job.jobId === ingestionJobId) ?? state.adminState.ingestionJob
+      if (existingJob) {
+        const updatedJob: IngestionJob = { ...existingJob, status: 'Published' }
+        state.adminState.ingestionJob = updatedJob
+        state.adminState.ingestionJobs = state.adminState.ingestionJobs.map(job => job.jobId === updatedJob.jobId ? updatedJob : job)
+      }
     }
     state.adminState.scenarioDraft = null
     state.adminState.scenarioDraftSource = null

@@ -15,6 +15,9 @@ namespace ReqSimulator.API.Services;
 /// </summary>
 public sealed partial class ScenarioVersionPublisher
 {
+    // Student-facing endpoints deliberately expose only this catalog domain.
+    // Imported scenarios must therefore be published into it, not "General".
+    private const string StudentCatalogDomain = "Information Technology";
     private readonly AppDbContext _db;
 
     public ScenarioVersionPublisher(AppDbContext db)
@@ -71,6 +74,8 @@ public sealed partial class ScenarioVersionPublisher
         {
             // Publishing an unchanged scenario is idempotent, but an admin review is still
             // material evidence. Record it rather than silently dropping the review notes.
+            var catalogUpdated = !string.Equals(current.Domain, StudentCatalogDomain, StringComparison.Ordinal);
+            if (catalogUpdated) current.Domain = StudentCatalogDomain;
             if (reviewerId is Guid previousReviewer)
             {
                 current.ReviewedByUserId = previousReviewer;
@@ -86,6 +91,10 @@ public sealed partial class ScenarioVersionPublisher
                     RequirementCount = current.HiddenRequirements.Count,
                     ReviewedAt = now
                 });
+                await _db.SaveChangesAsync(cancellationToken);
+            }
+            else if (catalogUpdated)
+            {
                 await _db.SaveChangesAsync(cancellationToken);
             }
             await transaction.CommitAsync(cancellationToken);
@@ -114,7 +123,7 @@ public sealed partial class ScenarioVersionPublisher
             ScenarioKey = scenarioKey,
             Title = config.ScenarioTitle.Trim(),
             Description = Limit(config.Context?.Trim(), 500) ?? "General scenario context.",
-            Domain = "General",
+            Domain = StudentCatalogDomain,
             Difficulty = PersonaDifficulty.Medium,
             Version = maxVersion + 1,
             IsActive = true,

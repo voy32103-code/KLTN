@@ -121,6 +121,7 @@ public class AdminScenariosController : ControllerBase
     [HttpPost("publish")]
     public async Task<IActionResult> PublishScenario(
         [FromBody] ScenarioConfigJson scenario,
+        [FromQuery] Guid? ingestionJobId,
         CancellationToken cancellationToken)
     {
         try
@@ -128,6 +129,19 @@ public class AdminScenariosController : ControllerBase
             var reviewerClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (!Guid.TryParse(reviewerClaim, out var reviewerId)) return Unauthorized();
             var published = await _publisher.PublishAsync(scenario, reviewerId, cancellationToken);
+            if (ingestionJobId is Guid jobId)
+            {
+                var job = await _db.IngestionJobs.SingleOrDefaultAsync(
+                    item => item.Id == jobId && item.CreatedByUserId == reviewerId,
+                    cancellationToken);
+                if (job is not null && job.Status == "AwaitingReview")
+                {
+                    job.Status = "Published";
+                    job.ErrorCode = null;
+                    job.UpdatedAt = DateTime.UtcNow;
+                    await _db.SaveChangesAsync(cancellationToken);
+                }
+            }
             return Ok(new
             {
                 message = "Scenario published successfully.",
