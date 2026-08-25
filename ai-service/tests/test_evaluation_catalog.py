@@ -26,10 +26,12 @@ class EvaluationCatalogTests(unittest.TestCase):
             ids = [item["id"] for item in document["requirements"]]
             self.assertEqual(len(ids), len(set(ids)), path.name)
 
-    def test_backend_catalog_snapshot_is_byte_identical(self):
+    def test_locked_evaluation_catalog_is_a_byte_identical_runtime_subset(self):
         source = {path.name: path.read_bytes() for path in SCENARIO_DIRECTORY.glob("*.json")}
         backend = {path.name: path.read_bytes() for path in BACKEND_DIRECTORY.glob("*.json")}
-        self.assertEqual(source, backend)
+        self.assertTrue(set(source).issubset(backend))
+        for name, content in source.items():
+            self.assertEqual(content, backend[name], name)
 
     def test_review_sheet_covers_every_requirement_once(self):
         expected = []

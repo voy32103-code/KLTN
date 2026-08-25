@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Synchronize the AI scenario catalog into the backend publish artifact."""
+"""Synchronize the locked AI evaluation catalog into the runtime catalog."""
 
 from __future__ import annotations
 
@@ -26,14 +26,17 @@ def check_snapshot() -> int:
         return 0
 
     missing = sorted(source.keys() - target.keys())
-    extra = sorted(target.keys() - source.keys())
     changed = sorted(name for name in source.keys() & target.keys() if source[name] != target[name])
     if missing:
         print("Missing backend snapshots:", ", ".join(missing))
-    if extra:
-        print("Unexpected backend snapshots:", ", ".join(extra))
     if changed:
         print("Changed backend snapshots:", ", ".join(changed))
+    # The runtime catalog may contain additional active scenarios that are not
+    # part of the locked evaluation v1 bundle. Those files are intentional and
+    # must not make the evaluation snapshot stale.
+    if not missing and not changed:
+        print(f"Evaluation catalog snapshot is current ({len(source)} locked files).")
+        return 0
     print("Run: python tools/sync_scenario_catalog.py")
     return 1
 
@@ -41,9 +44,6 @@ def check_snapshot() -> int:
 def synchronize() -> int:
     source = catalog_files(SOURCE_DIRECTORY)
     TARGET_DIRECTORY.mkdir(parents=True, exist_ok=True)
-    for path in TARGET_DIRECTORY.glob("*.json"):
-        if path.name not in source:
-            path.unlink()
     for name, content in source.items():
         (TARGET_DIRECTORY / name).write_bytes(content)
     print(f"Synchronized {len(source)} scenario files into the backend artifact.")

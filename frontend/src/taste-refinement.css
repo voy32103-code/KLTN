@@ -315,6 +315,8 @@ input:focus, textarea:focus, select:focus {
 
 /* Retire the former yellow Neo-Brutalist accent everywhere it is still used. */
 thead,
+thead tr,
+thead th,
 .modal-icon,
 .feedback-survey-scale,
 .rounded-full-pill,
