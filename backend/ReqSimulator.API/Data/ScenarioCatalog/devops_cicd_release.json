@@ -1,6 +1,6 @@
 {
   "scenario_key": "devops_cicd_release", "scenario_title": "DevOps - CI/CD và phát hành production", "domain": "Information Technology", "difficulty": "Hard", "source_kind": "synthetic", "review_status": "approved",
-  "context": "Đội DevOps cần xây dựng pipeline CI/CD an toàn để triển khai dịch vụ web lên staging và production.",
+  "context": "Một sản phẩm SaaS có các dịch vụ web cần phát hành đều đặn lên staging và production. Đội DevOps, kỹ sư phát triển và người phê duyệt release muốn chuẩn hoá pipeline từ khi merge code, tạo artifact, kiểm tra bảo mật đến triển khai có kiểm soát. Sinh viên cần khai thác điều kiện phát hành, phân quyền và quản lý secret, tiêu chí health check/rollback, xử lý database migration, monitoring–alert–SLO và dấu vết audit; không cần chọn công cụ CI/CD hay nhà cung cấp cloud cụ thể.",
   "general_keywords": ["CI/CD", "deploy", "production", "pipeline", "release"],
   "gate_keyword_groups": {"1":["branch","build","unit test","artifact"],"2":["approval","secret","environment","permission"],"3":["rollback","database migration","incident"],"4":["monitoring","alert","SLO","availability"]},
   "question_type_gate_map": {"Clarifying":[1,2],"ConstraintOriented":[2,4],"ExceptionOriented":[3,4]}, "max_new_reveals_per_turn": 1,

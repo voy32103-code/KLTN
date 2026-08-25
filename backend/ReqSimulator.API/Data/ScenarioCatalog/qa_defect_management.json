@@ -1,6 +1,6 @@
 {
   "scenario_key": "qa_defect_management", "scenario_title": "QA Tester - Quản lý lỗi phần mềm", "domain": "Information Technology", "difficulty": "Medium", "source_kind": "synthetic", "review_status": "approved",
-  "context": "Một đội QA cần hệ thống ghi nhận, phân loại và theo dõi lỗi phát hiện trong quá trình kiểm thử sản phẩm web.",
+  "context": "Công ty phát triển nền tảng thương mại điện tử phát hành bản web mới mỗi hai tuần. Đội QA gồm tester, QA lead và developer cần một nơi thống nhất để ghi nhận lỗi từ môi trường test, phân loại mức ảnh hưởng, giao việc và theo dõi đến khi đóng lỗi. Sinh viên đóng vai BA, cần làm rõ dữ liệu báo lỗi, cách ưu tiên và leo thang lỗi production, quy trình retest/reopen, quyền truy cập và lịch sử truy vết; không thiết kế giao diện test case hay công cụ tự động hoá kiểm thử.",
   "general_keywords": ["bug", "defect", "test", "issue", "lỗi"],
   "gate_keyword_groups": {"1":["reproduce","môi trường","bước tái hiện","expected","actual"],"2":["severity","priority","log","evidence"],"3":["assign","SLA","retest","reopen"],"4":["audit","permission","notification","performance"]},
   "question_type_gate_map": {"Clarifying":[1,2],"Probing":[2,3],"ExceptionOriented":[3,4]}, "max_new_reveals_per_turn": 1,

@@ -1,6 +1,6 @@
 {
   "scenario_key": "backend_order_api", "scenario_title": "Backend Developer - API quản lý đơn hàng", "domain": "Information Technology", "difficulty": "Medium", "source_kind": "synthetic", "review_status": "approved",
-  "context": "Một nền tảng thương mại điện tử cần API để tạo, cập nhật và theo dõi đơn hàng an toàn.",
+  "context": "Nền tảng thương mại điện tử có web và mobile app cần một Order API phục vụ khách hàng, nhân viên vận hành và các dịch vụ tồn kho, thanh toán, giao hàng. API phải hỗ trợ vòng đời đơn hàng từ tạo đơn đến cập nhật/truy vấn trạng thái trong điều kiện retry mạng, tồn kho thay đổi và lỗi thanh toán. Sinh viên cần làm rõ dữ liệu đầu vào/đầu ra, xác thực–phân quyền, kiểm tra và giữ hàng, idempotency, mã lỗi nhất quán, audit và mục tiêu latency; không thiết kế UI checkout hay cổng thanh toán cụ thể.",
   "general_keywords": ["API", "order", "authentication", "validation", "đơn hàng"],
   "gate_keyword_groups": {"1":["endpoint","request","response","validation"],"2":["authorization","status","idempotency","inventory"],"3":["error","cancel","retry","payment"],"4":["rate limit","latency","audit","security"]},
   "question_type_gate_map": {"Clarifying":[1,2],"ExceptionOriented":[2,3],"ConstraintOriented":[4]}, "max_new_reveals_per_turn": 1,
