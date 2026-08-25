@@ -570,7 +570,9 @@ async function selectScenario(scenarioId: string) {
       `/api/Scenarios/${scenarioId}?lang=${state.scenarioLanguage}`
     )
     state.selectedScenario = scenario
-    state.selectedPersonaId = scenario.personas[0]?.id ?? null
+    // The student must explicitly choose the interviewee for each scenario.
+    // This prevents an accidental session with the first persona in the catalog.
+    state.selectedPersonaId = null
     state.evaluation = null
     clearNotice()
   })

@@ -100,7 +100,7 @@ public class ScenariosController : ControllerBase
             Personas = scenario.Personas.Select(p => new
             {
                 p.Id, p.Name, p.RoleTitle, p.Difficulty,
-                p.Label, p.CommunicationStyle, p.KnowledgeLevel,
+                p.Label, p.CommunicationStyle, p.KnowledgeLevel, p.InitialMood, p.InitialPatience,
                 Stakeholder = p.Stakeholder == null ? null : new
                 {
                     p.Stakeholder.Id,

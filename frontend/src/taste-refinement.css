@@ -317,6 +317,79 @@ input:focus, textarea:focus, select:focus {
   gap: 14px;
 }
 
+.scenario-picker-intro {
+  margin: 8px 0 0;
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.scenario-item {
+  gap: 12px;
+}
+
+.scenario-task {
+  display: grid;
+  gap: 4px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.scenario-task b {
+  color: var(--text-primary);
+  font-size: 11px;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.scenario-task > span {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+}
+
+.scenario-item.active .scenario-task,
+.scenario-item.active .scenario-task b {
+  color: #ffffff !important;
+}
+
+.scenario-student-goal {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  border: 2px solid var(--line);
+  background: #d9f2ed;
+}
+
+.scenario-student-goal h3 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.scenario-student-goal ul {
+  display: grid;
+  gap: 7px;
+  margin: 0;
+  padding-left: 20px;
+}
+
+.scenario-student-goal li,
+.scenario-student-goal > p {
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.scenario-student-goal > p {
+  margin: 0;
+}
+
+.scenario-student-goal strong {
+  color: var(--text-primary);
+}
+
 .persona-selection-hint {
   margin: -4px 0 2px;
   color: var(--text-secondary);
@@ -329,7 +402,7 @@ input:focus, textarea:focus, select:focus {
 }
 
 .persona-card {
-  min-height: 188px;
+  min-height: 254px;
   padding: 16px !important;
   display: flex !important;
   flex-direction: column;
@@ -398,15 +471,56 @@ input:focus, textarea:focus, select:focus {
   font-weight: 700;
 }
 
+.persona-behavior {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.persona-behavior > span {
+  display: grid;
+  gap: 3px;
+  padding: 8px;
+  border-left: 3px solid var(--accent);
+  background: color-mix(in srgb, var(--accent) 7%, var(--surface-muted));
+  color: var(--text-primary);
+}
+
+.persona-behavior b {
+  color: var(--text-secondary);
+  font-size: 11px;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.persona-behavior strong {
+  font-size: 14px;
+  line-height: 1.25;
+}
+
+.persona-behavior small {
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
 .persona-card.active .persona-card-role,
 .persona-card.active .persona-facts > span,
 .persona-card.active .persona-facts b,
+.persona-card.active .persona-behavior > span,
+.persona-card.active .persona-behavior b,
+.persona-card.active .persona-behavior small,
 .persona-card.active .persona-card-action {
   color: #ffffff !important;
 }
 
 .persona-card.active .persona-facts > span {
   border-color: rgba(255, 255, 255, .5);
+  background: rgba(0, 0, 0, .14);
+}
+
+.persona-card.active .persona-behavior > span {
+  border-left-color: #ffffff;
   background: rgba(0, 0, 0, .14);
 }
 
@@ -436,6 +550,10 @@ thead th,
 }
 
 .persona-card.active:hover:not(:disabled) {
+  background: var(--accent) !important;
+}
+
+.scenario-item.active:hover:not(:disabled) {
   background: var(--accent) !important;
 }
 

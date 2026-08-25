@@ -28,6 +28,8 @@ export type Persona = {
     roleTitle: string
     department?: string | null
   } | null
+  initialMood?: string | null
+  initialPatience?: number | null
 }
 
 export type ScenarioDetail = ScenarioSummary & {

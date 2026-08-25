@@ -29,6 +29,12 @@ import {
   shortId,
 } from './utils'
 
+const STUDENT_INTERVIEW_GOALS = [
+  'Phỏng vấn nhân vật để phát hiện yêu cầu, quy tắc nghiệp vụ, ngoại lệ và tiêu chí chất lượng.',
+  'Dùng câu hỏi mở, câu hỏi làm rõ và câu hỏi tình huống; thông tin sẽ được tiết lộ dần theo chất lượng câu hỏi.',
+  'Ghi nhận các yêu cầu đã nghe được để hệ thống đánh giá khi kết thúc phiên.',
+]
+
 function getFriendlyModelName(modelId?: string): string {
   if (!modelId) return 'Gemini 2.5 Flash'
   switch (modelId) {
@@ -225,6 +231,7 @@ function renderScenarioPicker(state: AppState) {
           <div>
             <p class="section-kicker">Danh sách</p>
             <h2>${state.scenarios.length} kịch bản khả dụng</h2>
+            <p class="scenario-picker-intro">Chọn một bối cảnh, đọc nhiệm vụ của bạn rồi chọn nhân vật để bắt đầu phỏng vấn.</p>
           </div>
         </div>
         <div class="list-stack">
@@ -240,10 +247,14 @@ function renderScenarioPicker(state: AppState) {
 function renderScenarioItem(scenario: ScenarioSummary, state: AppState, index: number) {
   const active = scenario.id === state.selectedScenario?.id
   return `
-    <button class="scenario-item ${active ? 'active' : ''}" data-scenario-id="${escapeAttribute(scenario.id)}" type="button" data-animate="fade-up" style="--index: ${index}" ${state.busy ? 'disabled' : ''}>
+    <button class="scenario-item ${active ? 'active' : ''}" data-scenario-id="${escapeAttribute(scenario.id)}" type="button" aria-pressed="${active}" data-animate="fade-up" style="--index: ${index}" ${state.busy ? 'disabled' : ''}>
       <span class="scenario-title-block">
         <strong>${escapeHtml(scenario.title)}</strong>
         <small style="font-family: var(--font-mono); text-transform: uppercase;">${escapeHtml(scenario.domain ?? 'Nghiệp vụ')} · ${escapeHtml(scenario.difficulty)}</small>
+      </span>
+      <span class="scenario-task">
+        <b>Nhiệm vụ của bạn</b>
+        <span>${escapeHtml(scenario.description)}</span>
       </span>
       <span class="scenario-stats">
         <span>${scenario.personaCount} đối tác</span>
@@ -278,12 +289,13 @@ function renderScenarioDetail(scenario: ScenarioDetail, state: AppState) {
         <span>Độ khó: <strong style="font-family: var(--font-sans); text-transform: uppercase;">${escapeHtml(scenario.difficulty)}</strong></span>
       </div>
     </div>
+    ${renderStudentInterviewGoal()}
     <div class="persona-section">
       <div class="subsection-heading" data-animate="fade-up" style="--index: 1">
         <h3>Nhân vật phỏng vấn</h3>
         ${selectedPersona ? `<span class="view-pill">Đã chọn</span>` : ''}
       </div>
-      <p class="persona-selection-hint">Chọn vai trò phù hợp với mục tiêu khai thác thông tin. Bạn có thể xem brief trước khi bắt đầu.</p>
+      <p class="persona-selection-hint">Chọn vai trò phù hợp với mục tiêu khai thác thông tin. Tâm thế và kiên nhẫn là trạng thái ban đầu; chúng thay đổi theo cách bạn đặt câu hỏi.</p>
       <div class="persona-grid" role="group" aria-label="Chọn nhân vật phỏng vấn">
         ${scenario.personas.length === 0 ? renderEmpty('Kịch bản này chưa có đối tác phỏng vấn nào.', 'Cần khởi tạo dữ liệu đối tác trước khi bắt đầu phỏng vấn.') : scenario.personas.map((persona, index) => renderPersonaCard(persona, state, index + 2)).join('')}
       </div>
@@ -304,6 +316,19 @@ function renderScenarioDetail(scenario: ScenarioDetail, state: AppState) {
   `
 }
 
+function renderStudentInterviewGoal() {
+  return `
+    <section class="scenario-student-goal" aria-labelledby="scenario-student-goal-title" data-animate="fade-up" style="--index: 1">
+      <div>
+        <p class="section-kicker">Vai trò của sinh viên</p>
+        <h3 id="scenario-student-goal-title">Trong scenario này, bạn cần làm gì?</h3>
+      </div>
+      <ul>${STUDENT_INTERVIEW_GOALS.map((goal) => `<li>${escapeHtml(goal)}</li>`).join('')}</ul>
+      <p><strong>Không cần:</strong> thiết kế giao diện, viết code hoặc chọn công nghệ triển khai trong buổi phỏng vấn.</p>
+    </section>
+  `
+}
+
 function renderPersonaCard(persona: Persona, state: AppState, index: number) {
   const active = persona.id === state.selectedPersonaId
   const name = formatPersonaText(persona.name)
@@ -311,6 +336,8 @@ function renderPersonaCard(persona: Persona, state: AppState, index: number) {
   const difficulty = formatPersonaText(persona.difficulty)
   const communicationStyle = formatPersonaText(persona.communicationStyle ?? 'trung lập')
   const knowledgeLevel = formatPersonaText(persona.knowledgeLevel ?? 'tiêu chuẩn')
+  const mood = describeInitialMood(persona.initialMood)
+  const patience = describeInitialPatience(persona.initialPatience)
   return `
     <button class="persona-card ${active ? 'active' : ''}" data-persona-id="${escapeAttribute(persona.id)}" type="button" aria-pressed="${active}" aria-label="${escapeAttribute(`${name}, ${role}, độ khó ${difficulty}`)}" data-animate="fade-up" style="--index: ${index}">
       <span class="persona-card-header">
@@ -324,9 +351,29 @@ function renderPersonaCard(persona: Persona, state: AppState, index: number) {
         <span><b>Trao đổi</b>${escapeHtml(communicationStyle)}</span>
         <span><b>Am hiểu</b>${escapeHtml(knowledgeLevel)}</span>
       </span>
+      <span class="persona-behavior" aria-label="Tâm thế và mức kiên nhẫn khi bắt đầu phỏng vấn">
+        <span><b>Tâm thế ban đầu</b><strong>${escapeHtml(mood.label)}</strong><small>${escapeHtml(mood.hint)}</small></span>
+        <span><b>Kiên nhẫn ban đầu</b><strong>${escapeHtml(patience.label)}</strong><small>${escapeHtml(patience.hint)}</small></span>
+      </span>
       <span class="persona-card-action">${active ? 'Đang chọn' : 'Chọn nhân vật'}</span>
     </button>
   `
+}
+
+function describeInitialMood(value?: string | null) {
+  const mood = (value ?? 'neutral').trim().toLowerCase()
+  if (mood === 'rushed') return { label: 'Vội vã', hint: 'Ưu tiên câu hỏi ngắn, đi thẳng trọng tâm.' }
+  if (mood === 'irritated') return { label: 'Không thoải mái', hint: 'Tránh hỏi lặp hoặc hỏi quá dàn trải.' }
+  if (mood === 'neutral_busy') return { label: 'Bận rộn', hint: 'Sẵn sàng trao đổi, nhưng cần câu hỏi rõ ràng.' }
+  if (mood === 'cooperative') return { label: 'Hợp tác', hint: 'Cởi mở khi bạn khai thác đúng ngữ cảnh.' }
+  return { label: 'Bình thường', hint: 'Phản hồi theo chất lượng và độ rõ ràng của câu hỏi.' }
+}
+
+function describeInitialPatience(value?: number | null) {
+  const patience = typeof value === 'number' ? value : 0.7
+  if (patience <= 0.4) return { label: 'Thấp', hint: 'Giảm nhanh khi câu hỏi lặp, lan man hoặc quá kỹ thuật.' }
+  if (patience <= 0.7) return { label: 'Vừa', hint: 'Giữ câu hỏi ngắn gọn và làm rõ từng ý.' }
+  return { label: 'Cao', hint: 'Có thời gian trao đổi, nhưng vẫn cần bám sát nghiệp vụ.' }
 }
 
 function renderPersonaBrief(persona: Persona) {
