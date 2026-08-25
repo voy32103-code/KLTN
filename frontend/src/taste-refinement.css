@@ -313,6 +313,103 @@ input:focus, textarea:focus, select:focus {
   border-color: var(--line) !important;
 }
 
+.persona-section {
+  gap: 14px;
+}
+
+.persona-selection-hint {
+  margin: -4px 0 2px;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.persona-grid {
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 14px;
+}
+
+.persona-card {
+  min-height: 188px;
+  padding: 16px !important;
+  display: flex !important;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 14px !important;
+}
+
+.persona-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.persona-card-identity {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.persona-card strong {
+  font-size: 19px;
+  font-weight: 700;
+}
+
+.persona-card-role {
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.persona-card .difficulty-badge {
+  flex: 0 0 auto;
+  padding: 5px 8px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.persona-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: auto;
+}
+
+.persona-facts > span {
+  display: grid;
+  gap: 3px;
+  padding: 8px;
+  border: 1px solid var(--line-subtle);
+  background: var(--surface-muted);
+  color: var(--text-primary);
+  font-size: 13px;
+}
+
+.persona-facts b {
+  color: var(--text-secondary);
+  font-size: 11px;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.persona-card-action {
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.persona-card.active .persona-card-role,
+.persona-card.active .persona-facts > span,
+.persona-card.active .persona-facts b,
+.persona-card.active .persona-card-action {
+  color: #ffffff !important;
+}
+
+.persona-card.active .persona-facts > span {
+  border-color: rgba(255, 255, 255, .5);
+  background: rgba(0, 0, 0, .14);
+}
+
 /* Retire the former yellow Neo-Brutalist accent everywhere it is still used. */
 thead,
 thead tr,
@@ -336,6 +433,10 @@ thead th,
 .artifact-item:hover,
 .message.thinking {
   background: #d9f2ed !important;
+}
+
+.persona-card.active:hover:not(:disabled) {
+  background: var(--accent) !important;
 }
 
 .modal-card {

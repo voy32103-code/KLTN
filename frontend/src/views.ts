@@ -281,9 +281,10 @@ function renderScenarioDetail(scenario: ScenarioDetail, state: AppState) {
     <div class="persona-section">
       <div class="subsection-heading" data-animate="fade-up" style="--index: 1">
         <h3>Nhân vật phỏng vấn</h3>
-        ${selectedPersona ? `<span class="view-pill font-serif">${escapeHtml(formatPersonaText(selectedPersona.name))}</span>` : ''}
+        ${selectedPersona ? `<span class="view-pill">Đã chọn</span>` : ''}
       </div>
-      <div class="persona-grid">
+      <p class="persona-selection-hint">Chọn vai trò phù hợp với mục tiêu khai thác thông tin. Bạn có thể xem brief trước khi bắt đầu.</p>
+      <div class="persona-grid" role="group" aria-label="Chọn nhân vật phỏng vấn">
         ${scenario.personas.length === 0 ? renderEmpty('Kịch bản này chưa có đối tác phỏng vấn nào.', 'Cần khởi tạo dữ liệu đối tác trước khi bắt đầu phỏng vấn.') : scenario.personas.map((persona, index) => renderPersonaCard(persona, state, index + 2)).join('')}
       </div>
       ${selectedPersona ? renderPersonaBrief(selectedPersona) : ''}
@@ -305,14 +306,25 @@ function renderScenarioDetail(scenario: ScenarioDetail, state: AppState) {
 
 function renderPersonaCard(persona: Persona, state: AppState, index: number) {
   const active = persona.id === state.selectedPersonaId
+  const name = formatPersonaText(persona.name)
+  const role = formatPersonaText(persona.roleTitle ?? 'Đối tác')
+  const difficulty = formatPersonaText(persona.difficulty)
+  const communicationStyle = formatPersonaText(persona.communicationStyle ?? 'trung lập')
+  const knowledgeLevel = formatPersonaText(persona.knowledgeLevel ?? 'tiêu chuẩn')
   return `
-    <button class="persona-card ${active ? 'active' : ''}" data-persona-id="${escapeAttribute(persona.id)}" type="button" data-animate="fade-up" style="--index: ${index}">
-      <span class="persona-topline">
-        <strong class="font-serif">${escapeHtml(formatPersonaText(persona.name))}</strong>
-        <span class="difficulty-badge">${escapeHtml(formatPersonaText(persona.difficulty))}</span>
+    <button class="persona-card ${active ? 'active' : ''}" data-persona-id="${escapeAttribute(persona.id)}" type="button" aria-pressed="${active}" aria-label="${escapeAttribute(`${name}, ${role}, độ khó ${difficulty}`)}" data-animate="fade-up" style="--index: ${index}">
+      <span class="persona-card-header">
+        <span class="persona-card-identity">
+          <strong class="font-serif">${escapeHtml(name)}</strong>
+          <span class="persona-card-role">${escapeHtml(role)}</span>
+        </span>
+        <span class="difficulty-badge">${escapeHtml(difficulty)}</span>
       </span>
-      <span>${escapeHtml(formatPersonaText(persona.roleTitle ?? 'Đối tác'))}</span>
-      <small>Trao đổi: ${escapeHtml(formatPersonaText(persona.communicationStyle ?? 'trung lập'))} · Mức độ am hiểu: ${escapeHtml(formatPersonaText(persona.knowledgeLevel ?? 'tiêu chuẩn'))}</small>
+      <span class="persona-facts">
+        <span><b>Trao đổi</b>${escapeHtml(communicationStyle)}</span>
+        <span><b>Am hiểu</b>${escapeHtml(knowledgeLevel)}</span>
+      </span>
+      <span class="persona-card-action">${active ? 'Đang chọn' : 'Chọn nhân vật'}</span>
     </button>
   `
 }
